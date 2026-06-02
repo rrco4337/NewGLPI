@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Base de données
+  glpi-db:
+    image: mariadb:10.11
+    container_name: glpi-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_secret_pass
+      - MYSQL_DATABASE=glpi_db
+      - MYSQL_USER=glpi_user
+      - MYSQL_PASSWORD=glpi_pass
+    ports:
+      - "3306:3306" # <--- Ajoute cette ligne si tu veux y accéder depuis ton Mac/PC
+    volumes:
+      - glpi_db_data:/var/lib/mysql
+    restart: always
+
+  # Application GLPI 11.0.7
+  glpi:
+    image: glpi/glpi:11.0.7
+    container_name: glpi-app
+    ports:
+      - "8080:80"
+    environment:
+      - GLPI_DB_SERVER=glpi-db
+      - GLPI_DB_DATABASE=glpi_db
+      - GLPI_DB_USER=glpi_user
+      - GLPI_DB_PASSWORD=glpi_pass
+      - GLPI_AUTO_INSTALL=true # Permet d'automatiser l'install initiale ou la mise à jour
+    volumes:
+      - glpi_marketplace:/var/www/html/marketplace
+      - glpi_plugins:/var/www/html/plugins
+      - glpi_config:/var/www/html/config
+      - glpi_files:/var/www/html/files
+    depends_on:
+      - glpi-db
+    restart: always
+
+volumes:
+  glpi_db_data:
+  glpi_marketplace:
+  glpi_plugins:
+  glpi_config:
+  glpi_files:
