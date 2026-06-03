@@ -1,49 +1,33 @@
-import { useComputerForm } from '@/hooks/useComputerForm'
-import { useGlpiConnection } from '@/hooks/useGlpiConnection'
-import { TopBar } from '@/components/TopBar/TopBar'
-import { ComputerForm } from '@/components/ComputerForm/ComputerForm'
-import { SummaryPanel } from '@/components/SummaryPanel/SummaryPanel'
-import { ChecklistPanel } from '@/components/ChecklistPanel/ChecklistPanel'
-import { StatusMessage } from '@/components/StatusMessage/StatusMessage'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { FrontOfficeLayout } from '@/layouts/FrontOfficeLayout'
+import { DashboardLayout } from '@/layouts/DashboardLayout'
+import { Home } from '@/pages/FrontOffice/Home'
+import { Login } from '@/pages/BackOffice/Login'
+import { Dashboard } from '@/pages/BackOffice/Dashboard'
 
 function App() {
-  const connection = useGlpiConnection()
-  const form = useComputerForm()
-
-  const submitDisabled =
-    form.submitState === 'loading' || !connection.hasToken || !connection.hasAppToken
-
   return (
-    <div className="app">
-      <TopBar
-        apiUrl={connection.apiUrl}
-        hasToken={connection.hasToken}
-        hasAppToken={connection.hasAppToken}
-        connectionState={connection.connectionState}
-        onTestConnection={connection.testConnection}
-      />
+    <Routes>
+      {/* Front Office Routes */}
+      <Route path="/" element={<FrontOfficeLayout />}>
+        <Route index element={<Home />} />
+      </Route>
 
-      <StatusMessage state={connection.connectionState} message={connection.connectionMessage} />
+      {/* Back Office Auth Route */}
+      <Route path="/admin/login" element={<Login />} />
 
-      <main className="layout">
-        <ComputerForm
-          formData={form.formData}
-          submitState={form.submitState}
-          submitMessage={form.submitMessage}
-          errors={form.errors}
-          submitDisabled={submitDisabled}
-          hasToken={connection.hasToken}
-          hasAppToken={connection.hasAppToken}
-          onChange={form.handleChange}
-          onSubmit={form.handleSubmit}
-        />
-        <aside className="side">
-          <SummaryPanel formData={form.formData} />
-          <ChecklistPanel />
-        </aside>
-      </main>
-    </div>
+      {/* Back Office Protected Routes with Sidebar */}
+      <Route path="/admin" element={<DashboardLayout />}>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="inventory" element={<div style={{padding: '2rem'}}><h2>Inventory Module</h2><p>Coming soon...</p></div>} />
+        <Route path="users" element={<div style={{padding: '2rem'}}><h2>Users Module</h2><p>Coming soon...</p></div>} />
+        <Route path="settings" element={<div style={{padding: '2rem'}}><h2>Settings Module</h2><p>Coming soon...</p></div>} />
+      </Route>
+      
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 

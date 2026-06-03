@@ -16,11 +16,12 @@ type RequestOptions = {
   token?: string
   appToken?: string
   body?: unknown
+  headers?: Record<string, string>
 }
 
 const glpiRequest = async (path: string, options: RequestOptions) => {
   const token = options.token?.trim()
-  if (!token) {
+  if (!token && !options.headers?.Authorization) {
     throw new Error('Session token manquant. Ajoutez VITE_GLPI_SESSION_TOKEN dans .env.local.')
   }
 
@@ -35,7 +36,8 @@ const glpiRequest = async (path: string, options: RequestOptions) => {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'App-Token': appToken,
-      'Session-Token': token,
+      ...(token ? { 'Session-Token': token } : {}),
+      ...options.headers,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   })
@@ -82,5 +84,20 @@ export const createComputer = async (
     token,
     appToken,
     body: { input },
+  })
+}
+
+export const initSession = async (
+  username?: string,
+  password?: string,
+  appToken = GLPI_APP_TOKEN,
+) => {
+  const authString = btoa(`${username || ''}:${password || ''}`)
+  return glpiRequest('/initSession', {
+    method: 'GET',
+    appToken,
+    headers: {
+      Authorization: `Basic ${authString}`
+    }
   })
 }
