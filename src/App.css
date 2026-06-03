@@ -107,15 +107,6 @@
   gap: 12px;
 }
 
-.pill {
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  border: 1px solid var(--border);
-}
-
 .ghost {
   background: transparent;
   border: 1px solid var(--border);
@@ -176,17 +167,9 @@
   animation: rise 0.8s ease-out;
 }
 
-.form-card {
-  animation-delay: 0.05s;
-}
-
-.summary-card {
-  animation-delay: 0.12s;
-}
-
-.checklist-card {
-  animation-delay: 0.18s;
-}
+.form-card      { animation-delay: var(--anim-delay-1); }
+.summary-card   { animation-delay: var(--anim-delay-2); }
+.checklist-card { animation-delay: var(--anim-delay-3); }
 
 .card-header {
   display: flex;
@@ -250,6 +233,12 @@
 
 .span-2 {
   grid-column: span 2;
+}
+
+.field-error {
+  font-size: 12px;
+  color: #b91c1c;
+  margin-top: -4px;
 }
 
 .form-footer {

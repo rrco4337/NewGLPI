@@ -1,5 +1,4 @@
-import sessionTokenFile from '../../session-token.txt?raw'
+export const sessionTokenFromFile: string = (
+  (import.meta.env.VITE_GLPI_SESSION_TOKEN as string | undefined) ?? ''
+).trim()
 
-const tokenMatch = sessionTokenFile.match(/"session_token"\s*:\s*"([^"]+)"/i)
-
-export const sessionTokenFromFile = tokenMatch?.[1]?.trim() ?? ''

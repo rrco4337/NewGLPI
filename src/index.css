@@ -9,6 +9,9 @@
   --shadow: 0 20px 50px -36px rgba(27, 26, 22, 0.6);
   --body-font: 'Avenir Next', 'Trebuchet MS', 'Helvetica Neue', sans-serif;
   --heading-font: 'Futura', 'Avenir Next', 'Trebuchet MS', sans-serif;
+  --anim-delay-1: 0.05s;
+  --anim-delay-2: 0.12s;
+  --anim-delay-3: 0.18s;
 
   font: 16px/1.5 var(--body-font);
   color: var(--text);

@@ -1,18 +1,5 @@
-import { sessionTokenFromFile } from '../lib/sessionToken'
-
-export type ComputerFormData = {
-  assetTag: string
-  displayName: string
-  manufacturer: string
-  model: string
-  serialNumber: string
-  type: string
-  status: string
-  location: string
-  owner: string
-  purchaseDate: string
-  notes: string
-}
+import { sessionTokenFromFile } from '@/lib/sessionToken'
+import type { ComputerFormData } from '@/types/glpi'
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '')
 
@@ -20,27 +7,9 @@ export const GLPI_BASE_URL = normalizeBaseUrl(
   import.meta.env.VITE_GLPI_BASE_URL || 'http://localhost:8080',
 )
 
-export const GLPI_APP_TOKEN = import.meta.env.VITE_GLPI_APP_TOKEN || ''
+export const GLPI_APP_TOKEN: string = import.meta.env.VITE_GLPI_APP_TOKEN || ''
 
 const API_BASE = `${GLPI_BASE_URL}/apirest.php`
-
-const buildComment = (formData: ComputerFormData) => {
-  const lines = [
-    formData.manufacturer && `Manufacturer: ${formData.manufacturer}`,
-    formData.model && `Model: ${formData.model}`,
-    formData.type && `Type: ${formData.type}`,
-    formData.status && `Status: ${formData.status}`,
-    formData.location && `Location: ${formData.location}`,
-    formData.owner && `Owner: ${formData.owner}`,
-    formData.purchaseDate && `Purchase date: ${formData.purchaseDate}`,
-  ].filter(Boolean)
-
-  if (formData.notes) {
-    lines.push(`Notes: ${formData.notes}`)
-  }
-
-  return lines.join('\n')
-}
 
 type RequestOptions = {
   method: 'GET' | 'POST'
@@ -52,12 +21,12 @@ type RequestOptions = {
 const glpiRequest = async (path: string, options: RequestOptions) => {
   const token = options.token?.trim()
   if (!token) {
-    throw new Error('Session token manquant. Ajoute-le dans session-token.txt.')
+    throw new Error('Session token manquant. Ajoutez VITE_GLPI_SESSION_TOKEN dans .env.local.')
   }
 
   const appToken = options.appToken?.trim()
   if (!appToken) {
-    throw new Error('App token manquant. Ajoute VITE_GLPI_APP_TOKEN dans .env.local.')
+    throw new Error('App token manquant. Ajoutez VITE_GLPI_APP_TOKEN dans .env.local.')
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -89,12 +58,23 @@ export const createComputer = async (
   token = sessionTokenFromFile,
   appToken = GLPI_APP_TOKEN,
 ) => {
-  const comment = buildComment(formData)
   const input = {
     name: formData.displayName || formData.assetTag || 'Nouveau poste',
     serial: formData.serialNumber || undefined,
     otherserial: formData.assetTag || undefined,
-    comment: comment || undefined,
+    comment:
+      [
+        formData.manufacturer && `Fabricant: ${formData.manufacturer}`,
+        formData.model && `Modèle: ${formData.model}`,
+        formData.type && `Type: ${formData.type}`,
+        formData.status && `Statut: ${formData.status}`,
+        formData.location && `Localisation: ${formData.location}`,
+        formData.owner && `Utilisateur: ${formData.owner}`,
+        formData.purchaseDate && `Date d'achat: ${formData.purchaseDate}`,
+        formData.notes && `Notes: ${formData.notes}`,
+      ]
+        .filter(Boolean)
+        .join('\n') || undefined,
   }
 
   return glpiRequest('/Computer', {
