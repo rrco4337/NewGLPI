@@ -5,6 +5,7 @@ import { Home } from '@/pages/FrontOffice/Home'
 import { Login } from '@/pages/BackOffice/Login'
 import { Dashboard } from '@/pages/BackOffice/Dashboard'
 import { Settings } from '@/pages/BackOffice/Settings'
+import { Reset } from '@/pages/BackOffice/Reset'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="inventory" element={<div style={{padding: '2rem'}}><h2>Inventory Module</h2><p>Coming soon...</p></div>} />
         <Route path="users" element={<div style={{padding: '2rem'}}><h2>Users Module</h2><p>Coming soon...</p></div>} />
         <Route path="settings" element={<Settings />} />
+        <Route path="reset" element={<Reset />} />
       </Route>
       
       {/* Fallback */}

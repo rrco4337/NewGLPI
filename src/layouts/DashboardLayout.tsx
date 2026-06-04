@@ -39,8 +39,15 @@ export const DashboardLayout = () => {
             <span className="icon">👥</span>
             Users
           </NavLink>
-          <NavLink 
-            to="/admin/settings" 
+          <NavLink
+            to="/admin/reset"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <span className="icon">🗑️</span>
+            Réinitialisation
+          </NavLink>
+          <NavLink
+            to="/admin/settings"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           >
             <span className="icon">⚙️</span>

@@ -48,6 +48,12 @@
             <artifactId>hibernate-community-dialects</artifactId>
         </dependency>
 
+        <!-- JdbcTemplate (accès direct SQLite pour les opérations sur les tables) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
