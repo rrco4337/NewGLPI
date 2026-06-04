@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# Java / Maven
+backend/target/
+backend/data/
+*.db
+
 # Secrets & tokens — ne jamais versionner
 session-token.txt
 .env

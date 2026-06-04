@@ -43,3 +43,12 @@ volumes:
   glpi_plugins:
   glpi_config:
   glpi_files:
+
+  services:
+  sqlite-data:
+    image: alpine
+    container_name: glpi-sqlite
+    volumes:
+      - ./backend/data:/data
+    command: tail -f /dev/null
+
