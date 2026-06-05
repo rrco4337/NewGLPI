@@ -1,5 +1,5 @@
 import { createItem, deleteItems, listItems } from '@/api/glpi'
-import { uploadDocumentToGlpi, linkDocumentToItem } from '@/api/glpiDocuments'
+import { uploadDocumentToGlpi, linkDocumentToItem, ensureImageDocumentTypes } from '@/api/glpiDocuments'
 import { DropdownResolver } from './dropdownResolver'
 import type {
   AssetRow, TicketRow, CostRow, ParsedImage,
@@ -183,6 +183,10 @@ export async function runImport(
   // ── Phase 3: Upload images (best-effort, no rollback on failure) ──────────
   const validImages = images.filter(img => img.isValid && assetNameToInfo.has(img.basename.toLowerCase()))
   onProgress({ phase: 'images', message: `Upload de ${validImages.length} image(s)…`, current: 0, total: validImages.length })
+
+  // Ensure GLPI has the required DocumentTypes (PNG, JPEG, etc.)
+  // GLPI silently creates an empty Document record if the type is missing.
+  await ensureImageDocumentTypes(token)
 
   let imgDone = 0
   // Sequential uploads — GLPI's PHP session locking blocks concurrent multipart
