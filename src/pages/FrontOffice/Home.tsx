@@ -24,6 +24,8 @@ export const Home = () => {
         onTestConnection={connection.testConnection}
       />
 
+     
+
       <StatusMessage state={connection.connectionState} message={connection.connectionMessage} />
 
       <main className="layout">
@@ -41,8 +43,10 @@ export const Home = () => {
         <aside className="side">
           <SummaryPanel formData={form.formData} />
           <ChecklistPanel />
+         <button className="btn btn-primary"><a href="/elements">Voir les éléments</a></button> 
         </aside>
       </main>
+       
     </div>
   )
 }

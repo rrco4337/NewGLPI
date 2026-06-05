@@ -9,6 +9,7 @@ import { Reset } from '@/pages/BackOffice/Reset'
 import { Inventory } from './pages/BackOffice/Invotentory'
 import { GlpiImport } from './pages/BackOffice/GlpiImport'
 import { ImportVerify } from './pages/BackOffice/ImportVerify'
+import { ElementList } from './pages/FrontOffice/ElementList'
 
 function App() {
   return (
@@ -16,6 +17,8 @@ function App() {
       {/* Front Office Routes */}
       <Route path="/" element={<FrontOfficeLayout />}>
         <Route index element={<Home />} />
+        <Route path="elements" element={<ElementList />} />
+
       </Route>
 
       {/* Back Office Auth Route */}

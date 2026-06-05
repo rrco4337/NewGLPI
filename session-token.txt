@@ -1,1 +1,4 @@
   "session_token": "cDJmbUh2SnNLdW9tSXlCYy9zTGZrdEdCclFxeHU2eE8yNGtSbWFzMmNVS012Zm1CbzNDVGdhYU5BbFZxTDI2RStva1lKcmU4RmkyQjBzU3paWTlXcm5lUDRMQ3VKRzlL"
+
+
+curl -X GET "http://localhost/apirest.php/initSession" -H "Authorization: user_token TON_USER_TOKEN" -H "App-Token: TON_APP_TOKEN"
