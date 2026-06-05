@@ -49,7 +49,14 @@ export const ResetReport = ({ resetResults, importResults }: ResetReportProps) =
             {resetResults.map(r => (
               <tr key={r.itemType}>
                 <td className="table-name">{r.label}</td>
-                <td className="table-count">{r.deleted}</td>
+                <td className="table-count">
+                  {r.deleted}
+                  {r.skipped != null && (
+                    <span style={{ color: '#888', fontSize: '.8em', marginLeft: '.4rem' }}>
+                      ({r.skipped} admin préservé{r.skipped > 1 ? 's' : ''})
+                    </span>
+                  )}
+                </td>
                 <td className="table-count">{r.errors.length}</td>
                 <td>
                   {r.errors.length === 0 ? (

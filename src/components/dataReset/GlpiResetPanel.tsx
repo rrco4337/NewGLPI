@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { purgeAllItems } from '@/api/glpi'
+import { purgeAllItems, purgeNonAdminUsers } from '@/api/glpi'
 import { ConfirmModal } from '@/components/ConfirmModal/ConfirmModal'
 import { ResetReport } from '@/components/ResetReport/ResetReport'
 import type { ResetResult } from '@/pages/BackOffice/Settings'
@@ -21,6 +21,7 @@ const PURGEABLE_ITEM_TYPES = [
   { key: 'Supplier',          label: 'Fournisseurs',         icon: '🏢', weight: 52 },
   { key: 'Contact',           label: 'Contacts',             icon: '👤', weight: 53 },
   { key: 'Budget',            label: 'Budgets',              icon: '💰', weight: 54 },
+  { key: 'User',             label: 'Utilisateurs (non-admin)', icon: '👤', weight: 60 },
 ]
 
 type PanelState = 'idle' | 'confirming' | 'resetting' | 'done'
@@ -48,8 +49,13 @@ export const GlpiResetPanel = () => {
     for (let i = 0; i < typesToPurge.length; i++) {
       const type = typesToPurge[i]
       setProgress({ current: i + 1, total: typesToPurge.length, currentLabel: type.label })
-      const result = await purgeAllItems(type.key)
-      results.push({ itemType: type.key, label: type.label, deleted: result.deleted, errors: result.errors })
+      let result: { deleted: number; skipped?: number; errors: string[] }
+      if (type.key === 'User') {
+        result = await purgeNonAdminUsers()
+      } else {
+        result = await purgeAllItems(type.key)
+      }
+      results.push({ itemType: type.key, label: type.label, deleted: result.deleted, skipped: result.skipped, errors: result.errors })
     }
 
     setResetResults(results)
@@ -71,9 +77,9 @@ export const GlpiResetPanel = () => {
             <div>
               <strong>Données préservées :</strong>
               <ul>
-                <li>Utilisateurs & profils</li>
-                <li>Rôles et permissions</li>
-                <li>Entités et configuration</li>
+                <li>Administrateurs & profils admin</li>
+                <li>Rôles, permissions et entités</li>
+                <li>Configuration système</li>
               </ul>
             </div>
           </div>

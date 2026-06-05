@@ -194,6 +194,58 @@ export const purgeAllItems = async (
 }
 
 /**
+ * Purge non-admin users from GLPI.
+ * Admin users are identified by having a profile whose name contains "admin" (case-insensitive).
+ * User ID 1 (the built-in glpi superadmin) is always preserved.
+ */
+export const purgeNonAdminUsers = async (
+  token?: string,
+  appToken = GLPI_APP_TOKEN,
+): Promise<{ deleted: number; skipped: number; errors: string[] }> => {
+  const sessionToken = token || localStorage.getItem('glpi_session_token') || sessionTokenFromFile
+  const errors: string[] = []
+  let deleted = 0
+  let skipped = 0
+
+  try {
+    // Identify admin profile IDs (name contains "admin")
+    const profiles = await listItems('Profile', '0-999', sessionToken, appToken) as Array<{ id: number; name: string }>
+    const adminProfileIds = new Set(
+      profiles.filter(p => /admin/i.test(p.name ?? '')).map(p => p.id)
+    )
+
+    // Collect user IDs linked to admin profiles
+    const profileUsers = await listItems('Profile_User', '0-9999', sessionToken, appToken) as Array<{ users_id: number; profiles_id: number }>
+    const adminUserIds = new Set<number>([1]) // always preserve built-in glpi admin
+    for (const pu of profileUsers) {
+      if (adminProfileIds.has(pu.profiles_id)) adminUserIds.add(pu.users_id)
+    }
+
+    // Get all users, filter to non-admin
+    const users = await listItems('User', '0-9999', sessionToken, appToken) as Array<{ id: number }>
+    const toDelete = users.filter(u => !adminUserIds.has(u.id))
+    skipped = users.length - toDelete.length
+
+    if (toDelete.length === 0) return { deleted: 0, skipped, errors }
+
+    const ids = toDelete.map(u => u.id)
+    for (let i = 0; i < ids.length; i += 50) {
+      const batch = ids.slice(i, i + 50)
+      try {
+        await deleteItems('User', batch, sessionToken, appToken)
+        deleted += batch.length
+      } catch (err: unknown) {
+        errors.push(`Users batch ${Math.floor(i / 50) + 1}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+  } catch (err: unknown) {
+    errors.push(`Users: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  return { deleted, skipped, errors }
+}
+
+/**
  * Import a single item into GLPI.
  */
 export const createItem = async (

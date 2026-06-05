@@ -24,6 +24,7 @@ export type ResetResult = {
   itemType: string
   label: string
   deleted: number
+  skipped?: number
   errors: string[]
 }
 

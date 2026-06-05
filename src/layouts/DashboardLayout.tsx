@@ -25,12 +25,19 @@ export const DashboardLayout = () => {
             <span className="icon">📊</span>
             Overview
           </NavLink>
-          <NavLink 
-            to="/admin/inventory" 
+          <NavLink
+            to="/admin/inventory"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           >
             <span className="icon">💻</span>
             Inventory
+          </NavLink>
+          <NavLink
+            to="/admin/import"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <span className="icon">📥</span>
+            Import GLPI
           </NavLink>
           <NavLink 
             to="/admin/users" 
