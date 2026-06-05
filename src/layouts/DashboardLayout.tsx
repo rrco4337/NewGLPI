@@ -1,11 +1,13 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import './DashboardLayout.css'
+import { useGlpiStore } from '@/store/glpiStore'
 
 export const DashboardLayout = () => {
   const navigate = useNavigate()
+  const clearTokens = useGlpiStore((state) => state.clearTokens)
 
   const handleLogout = () => {
-    localStorage.removeItem('glpi_session_token')
+    clearTokens()
     navigate('/admin/login')
   }
 
@@ -24,6 +26,13 @@ export const DashboardLayout = () => {
           >
             <span className="icon">📊</span>
             Overview
+          </NavLink>
+          <NavLink 
+            to="/admin/tickets" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <span className="icon">🎫</span>
+            Tickets
           </NavLink>
           <NavLink 
             to="/admin/inventory" 

@@ -1,3 +1,5 @@
+@import 'tailwindcss';
+
 :root {
   --bg: #f5f1e8;
   --surface: #ffffff;
@@ -29,7 +31,8 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%);
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 35%, #eef2ff 100%);
+  color: #0f172a;
 }
 
 #root {
