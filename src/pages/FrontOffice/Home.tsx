@@ -43,7 +43,8 @@ export const Home = () => {
         <aside className="side">
           <SummaryPanel formData={form.formData} />
           <ChecklistPanel />
-         <button className="btn btn-primary"><a href="/elements">Voir les éléments</a></button> 
+         <button className="btn btn-primary"><a href="/elements">Voir les éléments</a></button>
+          <button className="btn btn-secondary"><a href="/create-ticket">Créer un ticket</a></button> 
         </aside>
       </main>
        

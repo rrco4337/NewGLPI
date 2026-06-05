@@ -10,6 +10,7 @@ import { Inventory } from './pages/BackOffice/Invotentory'
 import { GlpiImport } from './pages/BackOffice/GlpiImport'
 import { ImportVerify } from './pages/BackOffice/ImportVerify'
 import { ElementList } from './pages/FrontOffice/ElementList'
+import TicketForm from './pages/FrontOffice/TicketForm'
 
 function App() {
   return (
@@ -18,7 +19,7 @@ function App() {
       <Route path="/" element={<FrontOfficeLayout />}>
         <Route index element={<Home />} />
         <Route path="elements" element={<ElementList />} />
-
+        <Route path="create-ticket" element={<TicketForm />} />
       </Route>
 
       {/* Back Office Auth Route */}
