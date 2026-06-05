@@ -1,38 +1,109 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { GLPI_BASE_URL, GLPI_APP_TOKEN } from '@/api/glpi';
+import { sessionTokenFromFile } from '@/lib/sessionToken';
 import './TicketDetail.css';
+
+// Reuse GLPI status mapping
+const GLPI_STATUS: Record<number, { label: string, className: string }> = {
+  1: { label: 'NEW', className: 'status-new' },
+  2: { label: 'IN PROGRESS', className: 'status-progress' },
+  3: { label: 'PLANNED', className: 'status-progress' },
+  4: { label: 'PENDING', className: 'status-progress' },
+  5: { label: 'SOLVED', className: 'status-resolved' },
+  6: { label: 'CLOSED', className: 'status-resolved' },
+};
 
 export const TicketDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [ticket, setTicket] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+
+  useEffect(() => {
+    if (id) fetchTicketDetail(id);
+  }, [id]);
+
+  const fetchTicketDetail = async (ticketId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const sessionToken = localStorage.getItem('glpi_session_token') || sessionTokenFromFile;
+      
+      const response = await fetch(`${GLPI_BASE_URL}/apirest.php/Ticket/${ticketId}?expand_dropdowns=true`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'App-Token': GLPI_APP_TOKEN,
+          'Session-Token': sessionToken,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ticket: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTicket(data);
+    } catch (err: any) {
+      console.error('Failed to fetch ticket details:', err);
+      setError(err.message || 'Error loading ticket details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="ticket-detail-page"><div style={{ padding: '40px', textAlign: 'center' }}>Loading ticket details...</div></div>;
+  }
+
+  if (error || !ticket) {
+    return (
+      <div className="ticket-detail-page">
+        <div className="breadcrumb">
+          <span onClick={() => navigate('/admin/tickets')}>Tickets</span> 
+          <i className="bi bi-chevron-right"></i>
+          <span className="current">Error</span>
+        </div>
+        <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>
+          {error || 'Ticket not found.'}
+        </div>
+      </div>
+    );
+  }
+
+  const statusInfo = GLPI_STATUS[ticket.status] || { label: 'UNKNOWN', className: '' };
 
   return (
     <div className="ticket-detail-page">
       <div className="breadcrumb">
         <span onClick={() => navigate('/admin/tickets')}>Tickets</span> 
         <i className="bi bi-chevron-right"></i>
-        <span className="current">#{id || '14589'}</span>
+        <span className="current">#{ticket.id}</span>
       </div>
 
       <div className="ticket-header-glass">
         <div className="header-main">
           <div className="title-section">
             <span className="ticket-label">Ticket title</span>
-            <h1>Network Issue: Slow Wi-Fi in Conference Room (CR-201) <span>(#{id || '14589'})</span></h1>
+            <h1>{ticket.name || '(No title)'} <span>(#{ticket.id})</span></h1>
           </div>
           <div className="status-section">
             <div className="status-item">
               <span className="ticket-label">Status</span>
-              <span className="badge-progress"><span className="dot"></span> In Progress</span>
+              <span className={`badge-progress ${statusInfo.className}`} style={{ background: 'var(--blue)' }}>
+                <span className="dot"></span> {statusInfo.label}
+              </span>
             </div>
             <div className="status-item">
-              <span className="ticket-label">SLA / TTO</span>
-              <div className="sla-progress">
-                <div className="sla-bar"><div className="sla-fill" style={{ width: '75%' }}></div></div>
-                <span className="sla-text">SLA 75% remaining</span>
+              <span className="ticket-label">Date Created</span>
+              <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>
+                {ticket.date_creation || '-'}
               </div>
-              <div className="tto-status"><i className="bi bi-check-circle-fill"></i> TTO met</div>
             </div>
           </div>
         </div>
@@ -41,57 +112,31 @@ export const TicketDetail: React.FC = () => {
       <div className="ticket-content-split">
         {/* Sidebar */}
         <div className="sidebar-glass">
-          <h3>Actors & Assets</h3>
+          <h3>Ticket Info</h3>
           
           <div className="sidebar-section">
-            <h4>Requester</h4>
+            <h4>Content</h4>
+            <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+               <div dangerouslySetInnerHTML={{ __html: ticket.content || 'No content provided.' }} />
+            </div>
+          </div>
+
+          <div className="sidebar-section">
+            <h4>Requester ID</h4>
             <div className="actor-card">
-              <div className="avatar">AT</div>
+              <div className="avatar">R</div>
               <div className="actor-info">
-                <span className="name">Alex Thompson</span>
-                <span className="email">alex.t@email.com</span>
+                <span className="name">{ticket.users_id_recipient || 'N/A'}</span>
               </div>
             </div>
           </div>
 
           <div className="sidebar-section">
-            <h4>Observers</h4>
+            <h4>Assigned Tech ID</h4>
             <div className="actor-card">
-              <div className="avatar bg-green">LG</div>
+              <div className="avatar bg-purple">T</div>
               <div className="actor-info">
-                <span className="name">Lisa Green</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-            <h4>Assigned Tech</h4>
-            <div className="actor-card">
-              <div className="avatar bg-purple">SJ</div>
-              <div className="actor-info">
-                <span className="name">Sarah Jenkins</span>
-                <span className="email">sarah.j@email.com</span>
-                <span className="role">L2 Network Specialist</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="sidebar-divider"></div>
-
-          <div className="sidebar-section">
-            <h4>Linked Assets</h4>
-            <div className="asset-card">
-              <i className="bi bi-laptop asset-icon"></i>
-              <div className="asset-info">
-                <span className="name">MacBook Pro 16"</span>
-                <span className="id">#AST-9812</span>
-              </div>
-            </div>
-            <div className="asset-card">
-              <i className="bi bi-router asset-icon"></i>
-              <div className="asset-info">
-                <span className="name">Cisco AP</span>
-                <span className="id">#AP-401</span>
+                <span className="name">{ticket.users_id_assign || 'Unassigned'}</span>
               </div>
             </div>
           </div>
@@ -101,103 +146,35 @@ export const TicketDetail: React.FC = () => {
         <div className="timeline-glass">
           <div className="timeline-feed">
             
-            {/* Timeline Item 1 */}
+            {/* Timeline Item 1 - Creation */}
             <div className="timeline-item">
               <div className="timeline-time">
-                <span className="date">Oct 26,</span>
-                <span className="time">14:15</span>
+                <span className="time">{ticket.date_creation?.split(' ')[1]?.substring(0,5)}</span>
               </div>
               <div className="timeline-marker">
-                <div className="avatar-small">AT</div>
+                <div className="avatar-small">R</div>
                 <div className="line"></div>
               </div>
               <div className="timeline-content">
                 <div className="content-header">
-                  <strong>Alex Thompson</strong> created ticket
+                  <strong>Ticket Created</strong>
                 </div>
                 <div className="content-body">
-                  New, priority <span className="text-high">High</span>
+                  Initial request submitted
                 </div>
               </div>
             </div>
 
-            {/* Timeline Item 2 */}
-            <div className="timeline-item system">
-              <div className="timeline-time">
-                <span className="time">14:20</span>
-              </div>
-              <div className="timeline-marker">
-                <div className="icon-small bg-blue"><i className="bi bi-arrow-repeat"></i></div>
-                <div className="line"></div>
-              </div>
-              <div className="timeline-content">
-                <div className="content-body">
-                  Automatic assignment to Sarah Jenkins
-                </div>
-              </div>
-            </div>
-
-            {/* Timeline Item 3 */}
-            <div className="timeline-item internal">
-              <div className="timeline-time">
-                <span className="time">14:45</span>
-              </div>
-              <div className="timeline-marker">
-                <div className="avatar-small bg-purple">SJ</div>
-                <div className="line"></div>
-              </div>
-              <div className="timeline-content">
-                <div className="content-header">
-                  <strong>Sarah Jenkins</strong> (Internal Note)
-                  <i className="bi bi-three-dots"></i>
-                </div>
-                <div className="content-body">
-                  Investigated AP configuration (15 mins spent)
-                </div>
-              </div>
-            </div>
-
-            {/* Timeline Item 4 */}
+            {/* Note: In a full GLPI integration, you would fetch /Ticket/{id}/ITILFollowup and /TicketTask etc. to populate this timeline. */}
             <div className="timeline-item">
-              <div className="timeline-time">
-                <span className="time">15:10</span>
-              </div>
               <div className="timeline-marker">
-                <div className="avatar-small">AT</div>
-                <div className="line"></div>
+                 <div className="icon-small bg-blue"><i className="bi bi-info"></i></div>
+                 <div className="line"></div>
               </div>
               <div className="timeline-content">
-                <div className="content-header">
-                  <strong>Alex Thompson</strong> (Follow-up)
-                  <i className="bi bi-three-dots"></i>
-                </div>
-                <div className="content-body">
-                  Network test results
-                  <div className="attachment">
-                    <i className="bi bi-file-earmark-pdf-fill text-red"></i>
-                    <span>test_results.pdf</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Timeline Item 5 */}
-            <div className="timeline-item internal">
-              <div className="timeline-time">
-                <span className="time">15:30</span>
-              </div>
-              <div className="timeline-marker">
-                <div className="avatar-small bg-purple">SJ</div>
-                <div className="line"></div>
-              </div>
-              <div className="timeline-content">
-                <div className="content-header">
-                  <strong>Sarah Jenkins</strong> (Internal Task)
-                  <i className="bi bi-three-dots"></i>
-                </div>
-                <div className="content-body">
-                  Firmware Update (30 mins spent)
-                </div>
+                 <div className="content-body" style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
+                    Note: Full timeline (follow-ups, tasks, documents) requires fetching additional GLPI sub-endpoints (e.g. /Ticket/{ticket.id}/ITILFollowup).
+                 </div>
               </div>
             </div>
 
