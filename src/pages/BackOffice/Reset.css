@@ -1,4 +1,5 @@
-.reset-page {
+/* Styles migrated to Reset.tsx inline */
+.reset-page-DISABLED {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

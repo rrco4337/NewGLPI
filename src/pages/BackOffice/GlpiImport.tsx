@@ -129,13 +129,17 @@ export const GlpiImport = () => {
   return (
     <div className="glpi-import-page">
       <div className="glpi-import-header">
-        <h1>Import GLPI</h1>
+        <h1>
+          <i className="bi bi-cloud-upload-fill" style={{ marginRight: 10, color: '#4f46e5', fontSize: 20 }} />
+          Import GLPI
+        </h1>
         <p>Importez simultanément l'inventaire, les tickets, les coûts et les images.</p>
       </div>
 
       {globalError && (
         <div className="validation-err-banner" style={{ marginBottom: '1rem' }}>
-          ❌ {globalError}
+          <i className="bi bi-exclamation-circle-fill" style={{ fontSize: 15, flexShrink: 0 }} />
+          {globalError}
         </div>
       )}
 

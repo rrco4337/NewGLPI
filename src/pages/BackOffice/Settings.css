@@ -1,4 +1,5 @@
-.settings-page {
+/* Migrated to GlpiImport.css */
+.settings-page-DISABLED {
   display: flex;
   flex-direction: column;
   gap: 2rem;
