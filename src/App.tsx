@@ -9,6 +9,8 @@ import { Reset } from '@/pages/BackOffice/Reset'
 import { Inventory } from './pages/BackOffice/Invotentory'
 import { GlpiImport } from './pages/BackOffice/GlpiImport'
 import { ImportVerify } from './pages/BackOffice/ImportVerify'
+import { TicketsList } from './pages/BackOffice/TicketsList'
+import { TicketDetail } from './pages/BackOffice/TicketDetail'
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
       <Route path="/admin" element={<DashboardLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="tickets" element={<TicketsList />} />
+        <Route path="tickets/:id" element={<TicketDetail />} />
         <Route path="inventory" element={<Inventory/>} />
         <Route path="users" element={<div style={{padding: '2rem'}}><h2>Users Module</h2><p>Coming soon...</p></div>} />
         <Route path="settings" element={<Settings />} />

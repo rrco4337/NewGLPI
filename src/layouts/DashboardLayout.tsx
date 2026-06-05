@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 const NAV = [
   { to: '/admin/dashboard',     icon: 'bi-grid-1x2-fill',       label: 'Tableau de bord', end: true },
+  { to: '/admin/tickets',       icon: 'bi-ticket-detailed',      label: 'Tickets' },
   { to: '/admin/inventory',     icon: 'bi-pc-display',           label: 'Inventaire' },
   { to: '/admin/import',        icon: 'bi-cloud-upload-fill',    label: 'Import GLPI' },
   { to: '/admin/verify-import', icon: 'bi-patch-check-fill',     label: 'Vérif. Import' },
