@@ -39,7 +39,14 @@ export const DashboardLayout = () => {
             <span className="icon">📥</span>
             Import GLPI
           </NavLink>
-          <NavLink 
+          <NavLink
+            to="/admin/verify-import"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <span className="icon">🔍</span>
+            Vérif. Import
+          </NavLink>
+          <NavLink
             to="/admin/users" 
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           >

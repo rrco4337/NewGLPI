@@ -1,5 +1,5 @@
 import { createItem, deleteItems, listItems } from '@/api/glpi'
-import { uploadDocumentToGlpi } from '@/api/glpiDocuments'
+import { uploadDocumentToGlpi, linkDocumentToItem } from '@/api/glpiDocuments'
 import { DropdownResolver } from './dropdownResolver'
 import type {
   AssetRow, TicketRow, CostRow, ParsedImage,
@@ -185,17 +185,23 @@ export async function runImport(
   onProgress({ phase: 'images', message: `Upload de ${validImages.length} image(s)…`, current: 0, total: validImages.length })
 
   let imgDone = 0
-  const imgResults = await runBatch(validImages, 3, async img => {
+  // Sequential uploads — GLPI's PHP session locking blocks concurrent multipart
+  // requests causing temp files to be lost before they can be processed.
+  for (const img of validImages) {
     const info = assetNameToInfo.get(img.basename.toLowerCase())!
-    const docId = await uploadDocumentToGlpi(img.basename, img.blob, img.filename, info.itemtype, info.id, token)
-    return { name: img.basename, id: docId }
-  })
-  for (let i = 0; i < imgResults.length; i++) {
-    const r = imgResults[i]
-    if (!r.ok) {
-      warnings.push(`Image "${validImages[i].filename}": ${r.error.message}`)
-    } else {
-      registry.documents.push(r.value)
+    try {
+      // Step 1: upload the file alone (no item link in the manifest)
+      const docId = await uploadDocumentToGlpi(img.basename, img.blob, img.filename, token)
+      registry.documents.push({ name: img.basename, id: docId })
+
+      // Step 2: link the document to the asset (separate request)
+      try {
+        await linkDocumentToItem(docId, info.itemtype, info.id, token)
+      } catch (linkErr: unknown) {
+        warnings.push(`Image "${img.filename}": document créé (id=${docId}) mais lien échoué — ${linkErr instanceof Error ? linkErr.message : String(linkErr)}`)
+      }
+    } catch (e: unknown) {
+      warnings.push(`Image "${img.filename}": ${e instanceof Error ? e.message : String(e)}`)
     }
     imgDone++
     onProgress({ phase: 'images', message: `Images : ${imgDone}/${validImages.length}`, current: imgDone, total: validImages.length })

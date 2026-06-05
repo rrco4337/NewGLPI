@@ -8,6 +8,7 @@ import { Settings } from '@/pages/BackOffice/Settings'
 import { Reset } from '@/pages/BackOffice/Reset'
 import { Inventory } from './pages/BackOffice/Invotentory'
 import { GlpiImport } from './pages/BackOffice/GlpiImport'
+import { ImportVerify } from './pages/BackOffice/ImportVerify'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="reset" element={<Reset />} />
         <Route path="import" element={<GlpiImport />} />
+        <Route path="verify-import" element={<ImportVerify />} />
       </Route>
       
       {/* Fallback */}
