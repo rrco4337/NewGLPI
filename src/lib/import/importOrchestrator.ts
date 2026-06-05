@@ -273,20 +273,21 @@ export async function runImport(
       continue
     }
 
-    const createCost = async (actiontime: number, cost: number, name: string) => {
-      const res = await createItem('TicketCost', { tickets_id: ticketGlpiId, name, actiontime, cost }, token)
+    try {
+      // One TicketCost record per CSV row — GLPI fields:
+      //   actiontime  = duration in seconds
+      //   cost_time   = financial value of time spent
+      //   cost_fixed  = flat/fixed cost
+      const res = await createItem('TicketCost', {
+        tickets_id: ticketGlpiId,
+        name: 'Coût d\'intervention',
+        actiontime: c.durationSecond,
+        cost_time:  c.timeCost,
+        cost_fixed: c.fixedCost,
+      }, token)
       const id = Array.isArray(res) ? res[0]?.id : res?.id
       if (!id) throw new Error('Pas d\'ID retourné')
       registry.ticketCosts.push({ id: id as number })
-    }
-
-    try {
-      if (c.durationSecond > 0 || c.timeCost > 0) {
-        await createCost(c.durationSecond, c.timeCost, 'Coût de temps')
-      }
-      if (c.fixedCost > 0) {
-        await createCost(0, c.fixedCost, 'Coût fixe')
-      }
     } catch (e: unknown) {
       errors.push(`Coût ticket ${c.numTicket}: ${e instanceof Error ? e.message : String(e)}`)
       const rollbackErrors = await rollback(registry, token)
