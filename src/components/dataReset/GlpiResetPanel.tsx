@@ -101,7 +101,7 @@ export const GlpiResetPanel = () => {
               {PURGEABLE_ITEM_TYPES.map(type => (
                 <label key={type.key} className={`type-chip ${selectedTypes.includes(type.key) ? 'selected' : ''}`}>
                   <input type="checkbox" checked={selectedTypes.includes(type.key)} onChange={() => toggleType(type.key)} />
-                  <span className="chip-icon">{type.icon}</span>
+                  <i className={`bi ${type.icon} chip-icon`} />
                   <span className="chip-label">{type.label}</span>
                 </label>
               ))}
@@ -109,7 +109,7 @@ export const GlpiResetPanel = () => {
           </div>
 
           <button className="reset-button" onClick={() => setState('confirming')} disabled={selectedTypes.length === 0}>
-            <span>🗑️</span> Réinitialiser ({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''})
+            <i className="bi bi-trash-fill" style={{ marginRight: 6 }} />Réinitialiser ({selectedTypes.length} type{selectedTypes.length > 1 ? 's' : ''})
           </button>
         </>
       )}
@@ -136,11 +136,11 @@ export const GlpiResetPanel = () => {
 
       {state === 'confirming' && (
         <ConfirmModal
-          title="⚠️ Confirmer la purge GLPI"
+          title="Confirmer la purge GLPI"
           message={`Suppression définitive de ${selectedTypes.length} type(s). Action irréversible.`}
           details={selectedTypes.map(key => {
             const t = PURGEABLE_ITEM_TYPES.find(p => p.key === key)
-            return t ? `${t.icon} ${t.label}` : key
+            return t ? t.label : key
           })}
           confirmText="Oui, purger"
           cancelText="Annuler"

@@ -150,7 +150,7 @@ export const GlpiImport = () => {
             <FileUploadZone
               label="CSV 1 — Inventaire"
               hint="Colonnes : Name, Status, Location, Manufacturer, Item_Type, Model, Inventory_Number, User"
-              icon="📋"
+              icon="bi-file-earmark-spreadsheet-fill"
               accept=".csv"
               file={files.csv1}
               onFile={f => { setFiles(p => ({ ...p, csv1: f })); setValidation(null); setPhase('upload') }}
@@ -158,7 +158,7 @@ export const GlpiImport = () => {
             <FileUploadZone
               label="CSV 2 — Tickets"
               hint="Colonnes : Ref_Ticket, Date, Heure, Type, Titre, Description, Status, Priority, Items"
-              icon="🎫"
+              icon="bi-ticket-detailed-fill"
               accept=".csv"
               file={files.csv2}
               onFile={f => { setFiles(p => ({ ...p, csv2: f })); setValidation(null); setPhase('upload') }}
@@ -166,7 +166,7 @@ export const GlpiImport = () => {
             <FileUploadZone
               label="CSV 3 — Coûts"
               hint="Colonnes : Num_Ticket, Duration_second, Time_Cost, Fixed_Cost"
-              icon="💰"
+              icon="bi-currency-euro"
               accept=".csv"
               file={files.csv3}
               onFile={f => { setFiles(p => ({ ...p, csv3: f })); setValidation(null); setPhase('upload') }}
@@ -174,7 +174,7 @@ export const GlpiImport = () => {
             <FileUploadZone
               label="Images ZIP"
               hint="Images nommées par asset (ex. PC-ADM-001.png) — formats : jpg, jpeg, png, webp"
-              icon="🖼"
+              icon="bi-file-zip-fill"
               accept=".zip"
               file={files.zip}
               onFile={f => { setFiles(p => ({ ...p, zip: f })); setValidation(null); setPhase('upload') }}
@@ -187,12 +187,15 @@ export const GlpiImport = () => {
               onClick={handleValidate}
               disabled={!allFilesSelected || phase === 'validating'}
             >
-              {phase === 'validating' ? '⏳ Validation…' : '🔍 Vérifier les fichiers'}
+              {phase === 'validating'
+                ? <><i className="bi bi-hourglass-split" style={{ marginRight: 6 }} />Validation…</>
+                : <><i className="bi bi-search" style={{ marginRight: 6 }} />Vérifier les fichiers</>
+              }
             </button>
 
             {phase === 'validated' && validation?.canImport && (
               <button className="btn-import" onClick={handleImport}>
-                🚀 Lancer l'import
+                <i className="bi bi-rocket-takeoff-fill" style={{ marginRight: 6 }} />Lancer l'import
               </button>
             )}
 

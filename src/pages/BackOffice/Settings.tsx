@@ -8,16 +8,16 @@ import './Settings.css'
 // GLPI item types eligible for purge (test data).
 // We intentionally exclude: User, Profile, Entity, Config — these are system data.
 const PURGEABLE_ITEM_TYPES = [
-  { key: 'Computer', label: 'Ordinateurs', icon: '💻' },
-  { key: 'Monitor', label: 'Moniteurs', icon: '🖥️' },
-  { key: 'Printer', label: 'Imprimantes', icon: '🖨️' },
-  { key: 'NetworkEquipment', label: 'Équipements Réseau', icon: '🌐' },
-  { key: 'Phone', label: 'Téléphones', icon: '📱' },
-  { key: 'Peripheral', label: 'Périphériques', icon: '🔌' },
-  { key: 'Software', label: 'Logiciels', icon: '📦' },
-  { key: 'Ticket', label: 'Tickets', icon: '🎫' },
-  { key: 'CartridgeItem', label: 'Cartouches', icon: '🖋️' },
-  { key: 'ConsumableItem', label: 'Consommables', icon: '📎' },
+  { key: 'Computer',        label: 'Ordinateurs',     icon: 'bi-pc-display' },
+  { key: 'Monitor',         label: 'Moniteurs',        icon: 'bi-display-fill' },
+  { key: 'Printer',         label: 'Imprimantes',      icon: 'bi-printer-fill' },
+  { key: 'NetworkEquipment',label: 'Équipements Réseau',icon: 'bi-globe' },
+  { key: 'Phone',           label: 'Téléphones',       icon: 'bi-phone-fill' },
+  { key: 'Peripheral',      label: 'Périphériques',    icon: 'bi-plug-fill' },
+  { key: 'Software',        label: 'Logiciels',        icon: 'bi-box-fill' },
+  { key: 'Ticket',          label: 'Tickets',          icon: 'bi-ticket-detailed-fill' },
+  { key: 'CartridgeItem',   label: 'Cartouches',       icon: 'bi-pen-fill' },
+  { key: 'ConsumableItem',  label: 'Consommables',     icon: 'bi-paperclip' },
 ]
 
 export type ResetResult = {
@@ -129,7 +129,7 @@ export const Settings = () => {
       <section className="settings-section danger-section">
         <div className="section-header">
           <div className="section-title-group">
-            <h2>🗑️ Réinitialisation des données</h2>
+            <h2><i className="bi bi-trash-fill" style={{ marginRight: 8 }} />Réinitialisation des données</h2>
             <p className="section-description">
               Supprimez toutes les données de test. Les données système (utilisateurs, rôles, permissions, configuration) seront préservées.
             </p>
@@ -139,7 +139,7 @@ export const Settings = () => {
         {state === 'idle' && (
           <>
             <div className="preserve-notice">
-              <div className="preserve-icon">🔒</div>
+              <div className="preserve-icon"><i className="bi bi-lock-fill" /></div>
               <div>
                 <strong>Données préservées automatiquement :</strong>
                 <ul>
@@ -171,7 +171,7 @@ export const Settings = () => {
                       checked={selectedTypes.includes(type.key)}
                       onChange={() => toggleType(type.key)}
                     />
-                    <span className="chip-icon">{type.icon}</span>
+                    <i className={`bi ${type.icon} chip-icon`} />
                     <span className="chip-label">{type.label}</span>
                   </label>
                 ))}
@@ -183,7 +183,7 @@ export const Settings = () => {
               onClick={() => setState('confirming')}
               disabled={selectedTypes.length === 0}
             >
-              <span>🗑️</span> Réinitialiser les données ({selectedTypes.length} tables)
+              <i className="bi bi-trash-fill" style={{ marginRight: 6 }} />Réinitialiser les données ({selectedTypes.length} tables)
             </button>
           </>
         )}
@@ -216,7 +216,7 @@ export const Settings = () => {
             />
 
             <div className="post-reset-section">
-              <h3>📥 Importer de nouvelles données (CSV)</h3>
+              <h3><i className="bi bi-download" style={{ marginRight: 8 }} />Importer de nouvelles données (CSV)</h3>
               <p className="section-description">
                 Vous pouvez maintenant réalimenter les modules en important des fichiers CSV.
               </p>
@@ -236,11 +236,11 @@ export const Settings = () => {
       {/* Confirmation Modal */}
       {state === 'confirming' && (
         <ConfirmModal
-          title="⚠️ Confirmation de réinitialisation"
+          title="Confirmation de réinitialisation"
           message={`Vous êtes sur le point de supprimer définitivement toutes les données de ${selectedTypes.length} table(s). Cette action est irréversible.`}
           details={selectedTypes.map(key => {
             const t = PURGEABLE_ITEM_TYPES.find(p => p.key === key)
-            return t ? `${t.icon} ${t.label}` : key
+            return t ? t.label : key
           })}
           confirmText="Oui, réinitialiser"
           cancelText="Annuler"

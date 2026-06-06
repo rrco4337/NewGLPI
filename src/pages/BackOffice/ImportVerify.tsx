@@ -241,7 +241,7 @@ export const ImportVerify = () => {
         </button>
       </div>
 
-      {state.error && <div className="iv-error-banner">❌ {state.error}</div>}
+      {state.error && <div className="iv-error-banner"><i className="bi bi-x-circle-fill" style={{ marginRight: 7 }} />{state.error}</div>}
 
       {/* ── Tabs ───────────────────────────────────────────────────────────── */}
       <div className="iv-tabs">
@@ -251,10 +251,10 @@ export const ImportVerify = () => {
             className={`iv-tab ${tab === t ? 'active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'assets'  && '💻 Actifs'}
-            {t === 'tickets' && '🎫 Tickets'}
-            {t === 'costs'   && '💰 Coûts'}
-            {t === 'images'  && '🖼 Images'}
+            {t === 'assets'  && <><i className="bi bi-pc-display" style={{ marginRight: 5 }} />Actifs</>}
+            {t === 'tickets' && <><i className="bi bi-ticket-detailed-fill" style={{ marginRight: 5 }} />Tickets</>}
+            {t === 'costs'   && <><i className="bi bi-currency-euro" style={{ marginRight: 5 }} />Coûts</>}
+            {t === 'images'  && <><i className="bi bi-file-zip-fill" style={{ marginRight: 5 }} />Images</>}
             <span className="iv-tab-badge">{counts[t]}</span>
           </button>
         ))}

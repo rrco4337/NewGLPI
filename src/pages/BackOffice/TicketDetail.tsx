@@ -235,7 +235,7 @@ export const TicketDetail = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {ticket.documents!.map(doc => (
                   <div key={doc.id} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px', border: '1px solid #e2e8f0', fontSize: 13, color: '#374151' }}>
-                    📎 {doc.filename}
+                    <i className="bi bi-paperclip" style={{ marginRight: 5 }} />{doc.filename}
                   </div>
                 ))}
               </div>

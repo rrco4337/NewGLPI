@@ -112,7 +112,7 @@ export const Dashboard = () => {
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 22 }}>👋</span>
+          <i className="bi bi-hand-wave" style={{ fontSize: 22, color: '#f59e0b' }} />
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1e293b', letterSpacing: '-.4px' }}>
             {greeting}, Administrateur
           </h1>

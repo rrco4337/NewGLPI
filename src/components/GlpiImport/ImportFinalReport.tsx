@@ -5,61 +5,53 @@ type Props = {
   onReset: () => void
 }
 
-export const ImportFinalReport = ({ report, onReset }: Props) => {
-  const bannerClass = report.rolledBack
-    ? 'rollback'
-    : report.success
-    ? 'success'
-    : 'failure'
+const STATS = [
+  { key: 'users',     label: 'Utilisateurs',  icon: 'bi-person-fill' },
+  { key: 'computers', label: 'Ordinateurs',   icon: 'bi-pc-display' },
+  { key: 'monitors',  label: 'Moniteurs',     icon: 'bi-display-fill' },
+  { key: 'tickets',   label: 'Tickets',       icon: 'bi-ticket-detailed-fill' },
+  { key: 'documents', label: 'Images',        icon: 'bi-file-zip-fill' },
+  { key: 'costs',     label: 'Coûts',         icon: 'bi-currency-euro' },
+  { key: 'itemLinks', label: 'Liens actifs',  icon: 'bi-link-45deg' },
+] as const
 
-  const bannerText = report.rolledBack
-    ? '⏪ Import annulé — rollback effectué'
-    : report.success
-    ? '✅ Import réussi avec succès'
-    : '❌ Import échoué'
+export const ImportFinalReport = ({ report, onReset }: Props) => {
+  const bannerClass = report.rolledBack ? 'rollback' : report.success ? 'success' : 'failure'
 
   return (
     <div className="import-final-report">
       <h2>Rapport d'import</h2>
 
-      <div className={`result-banner ${bannerClass}`}>{bannerText}</div>
+      <div className={`result-banner ${bannerClass}`}>
+        {report.rolledBack ? (
+          <><i className="bi bi-skip-backward-fill" style={{ marginRight: 8 }} />Import annulé — rollback effectué</>
+        ) : report.success ? (
+          <><i className="bi bi-check-circle-fill" style={{ marginRight: 8 }} />Import réussi avec succès</>
+        ) : (
+          <><i className="bi bi-x-circle-fill" style={{ marginRight: 8 }} />Import échoué</>
+        )}
+      </div>
 
       {!report.rolledBack && (
         <div className="result-stats">
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.users}</span>
-            <span className="result-stat-label">👤 Utilisateurs</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.computers}</span>
-            <span className="result-stat-label">💻 Ordinateurs</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.monitors}</span>
-            <span className="result-stat-label">🖥 Moniteurs</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.tickets}</span>
-            <span className="result-stat-label">🎫 Tickets</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.documents}</span>
-            <span className="result-stat-label">🖼 Images</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.costs}</span>
-            <span className="result-stat-label">💰 Coûts</span>
-          </div>
-          <div className="result-stat">
-            <span className="result-stat-value">{report.created.itemLinks}</span>
-            <span className="result-stat-label">🔗 Liens actifs</span>
-          </div>
+          {STATS.map(({ key, label, icon }) => (
+            <div key={key} className="result-stat">
+              <span className="result-stat-value">{report.created[key as keyof typeof report.created]}</span>
+              <span className="result-stat-label">
+                <i className={`bi ${icon}`} style={{ marginRight: 5 }} />
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {report.rollbackErrors.length > 0 && (
         <div className="result-errors">
-          <h4>⚠ Erreurs lors du rollback</h4>
+          <h4>
+            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 6, color: '#f59e0b' }} />
+            Erreurs lors du rollback
+          </h4>
           <ul className="result-list">
             {report.rollbackErrors.map((e, i) => <li key={i}>{e}</li>)}
           </ul>
@@ -68,7 +60,10 @@ export const ImportFinalReport = ({ report, onReset }: Props) => {
 
       {report.errors.length > 0 && (
         <div className="result-errors">
-          <h4>❌ Erreurs d'import</h4>
+          <h4>
+            <i className="bi bi-x-circle-fill" style={{ marginRight: 6, color: '#ef4444' }} />
+            Erreurs d'import
+          </h4>
           <ul className="result-list">
             {report.errors.map((e, i) => <li key={i}>{e}</li>)}
           </ul>
@@ -77,7 +72,10 @@ export const ImportFinalReport = ({ report, onReset }: Props) => {
 
       {report.imageWarnings.length > 0 && (
         <div className="result-warnings">
-          <h4>⚠ Avertissements</h4>
+          <h4>
+            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 6, color: '#f59e0b' }} />
+            Avertissements
+          </h4>
           <ul className="result-list">
             {report.imageWarnings.map((w, i) => <li key={i}>{w}</li>)}
           </ul>
@@ -85,7 +83,8 @@ export const ImportFinalReport = ({ report, onReset }: Props) => {
       )}
 
       <button className="btn-new-import" onClick={onReset}>
-        ← Nouvel import
+        <i className="bi bi-arrow-left" style={{ marginRight: 6 }} />
+        Nouvel import
       </button>
     </div>
   )
