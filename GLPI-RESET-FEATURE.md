@@ -1,368 +1,93 @@
-# Fonctionnalité de Réinitialisation GLPI
+Analyse Détaillée : Flux API et Mapping des Données (Reset & Import)
+Ce document explique en détail et techniquement quelles API sont appelées, pour quelles données (CSV par CSV), et comment les données sont associées (Mapping) dans l'application.
 
-## 📋 Vue d'ensemble
+1. Processus de Réinitialisation (/reset)
+La réinitialisation est divisée en deux moteurs distincts selon l'onglet choisi.
 
-La fonctionnalité de **réinitialisation GLPI** permet aux administrateurs de purger entièrement les données de test dans une ou plusieurs entités GLPI de manière sécurisée et ordonnée. Cette opération supprime définitivement les objets via l'API DELETE de GLPI avec résolution automatique des dépendances entre objets.
+A. Reset GLPI (Purge via API REST GLPI)
+Géré par GlpiResetPanel.tsx et la fonction purgeAllItems dans src/api/glpi.ts. Il cible 17 types d'objets GLPI (Tickets, Computers, Monitors, Users, etc.).
 
-## 🎯 Objectif
+Séquence des appels API pour les équipements standards :
 
-- Nettoyer les données de test dans GLPI
-- Réinitialiser une ou plusieurs entités GLPI
-- Résoudre automatiquement les dépendances lors de la suppression
-- Fournir un retour d'exécution détaillé à l'utilisateur
+Lister les éléments existants : GET /apirest.php/{ItemType}?range=0-9999
+Purger par lot (Batch de 50) : L'application extrait les IDs existants et utilise la méthode de suppression de masse GLPI en forçant la purge définitive (pas de corbeille). DELETE /apirest.php/{ItemType}?force_purge=1
+Payload (Body) : { "input": [ {"id": 1}, {"id": 2} ] }
+Séquence des appels API pour les Utilisateurs (Exception) : La fonction purgeNonAdminUsers est conçue pour ne supprimer que les utilisateurs standards, préservant les administrateurs.
 
-## 🏗️ Architecture
+GET /apirest.php/Profile : Récupère tous les profils et isole ceux dont le nom contient "admin".
+GET /apirest.php/Profile_User : Récupère les liaisons Utilisateur ↔ Profil pour identifier les IDs des utilisateurs admins.
+GET /apirest.php/User : Récupère tous les utilisateurs.
+DELETE /apirest.php/User?force_purge=1 : Purge uniquement les IDs non-admins identifiés. (L'ID 1 de GLPI est toujours préservé en dur).
+B. Reset SQLite (Purge locale)
+Géré par SqliteResetPanel.tsx et src/api/sqliteReset.ts. Il communique avec un backend custom (Node/Express/autre) qui gère la base de données locale du projet frontend.
 
-### Frontend (Vue.js 3)
+Lister les tables : GET /api/sqlite/tables
+Vider les tables : POST /api/sqlite/tables/reset avec le payload { "tableNames": ["table1", "table2"] }
+2. Processus d'Importation (/import)
+Géré par importOrchestrator.ts. L'importation s'exécute de façon séquentielle stricte car les données dépendent les unes des autres.
 
-#### Pages
-- **[src/pages/dataReset/DataResetPage.vue](../newApp/src/pages/dataReset/DataResetPage.vue)**
-  - Page conteneur principal avec onglets (GLPI / SQLite)
-  - Bascule entre les deux modes de réinitialisation
+Pré-requis (Phase 1) : Les Listes Déroulantes (Dropdowns)
+Avant d'importer les fichiers, l'orchestrateur parse les colonnes de catégories (Status, Location, Manufacturer, Model) du CSV 1. Il appelle GET /apirest.php/State, Location, Manufacturer, ComputerModel, etc. Si une valeur (ex: Fabricant "Dell") du CSV n'existe pas dans GLPI, l'orchestrateur la crée à la volée via POST /apirest.php/Manufacturer avec le payload { "input": { "name": "Dell" } } et récupère son ID.
 
-#### Composants
-- **[src/components/dataReset/DataResetPanel.vue](../newApp/src/components/dataReset/DataResetPanel.vue)**
-  - Panel GLPI : sélection des entités et des types de données
-  - Affichage du journal d'exécution et du résumé
-  - Bouton de lancement du processus
+A. CSV 1 : Inventaire des Équipements (test-feuille1.csv)
+Colonnes CSV : Name, Status, Location, Manufacturer, Item_Type, Model, Inventory_Number, User
 
-- **[src/components/dataReset/GlpiEntitySelector.vue](../newApp/src/components/dataReset/GlpiEntitySelector.vue)**
-  - Sélecteur arborescent des entités GLPI
-  - Boutons de sélection/désélection globale
-  - Option pour inclure les sous-entités (récursion)
+1. Vérification des utilisateurs
 
-#### Composables (Logique métier)
-- **[src/composables/dataReset/useDataReset.js](../newApp/src/composables/dataReset/useDataReset.js)**
-  - Gestion de l'état de la réinitialisation
-  - Chargement des entités GLPI
-  - Orchestration du processus de purge
-  - Suivi des logs et du résumé final
+GLPI a besoin de la clé étrangère de l'utilisateur (users_id). Le script extrait la colonne User, vérifie si l'utilisateur existe dans GLPI via GET /apirest.php/User et le crée si nécessaire (POST /apirest.php/User).
+2. Création de l'équipement
 
-#### Services (API Client)
-- **[src/services/dataReset/glpiResetApi.js](../newApp/src/services/dataReset/glpiResetApi.js)**
-  - Wrapper API pour les endpoints GLPI Reset
-  - Listage des entités GLPI
-  - Changement d'entité active
-  - Listage des IDs d'objets (avec pagination)
-  - Suppression d'objets par lots
+Selon la colonne Item_Type, l'API appelée sera POST /apirest.php/Computer ou POST /apirest.php/Monitor.
+Mapping CSV → GLPI (Payload JSON) :
+Name ➔ input.name
+Inventory_Number ➔ input.otherserial
+Status ➔ input.states_id (ID GLPI récupéré en phase 1)
+Location ➔ input.locations_id (ID GLPI)
+Manufacturer ➔ input.manufacturers_id (ID GLPI)
+Model ➔ input.computermodels_id (ou monitormodels_id) (ID GLPI)
+User ➔ input.users_id (ID GLPI)
+B. L'Archive ZIP (Images / Photos)
+Les images sont extraites du ZIP en mémoire. L'orchestrateur fait correspondre le nom du fichier (ex: PC-ADM-001.png) avec le champ Name du CSV 1. S'il y a correspondance, il a l'ID GLPI de l'équipement.
 
-- **[src/services/dataReset/resetConfig.js](../newApp/src/services/dataReset/resetConfig.js)**
-  - Configuration des types d'objets purgeables (itemtypes)
-  - Ordre de suppression (weight) basé sur les dépendances
-  - Constantes de configuration (taille des lots, nombre de passes)
+Séquence des appels API :
 
-### Backend (Java Spring Boot)
+Upload du document (seul) : POST /apirest.php/Document
+Le payload est un "multipart/form-data" contenant un fichier binaire et un JSON manifest manifestant le nom du fichier. Il retourne l'ID du document GLPI (docId).
+Liaison du document à l'équipement : POST /apirest.php/Document_Item
+Payload : { "input": { "documents_id": docId, "items_id": AssetId, "itemtype": "Computer" } }
+C. CSV 2 : Tickets d'Incidents (test-feuille2.csv)
+Colonnes CSV : Ref_Ticket, Date, Heure, Type, Titre, Description, Status, Priority, Items
 
-#### Contrôleur
-- **[back-sqlite/src/main/java/com/example/backsqlite/controller/reset/SqliteTableResetController.java](../back-sqlite/src/main/java/com/example/backsqlite/controller/reset/SqliteTableResetController.java)**
-  - Endpoint `GET /api/sqlite/tables` : liste des tables SQLite
-  - Endpoint `POST /api/sqlite/tables/reset` : réinitialise les tables sélectionnées
+1. Création du Ticket
 
-#### Service
-- **[back-sqlite/src/main/java/com/example/backsqlite/service/reset/SqliteTableResetService.java](../back-sqlite/src/main/java/com/example/backsqlite/service/reset/SqliteTableResetService.java)**
-  - Logique métier de réinitialisation SQLite
-  - Validation des tables
-  - Suppression des lignes par table
-  - Transaction managée
+API : POST /apirest.php/Ticket
+Mapping CSV → GLPI (Payload JSON) :
+Titre ➔ input.name
+Description ➔ input.content
+Type ➔ input.type (Converti en int : 1 pour Incident, 2 pour Request)
+Status ➔ input.status (Converti en int : 1 pour New, 2 pour Assigned, 5 pour Solved, etc.)
+Priority ➔ input.priority (Converti en int de 1 à 5)
+Date + Heure ➔ input.date (Reformaté en YYYY-MM-DD HH:MM:SS)
+L'API retourne un TicketId GLPI natif. Le code garde en mémoire un dictionnaire associant votre Ref_Ticket (du CSV) au nouveau TicketId généré par GLPI.
 
-#### Repository
-- **[back-sqlite/src/main/java/com/example/backsqlite/repository/reset/SqliteTableResetRepository.java](../back-sqlite/src/main/java/com/example/backsqlite/repository/reset/SqliteTableResetRepository.java)**
-  - Accès direct à la base de données SQLite
-  - Listage des tables
-  - Suppression des lignes
+2. Liaison des équipements impliqués
 
-## 📊 Modèle de données
+La colonne Items contient un tableau JSON de noms d'équipements (ex: ["PC-ADM-001", "MN-DIR-002"]).
+Pour chaque équipement mentionné, le script retrouve l'ID GLPI de l'équipement (créé grâce au CSV 1).
+API : POST /apirest.php/Item_Ticket
+Payload : { "input": { "tickets_id": TicketId, "itemtype": "Computer", "items_id": AssetId } }
+D. CSV 3 : Coûts des Tickets (test-feuille3.csv)
+Colonnes CSV : Num_Ticket, Duration_second, Time_Cost, Fixed_Cost
 
-### DTOs (Data Transfer Objects)
+L'orchestrateur utilise le Num_Ticket de votre CSV, cherche dans son dictionnaire (créé à l'étape précédente) pour retrouver le vrai TicketId GLPI associé.
 
-#### GLPI Reset
-```typescript
-// Aucun DTO backend pour GLPI (communication directe via API REST externe)
-// Client utilise directement les endpoints GLPI
-```
+API : POST /apirest.php/TicketCost
+Mapping CSV → GLPI (Payload JSON) :
+(Généré) ➔ input.name = "Coût d'intervention"
+(Dictionnaire) ➔ input.tickets_id = TicketId GLPI
+Duration_second ➔ input.actiontime (durée en secondes)
+Time_Cost ➔ input.cost_time (valeur financière du temps passé)
+Fixed_Cost ➔ input.cost_fixed (coût matériel / forfaitaire fixe)
+Résumé de la mécanique (Rollback)
+L'intégralité du code (dans importOrchestrator.ts) gère ces appels dans un bloc try/catch. Si n'importe laquelle de ces requêtes GLPI venait à échouer (erreur 400 ou 500) au milieu de l'import, la fonction de rollback() est exécutée et lance des requêtes DELETE (identiques à la mécanique de reset GLPI) pour détruire tout ce qui a été partiellement importé, garantissant l'intégrité de GLPI.
 
-#### SQLite Reset
-```typescript
-// SqliteTableResetRequest
-{
-  tableNames: string[]
-}
-
-// SqliteTableResetResponse
-{
-  success: boolean,
-  message: string,
-  totalDeleted: number,
-  resetTables: string[]
-}
-
-// SqliteTableDto
-{
-  name: string,
-  rowCount: number
-}
-```
-
-## 🔄 Processus de purge GLPI
-
-### Étapes du processus
-
-1. **Sélection des entités**
-   - L'utilisateur sélectionne une ou plusieurs entités GLPI
-   - Option pour inclure les sous-entités (récursion)
-
-2. **Sélection des types de données**
-   - Sélection des itemtypes à purger (coché par défaut)
-   - Les types disponibles : Tickets, Problèmes, Changements, Ordinateurs, etc.
-
-3. **Activation du contexte**
-   - Pour chaque entité sélectionnée, activation via `/changeActiveEntities`
-   - Cette opération limite les suppressions à l'entité active uniquement
-
-4. **Purge par itemtype**
-   - Récupération des IDs d'objets (pagination par lots de 200)
-   - Suppression par lots de 100 IDs avec `force_purge: true`
-   - Logging détaillé de chaque opération
-
-5. **Résolution des dépendances**
-   - Jusqu'à 4 passes de suppression (`MAX_PASSES`)
-   - Chaque pass réessaie les itemtypes ayant échoué
-   - Ordre intelligent basé sur le `weight` des itemtypes
-
-### Itemtypes purgeables
-
-| Catégorie | Itemtype | Label | Weight |
-|-----------|----------|-------|--------|
-| **ITIL** | Ticket | Tickets | 10 |
-| | Problem | Problèmes | 11 |
-| | Change | Changements | 12 |
-| **Actifs** | Computer | Ordinateurs | 30 |
-| | Monitor | Écrans | 31 |
-| | NetworkEquipment | Équipements réseau | 32 |
-| | Peripheral | Périphériques | 33 |
-| | Phone | Téléphones | 34 |
-| | Printer | Imprimantes | 35 |
-| **Logiciels** | SoftwareLicense | Licences logicielles | 40 |
-| | Software | Logiciels | 41 |
-| **Gestion** | Document | Documents | 50 |
-| | Contract | Contrats | 51 |
-| | Supplier | Fournisseurs | 52 |
-| | Contact | Contacts | 53 |
-| | Budget | Budgets | 54 |
-
-### Ordre de suppression
-
-Les itemtypes sont triés par **weight ascendant** :
-- Les plus bas (10-12) : objets ITIL dépendants
-- Puis (30-35) : actifs (assets)
-- Puis (40-41) : logiciels et licences
-- Les plus hauts (50-54) : données de référence
-
-Cette hiérarchie évite les erreurs de contrainte de clé étrangère.
-
-## 🔐 Authentification et autorisation
-
-- Accès limité aux utilisateurs authentifiés GLPI
-- Session GLPI obligatoire (Session-Token)
-- Toutes les requêtes incluent le Session-Token de l'utilisateur connecté
-- Pas de proxy backend pour les resets GLPI (appels directs depuis le client)
-
-## ⚙️ Configuration
-
-### Variables d'environnement
-```env
-# Frontend (.env)
-VITE_GLPI_API_BASE_URL=/glpi           # URL de base de l'API GLPI
-VITE_GLPI_API_KEY=YOUR_GLPI_API_KEY    # App-Token GLPI
-```
-
-### Constantes de configuration
-```javascript
-// resetConfig.js
-DELETE_CHUNK_SIZE = 100    // IDs supprimés par requête DELETE
-MAX_PASSES = 4             // Nombre maximal de passes de retry
-PAGE_SIZE = 200            // IDs listés par requête GET
-```
-
-## 📝 Routes et endpoints
-
-### Frontend
-```
-/reset                    // Redirection vers /reset/glpi
-/reset/glpi              // Réinitialisation GLPI
-/reset/sqlite            // Réinitialisation SQLite
-```
-
-### Backend API
-```
-GET  /api/sqlite/tables                // Liste les tables SQLite
-POST /api/sqlite/tables/reset          // Réinitialise les tables
-```
-
-### API GLPI (endpoints utilisés)
-```
-GET    /Entity                         // Liste les entités
-POST   /changeActiveEntities           // Active une entité
-GET    /{itemtype}?only_id=true       // Liste les IDs d'objets
-DELETE /{itemtype}                     // Supprime les objets
-```
-
-## 💾 Flux de données
-
-### Réinitialisation GLPI
-
-```
-┌─────────────────────┐
-│  DataResetPage.vue  │ (Page conteneur)
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│     DataResetPanel.vue                  │ (Composant GLPI)
-│  - Sélection des entités               │
-│  - Sélection des itemtypes             │
-│  - Affichage des logs                  │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  useDataReset.js                        │ (Composable)
-│  - runReset()                          │
-│  - Orchestration du processus          │
-│  - Logging                             │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  glpiResetApi.js                        │ (Service API)
-│  - listEntities()                      │
-│  - changeActiveEntities()              │
-│  - listItemIds()                       │
-│  - deleteItems()                       │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-     ┌─────────────┐
-     │   API GLPI  │ (Endpoints REST)
-     └─────────────┘
-```
-
-### Réinitialisation SQLite
-
-```
-┌─────────────────────┐
-│  DataResetPage.vue  │ (Page conteneur)
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│     SqliteResetPanel.vue                │ (Composant SQLite)
-│  - Sélection des tables                │
-│  - Affichage des résultats             │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  sqliteResetApi.js                      │ (Service API)
-│  - listTables()                        │
-│  - resetTables()                       │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  SqliteTableResetController.java        │ (Contrôleur Backend)
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  SqliteTableResetService.java           │ (Service Backend)
-│  - listTables()                        │
-│  - resetTables()                       │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────┐
-│  SqliteTableResetRepository.java        │ (Repository)
-│  - listTableNames()                    │
-│  - deleteAllRows()                     │
-└──────────┬──────────────────────────────┘
-           │
-           ▼
-     ┌──────────────┐
-     │ BD SQLite    │ (Base de données)
-     └──────────────┘
-```
-
-## 🛡️ Gestion des erreurs
-
-### GLPI
-- Détection d'erreurs au format GLPI : `["ERROR_xxx", "message"]`
-- Récupération des messages d'erreur lisibles
-- Retry automatique en cas d'erreurs de dépendances (jusqu'à `MAX_PASSES`)
-- Logging complet de chaque tentative
-
-### SQLite
-- Validation des tables contre la liste réelle (injection SQL)
-- Suppression conditionnelle (seulement les tables existantes)
-- Transaction managée par Spring
-- Logging des opérations
-
-## 📊 Retours utilisateur
-
-### Logs en temps réel
-```
-[14:23:01] info  Entité "Société A" : activation du contexte...
-[14:23:02] info  Tickets : chargement des IDs...
-[14:23:03] success Tickets : 45 item(s) supprimé(s), 0 echec(s).
-[14:23:04] warning Ordinateurs : échec d'un lot (400) ...
-[14:23:05] info  Pass 2/4 : Ordinateurs (retry)...
-[14:23:06] success Ordinateurs : 12 item(s) supprimé(s), 8 echec(s).
-```
-
-### Résumé final
-```
-Entité "Société A"
-├── Supprimé : 150 items
-├── Échoué : 8 items
-└── Temps : 2m 34s
-```
-
-## 🔄 État du développement
-
-### ✅ Implémenté
-- Sélection des entités GLPI
-- Sélection des itemtypes
-- Purge ordonnée avec résolution des dépendances
-- Logging détaillé en temps réel
-- Support SQLite (alternative)
-- Gestion des erreurs GLPI
-
-### ⚠️ À noter
-- Pas de proxy backend pour GLPI (sécurité : clé API exposée au client)
-- Session-Token GLPI nécessaire et actif
-- Suppression définitive avec `force_purge: true`
-- Pas de confirmation avant-après (à considérer pour sécurité)
-
-## 🚀 Utilisation
-
-### Interface utilisateur
-
-1. Accéder à **Réinitialisation → GLPI**
-2. Sélectionner une ou plusieurs entités
-3. Cocher les types de données à purger
-4. Cocher la case "J'ai compris..."
-5. Cliquer sur "Lancer la réinitialisation"
-6. Suivre les logs en temps réel
-7. Consulter le résumé final
-
-### Prérequis
-- Utilisateur authentifié GLPI
-- Session active dans GLPI
-- Permissions administrateur GLPI (pour suppression)
-- `VITE_GLPI_API_BASE_URL` et `VITE_GLPI_API_KEY` configurés
-
-## 📚 Références
-
-- [NEWAPP-CODE-OVERVIEW.md](NEWAPP-CODE-OVERVIEW.md#reinitialisation-de-donnees-glpi) - Section réinitialisation
-- [GUIDE-PACKAGES-ET-FONCTIONNALITES.md](GUIDE-PACKAGES-ET-FONCTIONNALITES.md) - Configuration et sécurité
-- [API GLPI Documentation](https://glpi-project.org/api/) - Endpoints GLPI

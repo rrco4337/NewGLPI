@@ -1,0 +1,201 @@
+Name,Status,Location,Manufacturer,Item_Type,Model,Inventory_Number,User
+MO-FIN-001,En panne,Magasin Informatique,Lenovo,Monitor,Model 820,ITU-2026-0001,User 1
+LA-HR-002,En prOduction,Direction,Epson,Laptop,Model 765,ITU-2026-0002,User 2
+RO-FIN-003,Maintenance,Bibliothèque,Epson,Router,Model 576,ITU-2026-0003,
+UP-ADM-004,Maintenance,Magasin Informatique,Samsung,UPS,Model 339,ITU-2026-0004,User 4
+,En prOduction,Bibliothèque,Apple,Switch,Model 413,ITU-2026-0005,User 5
+LA-FIN-006,Maintenance,Salle de Conférence,Apple,Laptop,Model 657,ITU-2026-0006,User 6
+CO-IT-007,Mis au rebut,Comptabilité,Epson,Computer,Model 702,ITU-2026-0007,
+SW-FIN-008,En production,Salle de Conférence,Samsung,Switch,Model 586,ITU-2026-0008,User 8
+SW-ADM-009,En production,Finance,Cisco,Switch,Model 121,ITU-2026-0009,User 9
+CO-ADM-010,En prOduction,Laboratoire IA,Epson,Computer,Model 608,ITU-2026-0010,
+MO-FIN-011,Mis au rebut,Laboratoire IA,LG,Monitor,Model 164,ITU-2026-0011,User 11
+SC-HR-012,Mis au rebut,Magasin Informatique,Brother,Scanner,Model 224,ITU-2026-0012,User 12
+SC-ADM-013,Mis au rebut,Direction,Dell,Scanner,Model 390,ITU-2026-0013,
+UP-HR-014,Mis au rebut,Comptabilité,Cisco,UPS,Model 678,ITU-2026-0014,User 14
+CO-FIN-015,En prOduction,Comptabilité,HP,Computer,Model 662,ITU-2026-0015,User 15
+UP-IT-016,En prOduction,Bibliothèque,Samsung,UPS,Model 196,ITU-2026-0016,User 16
+,Mis au rebut,Laboratoire IA,Canon,Printer,Model 803,ITU-2026-0017,User 17
+MO-HR-018,En production,Salle de Conférence,Lenovo,Monitor,Model 906,ITU-2026-0018,User 18
+SW-ADM-019,Mis au rebut,Administration,Brother,Switch,Model 334,ITU-2026-0019,User 19
+PR-HR-020,En panne,Comptabilité,Cisco,Printer,Model 439,ITU-2026-0020,User 20
+CO-IT-021,En panne,Finance,HP,Computer,Model 899,ITU-2026-0021,User 21
+PR-FIN-022,En panne,Salle de Conférence,Brother,Printer,Model 489,ITU-2026-0022,User 22
+RO-HR-023,En panne,Comptabilité,HP,Router,Model 515,ITU-2026-0023,
+SW-ADM-024,En panne,Magasin Informatique,Samsung,Switch,Model 394,ITU-2026-0024,User 24
+SC-ADM-025,En panne,Secrétariat,Canon,Scanner,Model 685,ITU-2026-0025,User 25
+RO-IT-026,En stock,Direction,LG,Router,Model 792,ITU-2026-0026,User 26
+CO-IT-027,En prOduction,Magasin Informatique,HP,Computer,Model 658,ITU-2026-0027,User 27
+RO-IT-028,En prduction,Direction,Samsung,Router,Model 467,ITU-2026-0028,User 28
+SC-FIN-029,En stock,Finance,LG,Scanner,Model 981,ITU-2026-0029,User 29
+LA-FIN-030,En prOduction,Direction,Cisco,Laptop,Model 761,ITU-2026-0030,User 30
+UP-IT-031,En prOduction,Finance,HP,UPS,Model 709,ITU-2026-0031,User 31
+PR-FIN-032,Mis au rebut,Administration,HP,Printer,Model 140,ITU-2026-0032,
+PR-ADM-033,En production,Laboratoire IA,Apple,Printer,Model 807,ITU-2026-0033,User 33
+CO-FIN-034,En production,Salle de Conférence,HP,Computer,Model 745,ITU-2026-0034,
+CO-HR-035,Mis au rebut,Finance,Cisco,Computer,Model 386,ITU-2026-0035,User 35
+SC-FIN-036,En stock,Direction,Apple,Scanner,Model 149,ITU-2026-0036,User 36
+SC-IT-037,En production,Secrétariat,Canon,Scanner,Model 878,ITU-2026-0037,User 37
+CO-HR-038,En stock,Salle de Conférence,Canon,Computer,Model 269,ITU-2026-0038,User 38
+LA-IT-039,En production,Laboratoire IA,Epson,Laptop,Model 229,ITU-2026-0039,
+RO-HR-040,En panne,Laboratoire IA,Samsung,Router,Model 261,ITU-2026-0040,
+SC-ADM-041,En prOduction,Finance,Brother,Scanner,Model 309,ITU-2026-0041,User 41
+CO-ADM-042,En stock,Secrétariat,Canon,Computer,Model 803,ITU-2026-0042,User 42
+LA-IT-043,Maintenance,Finance,Epson,Laptop,Model 946,ITU-2026-0043,User 43
+LA-FIN-044,En production,Administration,Cisco,Laptop,Model 812,ITU-2026-0044,
+UP-FIN-045,En prduction,Salle de Conférence,Epson,UPS,Model 516,ITU-2026-0045,User 45
+SW-IT-046,En prduction,Salle de Conférence,Lenovo,Switch,Model 217,ITU-2026-0046,User 46
+SC-FIN-047,Mis au rebut,Secrétariat,Samsung,Scanner,Model 392,ITU-2026-0047,
+SW-HR-048,En production,Comptabilité,HP,Switch,Model 226,ITU-2026-0048,
+UP-ADM-049,Mis au rebut,Magasin Informatique,Brother,UPS,Model 831,ITU-2026-0049,User 49
+UP-HR-050,Mis au rebut,Administration,HP,UPS,Model 806,ITU-2026-0050,
+PR-FIN-051,Maintenance,Bibliothèque,Samsung,Printer,Model 644,ITU-2026-0051,User 51
+CO-ADM-052,En prOduction,Direction,Cisco,Computer,Model 863,ITU-2026-0052,User 52
+SW-ADM-053,Mis au rebut,Comptabilité,Samsung,Switch,Model 530,ITU-2026-0053,
+SW-IT-054,En panne,Finance,Apple,Switch,Model 838,ITU-2026-0054,User 54
+SW-ADM-055,Maintenance,Comptabilité,HP,Switch,Model 339,ITU-2026-0055,User 55
+RO-FIN-056,En panne,Salle de Conférence,Dell,Router,Model 314,ITU-2026-0056,User 56
+SW-IT-057,En panne,Direction,HP,Switch,Model 374,ITU-2026-0057,User 57
+RO-ADM-058,Maintenance,Administration,Dell,Router,Model 884,ITU-2026-0058,User 58
+SC-ADM-059,En production,Secrétariat,Cisco,Scanner,Model 428,ITU-2026-0059,User 59
+MO-ADM-060,En stock,RH,Brother,Monitor,Model 420,ITU-2026-0060,User 60
+CO-IT-061,En stock,Magasin Informatique,LG,Computer,Model 945,ITU-2026-0061,User 61
+,En stock,Administration,HP,Scanner,Model 546,ITU-2026-0062,User 62
+PR-HR-063,En prOduction,Magasin Informatique,Apple,Printer,Model 449,ITU-2026-0063,User 63
+LA-IT-064,En panne,Finance,LG,Laptop,Model 481,ITU-2026-0064,User 64
+CO-IT-065,En production,Bibliothèque,LG,Computer,Model 904,ITU-2026-0065,User 65
+MO-FIN-066,En prOduction,RH,Lenovo,Monitor,Model 946,ITU-2026-0066,User 66
+SW-ADM-067,En production,Magasin Informatique,Cisco,Switch,Model 422,ITU-2026-0067,User 67
+MO-IT-068,Mis au rebut,Laboratoire IA,Lenovo,Monitor,Model 687,ITU-2026-0068,
+UP-ADM-069,En stock,Direction,HP,UPS,Model 955,ITU-2026-0069,User 69
+RO-FIN-070,En production,Comptabilité,Dell,Router,Model 556,ITU-2026-0070,User 70
+CO-ADM-071,En prOduction,Secrétariat,LG,Computer,Model 918,ITU-2026-0071,
+CO-ADM-072,En prduction,Bibliothèque,Dell,Computer,Model 177,ITU-2026-0072,User 72
+SW-ADM-073,Maintenance,Laboratoire IA,Dell,Switch,Model 410,ITU-2026-0073,User 73
+SC-HR-074,En panne,Comptabilité,Dell,Scanner,Model 897,ITU-2026-0074,User 74
+SC-IT-075,Mis au rebut,Finance,Lenovo,Scanner,Model 746,ITU-2026-0075,User 75
+CO-IT-076,Maintenance,Finance,Cisco,Computer,Model 264,ITU-2026-0076,
+CO-HR-077,Maintenance,Secrétariat,Apple,Computer,Model 140,ITU-2026-0077,User 77
+SW-HR-078,En stock,Secrétariat,LG,Switch,Model 670,ITU-2026-0078,User 78
+MO-HR-079,Mis au rebut,RH,Brother,Monitor,Model 362,ITU-2026-0079,User 79
+SC-FIN-080,Maintenance,Direction,Epson,Scanner,Model 578,ITU-2026-0080,User 80
+SW-IT-081,Mis au rebut,Administration,Dell,Switch,Model 868,ITU-2026-0081,
+LA-ADM-082,En stock,Salle de Conférence,Epson,Laptop,Model 143,ITU-2026-0082,User 82
+CO-ADM-083,En stock,Magasin Informatique,Dell,Computer,Model 729,ITU-2026-0083,User 83
+MO-HR-084,Maintenance,Comptabilité,Lenovo,Monitor,Model 735,ITU-2026-0084,User 84
+SW-IT-085,Maintenance,Bibliothèque,Lenovo,Switch,Model 348,ITU-2026-0085,User 85
+RO-FIN-086,Mis au rebut,Direction,Lenovo,Router,Model 766,ITU-2026-0086,User 86
+CO-IT-087,En panne,Bibliothèque,Brother,Computer,Model 623,ITU-2026-0087,User 87
+,En prduction,Laboratoire IA,Apple,Computer,Model 589,ITU-2026-0088,
+PR-FIN-089,Mis au rebut,Finance,Canon,Printer,Model 642,ITU-2026-0089,User 89
+CO-FIN-090,En production,Laboratoire IA,Dell,Computer,Model 778,ITU-2026-0090,User 90
+SC-HR-091,Mis au rebut,Laboratoire IA,Dell,Scanner,Model 492,ITU-2026-0091,
+CO-ADM-092,En panne,Secrétariat,HP,Computer,Model 897,ITU-2026-0092,User 92
+PR-FIN-093,En prOduction,RH,Canon,Printer,Model 174,ITU-2026-0093,User 93
+UP-HR-094,En stock,Administration,Dell,UPS,Model 342,ITU-2026-0094,User 94
+UP-ADM-095,En panne,Comptabilité,Canon,UPS,Model 941,ITU-2026-0095,User 95
+,Mis au rebut,Finance,Cisco,UPS,Model 494,ITU-2026-0096,User 96
+MO-ADM-097,En panne,Laboratoire IA,HP,Monitor,Model 782,ITU-2026-0097,User 97
+SW-IT-098,En production,Comptabilité,Epson,Switch,Model 180,ITU-2026-0098,User 98
+PR-HR-099,Mis au rebut,Bibliothèque,Samsung,Printer,Model 326,ITU-2026-0099,User 99
+UP-HR-100,Maintenance,Bibliothèque,Samsung,UPS,Model 486,ITU-2026-0100,User 100
+CO-IT-101,Maintenance,RH,Epson,Computer,Model 230,ITU-2026-0101,User 101
+PR-IT-102,Maintenance,Comptabilité,Lenovo,Printer,Model 281,ITU-2026-0102,User 102
+MO-FIN-103,En production,Comptabilité,Lenovo,Monitor,Model 663,ITU-2026-0103,User 103
+RO-IT-104,Mis au rebut,Administration,Apple,Router,Model 720,ITU-2026-0104,User 104
+MO-FIN-105,Mis au rebut,Comptabilité,Brother,Monitor,Model 172,ITU-2026-0105,User 105
+SW-IT-106,En panne,Bibliothèque,Dell,Switch,Model 368,ITU-2026-0106,User 106
+SC-HR-107,En panne,Finance,HP,Scanner,Model 955,ITU-2026-0107,User 107
+RO-IT-108,Maintenance,Salle de Conférence,Apple,Router,Model 139,ITU-2026-0108,User 108
+UP-ADM-109,Mis au rebut,RH,Apple,UPS,Model 897,ITU-2026-0109,User 109
+CO-ADM-110,En stock,Bibliothèque,Lenovo,Computer,Model 276,ITU-2026-0110,
+SW-ADM-111,Maintenance,Salle de Conférence,Canon,Switch,Model 188,ITU-2026-0111,User 111
+SW-FIN-112,En production,RH,Lenovo,Switch,Model 486,ITU-2026-0112,User 112
+CO-HR-113,En production,Bibliothèque,LG,Computer,Model 572,ITU-2026-0113,User 113
+SC-HR-114,En prOduction,Magasin Informatique,HP,Scanner,Model 502,ITU-2026-0114,User 114
+PR-FIN-115,En prOduction,Administration,Brother,Printer,Model 680,ITU-2026-0115,
+SW-ADM-116,Mis au rebut,Magasin Informatique,Apple,Switch,Model 364,ITU-2026-0116,User 116
+CO-FIN-117,Maintenance,RH,Apple,Computer,Model 472,ITU-2026-0117,User 117
+PR-HR-118,Mis au rebut,Secrétariat,Canon,Printer,Model 743,ITU-2026-0118,
+SW-HR-119,En production,Salle de Conférence,HP,Switch,Model 483,ITU-2026-0119,User 119
+CO-ADM-120,En prOduction,Salle de Conférence,Lenovo,Computer,Model 305,ITU-2026-0120,User 120
+PR-HR-121,En stock,Administration,HP,Printer,Model 494,ITU-2026-0121,User 121
+UP-IT-122,En stock,Laboratoire IA,HP,UPS,Model 918,ITU-2026-0122,
+SC-ADM-123,En prOduction,Finance,LG,Scanner,Model 393,ITU-2026-0123,User 123
+MO-IT-124,En panne,Laboratoire IA,HP,Monitor,Model 565,ITU-2026-0124,
+UP-HR-125,En production,Magasin Informatique,Apple,UPS,Model 941,ITU-2026-0125,User 125
+UP-HR-126,En panne,Direction,Apple,UPS,Model 715,ITU-2026-0126,User 126
+SW-HR-127,Maintenance,Laboratoire IA,Samsung,Switch,Model 996,ITU-2026-0127,User 127
+UP-IT-128,En panne,Administration,Canon,UPS,Model 351,ITU-2026-0128,User 128
+,En stock,Laboratoire IA,Apple,UPS,Model 678,ITU-2026-0129,User 129
+UP-ADM-130,En production,Bibliothèque,Lenovo,UPS,Model 767,ITU-2026-0130,
+CO-HR-131,Maintenance,Direction,Lenovo,Computer,Model 537,ITU-2026-0131,User 131
+RO-HR-132,En production,RH,Canon,Router,Model 421,ITU-2026-0132,User 132
+RO-HR-133,En prOduction,Direction,LG,Router,Model 430,ITU-2026-0133,User 133
+PR-FIN-134,En production,Finance,Brother,Printer,Model 901,ITU-2026-0134,
+PR-IT-135,Mis au rebut,Bibliothèque,Brother,Printer,Model 647,ITU-2026-0135,User 135
+MO-ADM-136,En production,Comptabilité,Brother,Monitor,Model 950,ITU-2026-0136,User 136
+UP-HR-137,En stock,Comptabilité,LG,UPS,Model 372,ITU-2026-0137,User 137
+PR-HR-138,En stock,RH,Lenovo,Printer,Model 155,ITU-2026-0138,
+SW-IT-139,En production,Secrétariat,Dell,Switch,Model 168,ITU-2026-0139,User 139
+SW-IT-140,Maintenance,RH,Canon,Switch,Model 497,ITU-2026-0140,
+CO-IT-141,En panne,Bibliothèque,Cisco,Computer,Model 866,ITU-2026-0141,User 141
+UP-ADM-142,En panne,Secrétariat,Cisco,UPS,Model 759,ITU-2026-0142,User 142
+CO-IT-143,En panne,Finance,Epson,Computer,Model 373,ITU-2026-0143,
+PR-ADM-144,Mis au rebut,Administration,Samsung,Printer,Model 296,ITU-2026-0144,User 144
+CO-FIN-145,Mis au rebut,Comptabilité,Lenovo,Computer,Model 419,ITU-2026-0145,User 145
+LA-FIN-146,En stock,Bibliothèque,LG,Laptop,Model 212,ITU-2026-0146,User 146
+MO-FIN-147,En stock,Bibliothèque,LG,Monitor,Model 353,ITU-2026-0147,User 147
+PR-HR-148,Maintenance,Laboratoire IA,LG,Printer,Model 279,ITU-2026-0148,User 148
+SW-HR-149,En prOduction,RH,Samsung,Switch,Model 636,ITU-2026-0149,User 149
+CO-FIN-150,En prOduction,Magasin Informatique,LG,Computer,Model 291,ITU-2026-0150,User 150
+SW-HR-151,En prduction,Direction,Brother,Switch,Model 195,ITU-2026-0151,User 151
+MO-HR-152,En production,Direction,Dell,Monitor,Model 184,ITU-2026-0152,User 152
+SC-IT-153,Maintenance,Direction,LG,Scanner,Model 137,ITU-2026-0153,User 153
+RO-FIN-154,Maintenance,Finance,Samsung,Router,Model 337,ITU-2026-0154,
+SC-HR-155,En production,Direction,Brother,Scanner,Model 765,ITU-2026-0155,User 155
+PR-HR-156,En prOduction,Secrétariat,Brother,Printer,Model 268,ITU-2026-0156,User 156
+,Mis au rebut,Secrétariat,HP,Scanner,Model 100,ITU-2026-0157,User 157
+PR-ADM-158,Maintenance,Direction,Samsung,Printer,Model 651,ITU-2026-0158,User 158
+SC-ADM-159,En prOduction,Salle de Conférence,Dell,Scanner,Model 734,ITU-2026-0159,User 159
+SC-FIN-160,En production,Direction,Apple,Scanner,Model 610,ITU-2026-0160,User 160
+SC-HR-161,En stock,Secrétariat,Canon,Scanner,Model 810,ITU-2026-0161,User 161
+CO-IT-162,En stock,RH,Samsung,Computer,Model 663,ITU-2026-0162,User 162
+SW-IT-163,En prduction,Laboratoire IA,Dell,Switch,Model 811,ITU-2026-0163,
+RO-FIN-164,En prOduction,Comptabilité,HP,Router,Model 599,ITU-2026-0164,User 164
+UP-FIN-165,En stock,Laboratoire IA,Samsung,UPS,Model 653,ITU-2026-0165,User 165
+MO-ADM-166,En prOduction,Salle de Conférence,Samsung,Monitor,Model 841,ITU-2026-0166,
+SW-HR-167,En production,RH,Brother,Switch,Model 495,ITU-2026-0167,User 167
+LA-IT-168,En production,RH,Canon,Laptop,Model 820,ITU-2026-0168,User 168
+,En panne,Finance,Apple,Laptop,Model 311,ITU-2026-0169,User 169
+SC-ADM-170,En stock,Bibliothèque,Epson,Scanner,Model 467,ITU-2026-0170,User 170
+SC-FIN-171,Mis au rebut,Secrétariat,Lenovo,Scanner,Model 358,ITU-2026-0171,
+PR-ADM-172,Mis au rebut,Comptabilité,Brother,Printer,Model 478,ITU-2026-0172,
+SC-IT-173,Maintenance,RH,Samsung,Scanner,Model 679,ITU-2026-0173,User 173
+PR-ADM-174,En production,Administration,Apple,Printer,Model 656,ITU-2026-0174,User 174
+PR-ADM-175,En production,RH,Epson,Printer,Model 993,ITU-2026-0175,User 175
+UP-ADM-176,En panne,Direction,Canon,UPS,Model 563,ITU-2026-0176,User 176
+LA-HR-177,Mis au rebut,Direction,Brother,Laptop,Model 319,ITU-2026-0177,User 177
+UP-ADM-178,En prOduction,Laboratoire IA,Dell,UPS,Model 603,ITU-2026-0178,User 178
+CO-FIN-179,Mis au rebut,Secrétariat,Dell,Computer,Model 443,ITU-2026-0179,User 179
+RO-FIN-180,Maintenance,Magasin Informatique,HP,Router,Model 551,ITU-2026-0180,User 180
+CO-HR-181,En prOduction,Administration,Epson,Computer,Model 463,ITU-2026-0181,User 181
+LA-ADM-182,En panne,Magasin Informatique,Brother,Laptop,Model 871,ITU-2026-0182,User 182
+SW-HR-183,En prOduction,Direction,Samsung,Switch,Model 371,ITU-2026-0183,User 183
+UP-HR-184,En prOduction,RH,Apple,UPS,Model 208,ITU-2026-0184,User 184
+SC-ADM-185,Maintenance,Bibliothèque,Lenovo,Scanner,Model 203,ITU-2026-0185,User 185
+LA-IT-186,Maintenance,Secrétariat,LG,Laptop,Model 860,ITU-2026-0186,User 186
+UP-ADM-187,En production,Laboratoire IA,Cisco,UPS,Model 595,ITU-2026-0187,
+LA-HR-188,En prOduction,Administration,LG,Laptop,Model 251,ITU-2026-0188,User 188
+RO-ADM-189,En panne,Bibliothèque,Dell,Router,Model 911,ITU-2026-0189,User 189
+SW-FIN-190,En prOduction,Administration,Dell,Switch,Model 788,ITU-2026-0190,User 190
+SW-ADM-191,Mis au rebut,RH,Samsung,Switch,Model 702,ITU-2026-0191,User 191
+MO-FIN-192,En production,RH,Dell,Monitor,Model 671,ITU-2026-0192,User 192
+UP-IT-193,En panne,Secrétariat,Cisco,UPS,Model 474,ITU-2026-0193,User 193
+SC-FIN-194,Maintenance,Secrétariat,Dell,Scanner,Model 344,ITU-2026-0194,
+SC-FIN-195,En production,Direction,Apple,Scanner,Model 403,ITU-2026-0195,User 195
+SW-HR-196,En production,Administration,Samsung,Switch,Model 307,ITU-2026-0196,User 196
+LA-IT-197,En prduction,Direction,LG,Laptop,Model 870,ITU-2026-0197,
+LA-ADM-198,Mis au rebut,Secrétariat,Cisco,Laptop,Model 489,ITU-2026-0198,User 198
+LA-IT-199,En prduction,Magasin Informatique,Samsung,Laptop,Model 486,ITU-2026-0199,User 199
+CO-HR-200,En production,Administration,Brother,Computer,Model 306,ITU-2026-0200,User 200
