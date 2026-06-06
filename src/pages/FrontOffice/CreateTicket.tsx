@@ -15,7 +15,7 @@ export function CreateTicket() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [urgency, setUrgency] = useState<number>(3) // 3 is medium in GLPI usually
-
+  const [type, setType] = useState<number>(3)
   // Asset selection
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Asset[]>([])
@@ -69,7 +69,8 @@ export function CreateTicket() {
       const ticketRes = await glpiTicketService.createTicket({
         name: title,
         content: description,
-        urgency: urgency
+        urgency: urgency,
+        type: type
       })
 
       const newTicketId = ticketRes?.id
@@ -151,6 +152,13 @@ export function CreateTicket() {
                 onChange={e => setDescription(e.target.value)}
                 required
               />
+            </div>
+             <div className="form-group">
+              <label htmlFor="type">Type</label>
+              <select id="type" value={type} onChange={e => setType(Number(e.target.value))}>
+                <option value={1}>Incident</option>
+                <option value={2}>Demande</option>
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="urgency">Urgence</label>

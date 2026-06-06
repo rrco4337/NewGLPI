@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { initSession } from '@/api/glpi'
 
 export const Login = () => {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+ 
+  const [password, setPassword] = useState('glpi')
   const [showPwd,  setShowPwd]  = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
@@ -15,7 +15,7 @@ export const Login = () => {
     setLoading(true)
     setError('')
     try {
-      const res = await initSession(username, password)
+      const res = await initSession(password)
       if (res?.session_token) {
         localStorage.setItem('glpi_session_token', res.session_token)
         navigate('/admin/dashboard')
@@ -167,37 +167,6 @@ export const Login = () => {
           {/* Form */}
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Username */}
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                Nom d'utilisateur
-              </label>
-              <div style={{ position: 'relative' }}>
-                <i className="bi bi-person-fill" style={{
-                  position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-                  color: '#94a3b8', fontSize: 16,
-                }} />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="glpi ou autre"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px 11px 42px',
-                    border: '1.5px solid #d0d7e1',
-                    borderRadius: 10,
-                    fontSize: 14,
-                    background: '#fff',
-                    color: '#1e293b',
-                    outline: 'none',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,.1)' }}
-                  onBlur={e => { e.target.style.borderColor = '#d0d7e1'; e.target.style.boxShadow = 'none' }}
-                />
-              </div>
-            </div>
 
             {/* Password */}
             <div>

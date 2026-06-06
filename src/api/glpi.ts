@@ -88,19 +88,21 @@ export const createComputer = async (
 }
 
 export const initSession = async (
-  username?: string,
-  password?: string,
+  code: string,  // Code unique (mot de passe seulement)
   appToken = GLPI_APP_TOKEN,
 ) => {
-  const authString = btoa(`${username || ''}:${password || ''}`)
+  // Utiliser un login par défaut fixe (ex: "backoffice" ou "glpi")
+  const defaultUsername =  import.meta.env.VITE_GLPI_DEFAULT_USERNAME || 'glpi';  // Ou 'glpi', 'admin', etc.
+  const authString = btoa(`${defaultUsername}:${code}`);
+  
   return glpiRequest('/initSession', {
     method: 'GET',
     appToken,
     headers: {
       Authorization: `Basic ${authString}`
     }
-  })
-}
+  });
+};
 
 /**
  * List all items of a given GLPI item type.

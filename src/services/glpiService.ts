@@ -95,11 +95,15 @@ export const glpiTicketService = {
     }
   },
 
-  async createTicket(payload: { name: string; content: string; urgency: number; itilcategories_id?: number; type?: number }) {
+  async createTicket(payload: { name: string; content: string; urgency: number;  type?: number }) {
     try {
+       console.log('Payload envoyé à GLPI:', { input: payload }); 
       const response = await api.post('/Ticket', { input: payload })
+      console.log('Réponse GLPI:', response.data);
       return response.data // usually returns { id: 123, message: "..." }
+          
     } catch (e) {
+      console.error('Erreur création ticket:', e); 
       // Mock fallback if API fails
       return { id: Math.floor(Math.random() * 1000) + 200, message: "Ticket créé avec succès (Mock)" }
     }
@@ -177,59 +181,238 @@ export const glpiTicketService = {
   }
 }
 
+// src/services/glpi.ts - Version améliorée du dashboard
+
 export const glpiDashboardService = {
   async getOverview() {
     try {
-      const [tickets, computers, printers, softs, network, peripherals] = await Promise.all([
-        api.get('/Ticket?range=0-99'),
-        api.get('/Computer?range=0-99'),
-        api.get('/Printer?range=0-99'),
-        api.get('/Software?range=0-99'),
-        api.get('/NetworkEquipment?range=0-99'),
-        api.get('/Peripheral?range=0-99'),
-      ])
+      // Récupération de tous les éléments en parallèle
+      const [
+        ticketsResponse,
+        computersResponse,
+        monitorsResponse,
+        printersResponse,
+        softsResponse,
+        networkResponse,
+        peripheralsResponse,
+        phonesResponse
+      ] = await Promise.allSettled([
+        api.get('/Ticket?range=0-999'),  // Augmenter la limite pour avoir tous les tickets
+        api.get('/Computer?range=0-999'),
+        api.get('/Monitor?range=0-999'),
+        api.get('/Printer?range=0-999'),
+        api.get('/Software?range=0-999'),
+        api.get('/NetworkEquipment?range=0-999'),
+        api.get('/Peripheral?range=0-999'),
+        api.get('/Phone?range=0-999')
+      ]);
 
-      const totalAssets = [computers, printers, softs, network, peripherals].reduce((sum, value) => sum + (Array.isArray(value.data) ? value.data.length : 0), 0)
+      // Fonction helper pour extraire les données
+      const getDataLength = (response: PromiseSettledResult<any>) => {
+        if (response.status === 'fulfilled' && Array.isArray(response.value.data)) {
+          return response.value.data.length;
+        }
+        return 0;
+      };
+
+      // Compter les éléments par type
+      const computers = getDataLength(computersResponse);
+      const monitors = getDataLength(monitorsResponse);
+      const printers = getDataLength(printersResponse);
+      const softs = getDataLength(softsResponse);
+      const network = getDataLength(networkResponse);
+      const peripherals = getDataLength(peripheralsResponse);
+      const phones = getDataLength(phonesResponse);
+
+      const totalAssets = computers + monitors + printers + softs + network + peripherals + phones;
+
+      // Analyse des tickets par statut
+      let ticketsData: any[] = [];
+      if (ticketsResponse.status === 'fulfilled' && Array.isArray(ticketsResponse.value.data)) {
+        ticketsData = ticketsResponse.value.data;
+      }
+
+      // Comptage des tickets par statut (codes GLPI)
+      const ticketsByStatus = {
+        new: 0,        // status 1
+        processing: 0, // status 2
+        waiting: 0,    // status 4
+        solved: 0,     // status 5
+        closed: 0,     // status 6
+        total: ticketsData.length
+      };
+
+      // Comptage par type de ticket (1 = Incident, 2 = Demande)
+      let incidents = 0;
+      let requests = 0;
+
+      ticketsData.forEach(ticket => {
+        // Statut
+        switch (ticket.status) {
+          case 1: ticketsByStatus.new++; break;
+          case 2: ticketsByStatus.processing++; break;
+          case 4: ticketsByStatus.waiting++; break;
+          case 5: ticketsByStatus.solved++; break;
+          case 6: ticketsByStatus.closed++; break;
+        }
+        
+        // Type
+        if (ticket.type === 1) incidents++;
+        else if (ticket.type === 2) requests++;
+      });
+
+      // Construction du breakdown des actifs
+      const assetBreakdown = [
+        { 
+          label: 'Ordinateurs', 
+          value: computers, 
+          accent: 'linear-gradient(135deg, #38bdf8, #6366f1)', 
+          detail: 'Postes de travail',
+          icon: '💻'
+        },
+        { 
+          label: 'Écrans', 
+          value: monitors, 
+          accent: 'linear-gradient(135deg, #a78bfa, #d946ef)', 
+          detail: 'Moniteurs',
+          icon: '🖥️'
+        },
+        { 
+          label: 'Imprimantes', 
+          value: printers, 
+          accent: 'linear-gradient(135deg, #34d399, #0f766e)', 
+          detail: 'Périphériques d\'impression',
+          icon: '🖨️'
+        },
+        { 
+          label: 'Logiciels', 
+          value: softs, 
+          accent: 'linear-gradient(135deg, #fbbf24, #f97316)', 
+          detail: 'Licences et applications',
+          icon: '📦'
+        },
+        { 
+          label: 'Équipements réseau', 
+          value: network, 
+          accent: 'linear-gradient(135deg, #fb7185, #ec4899)', 
+          detail: 'Switchs, routeurs',
+          icon: '🌐'
+        },
+        { 
+          label: 'Périphériques', 
+          value: peripherals, 
+          accent: 'linear-gradient(135deg, #22d3ee, #2563eb)', 
+          detail: 'Claviers, souris, webcams',
+          icon: '⌨️'
+        },
+        { 
+          label: 'Téléphones', 
+          value: phones, 
+          accent: 'linear-gradient(135deg, #facc15, #eab308)', 
+          detail: 'Postes téléphoniques',
+          icon: '📞'
+        }
+      ];
 
       return {
         totalAssets,
-        assetBreakdown: [
-          { label: 'Ordinateurs', value: Array.isArray(computers.data) ? computers.data.length : 0, accent: 'linear-gradient(135deg, #38bdf8, #6366f1)', detail: 'Postes de travail' },
-          { label: 'Écrans', value: 24, accent: 'linear-gradient(135deg, #a78bfa, #d946ef)', detail: 'Moniteurs actifs' },
-          { label: 'Imprimantes', value: Array.isArray(printers.data) ? printers.data.length : 0, accent: 'linear-gradient(135deg, #34d399, #0f766e)', detail: 'Périphériques d’impression' },
-          { label: 'Logiciels', value: Array.isArray(softs.data) ? softs.data.length : 0, accent: 'linear-gradient(135deg, #fbbf24, #f97316)', detail: 'Licences et applis' },
-          { label: 'Équipements réseau', value: Array.isArray(network.data) ? network.data.length : 0, accent: 'linear-gradient(135deg, #fb7185, #ec4899)', detail: 'Switchs, routeurs' },
-          { label: 'Périphériques', value: Array.isArray(peripherals.data) ? peripherals.data.length : 0, accent: 'linear-gradient(135deg, #22d3ee, #2563eb)', detail: 'Claviers, souris, webcams' },
-        ],
-        totalTickets: Array.isArray(tickets.data) ? tickets.data.length : 0,
+        assetBreakdown: assetBreakdown.filter(a => a.value > 0), // Ne montrer que les catégories avec des éléments
+        totalTickets: ticketsData.length,
         ticketsByStatus: {
-          open: 12,
-          closed: 8,
-          pending: 5,
-          incidents: 9,
-          requests: 14,
+          open: ticketsByStatus.new + ticketsByStatus.processing,
+          closed: ticketsByStatus.closed,
+          pending: ticketsByStatus.waiting,
+          solved: ticketsByStatus.solved,
+          incidents,
+          requests,
+          // Détails supplémentaires
+          details: ticketsByStatus
         },
-      }
-    } catch {
+        // Ajout de métadonnées utiles
+        metadata: {
+          lastUpdate: new Date().toISOString(),
+          sources: {
+            computers: computers > 0,
+            monitors: monitors > 0,
+            printers: printers > 0,
+            softs: softs > 0,
+            network: network > 0,
+            peripherals: peripherals > 0,
+            phones: phones > 0
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données du dashboard:', error);
+      
+      // Fallback avec données de démonstration
       return {
-        totalAssets: 148,
-        assetBreakdown: [
-          { label: 'Ordinateurs', value: 64, accent: 'linear-gradient(135deg, #38bdf8, #6366f1)', detail: 'Postes de travail' },
-          { label: 'Écrans', value: 24, accent: 'linear-gradient(135deg, #a78bfa, #d946ef)', detail: 'Moniteurs actifs' },
-          { label: 'Imprimantes', value: 11, accent: 'linear-gradient(135deg, #34d399, #0f766e)', detail: 'Périphériques d’impression' },
-          { label: 'Logiciels', value: 19, accent: 'linear-gradient(135deg, #fbbf24, #f97316)', detail: 'Licences et applis' },
-          { label: 'Équipements réseau', value: 16, accent: 'linear-gradient(135deg, #fb7185, #ec4899)', detail: 'Switchs, routeurs' },
-          { label: 'Périphériques', value: 14, accent: 'linear-gradient(135deg, #22d3ee, #2563eb)', detail: 'Claviers, souris, webcams' },
-        ],
-        totalTickets: 39,
+        totalAssets: 0,
+        assetBreakdown: [],
+        totalTickets: 0,
         ticketsByStatus: {
-          open: 12,
-          closed: 8,
-          pending: 5,
-          incidents: 9,
-          requests: 14,
+          open: 0,
+          closed: 0,
+          pending: 0,
+          solved: 0,
+          incidents: 0,
+          requests: 0,
+          details: {
+            new: 0,
+            processing: 0,
+            waiting: 0,
+            solved: 0,
+            closed: 0,
+            total: 0
+          }
         },
-      }
+        metadata: {
+          lastUpdate: new Date().toISOString(),
+          error: error instanceof Error ? error.message : 'Erreur inconnue'
+        }
+      };
     }
   },
-}
+
+  // Méthode supplémentaire pour récupérer les détails des actifs par catégorie
+  async getAssetsByType(type: string) {
+    try {
+      const response = await api.get(`/${type}?range=0-999`);
+      return Array.isArray(response.data) ? response.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  // Méthode pour récupérer les statistiques avancées
+  async getAdvancedStats() {
+    try {
+      const [tickets, computers, softs] = await Promise.all([
+        api.get('/Ticket?range=0-999'),
+        api.get('/Computer?range=0-999'),
+        api.get('/Software?range=0-999')
+      ]);
+
+      const ticketsList = Array.isArray(tickets.data) ? tickets.data : [];
+      
+      // Calculer l'âge moyen des tickets ouverts
+      const now = new Date();
+      const openTickets = ticketsList.filter(t => t.status === 1 || t.status === 2);
+      const avgAge = openTickets.reduce((sum, ticket) => {
+        const createDate = new Date(ticket.date_creation);
+        const age = (now.getTime() - createDate.getTime()) / (1000 * 60 * 60 * 24);
+        return sum + age;
+      }, 0) / (openTickets.length || 1);
+
+      return {
+        averageTicketAgeDays: Math.round(avgAge * 10) / 10,
+        openTicketsCount: openTickets.length,
+        computersCount: Array.isArray(computers.data) ? computers.data.length : 0,
+        softwareCount: Array.isArray(softs.data) ? softs.data.length : 0,
+        assetToTicketRatio: (Array.isArray(computers.data) ? computers.data.length : 0) / (ticketsList.length || 1)
+      };
+    } catch {
+      return null;
+    }
+  }
+};

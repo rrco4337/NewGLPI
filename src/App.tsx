@@ -12,6 +12,7 @@ import { GlpiImport } from './pages/BackOffice/GlpiImport'
 import { ImportVerify } from './pages/BackOffice/ImportVerify'
 import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from './pages/BackOffice/TicketDetail'
+import ProtectedRoute from './components/Security/ProtectedRoute';
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
       </Route>
 
       <Route path="/admin/login" element={<Login />} />
-
+      <Route element={<ProtectedRoute />}>
       <Route path="/admin" element={<DashboardLayout />}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -35,7 +36,7 @@ function App() {
         <Route path="import" element={<GlpiImport />} />
         <Route path="verify-import" element={<ImportVerify />} />
       </Route>
-
+</Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
