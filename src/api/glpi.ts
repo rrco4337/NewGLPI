@@ -248,6 +248,54 @@ export const purgeNonAdminUsers = async (
 }
 
 /**
+ * Download a GLPI document as a blob URL (usable in <img src>).
+ * Returns null if the document is not an image or cannot be fetched.
+ */
+export const fetchDocumentBlob = async (
+  docId: number,
+  token?: string,
+  appToken = GLPI_APP_TOKEN,
+): Promise<string | null> => {
+  const sessionToken = token || localStorage.getItem('glpi_session_token') || sessionTokenFromFile
+  try {
+    const res = await fetch(`${API_BASE}/Document/${docId}?alt=media`, {
+      headers: {
+        'App-Token': appToken,
+        'Session-Token': sessionToken,
+      },
+    })
+    if (!res.ok) return null
+    const blob = await res.blob()
+    if (!blob.type.startsWith('image/')) return null
+    return URL.createObjectURL(blob)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch all Document_Item link records.
+ * Each record has: { documents_id, items_id, itemtype }
+ * Use this to map assets → their linked document IDs.
+ */
+export const fetchDocumentItems = async (
+  token?: string,
+  appToken = GLPI_APP_TOKEN,
+): Promise<Array<{ id: number; documents_id: number; items_id: number; itemtype: string }>> => {
+  const sessionToken = token || localStorage.getItem('glpi_session_token') || sessionTokenFromFile
+  try {
+    const result = await glpiRequest('/Document_Item?range=0-9999', {
+      method: 'GET',
+      token: sessionToken,
+      appToken,
+    })
+    return Array.isArray(result) ? result : []
+  } catch {
+    return []
+  }
+}
+
+/**
  * Import a single item into GLPI.
  */
 export const createItem = async (
