@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useGlpiStore } from '@/store/glpiStore'
 
 const NAV = [
   { to: '/admin/dashboard',     icon: 'bi-grid-1x2-fill',       label: 'Tableau de bord', end: true },
@@ -15,9 +16,10 @@ const NAV = [
 export const DashboardLayout = () => {
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const { clearTokens } = useGlpiStore()
 
   const logout = () => {
-    localStorage.removeItem('glpi_session_token')
+    clearTokens()
     navigate('/admin/login')
   }
 

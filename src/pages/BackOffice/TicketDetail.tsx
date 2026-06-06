@@ -1,212 +1,277 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { GLPI_BASE_URL, GLPI_APP_TOKEN } from '@/api/glpi';
-import { sessionTokenFromFile } from '@/lib/sessionToken';
-import './TicketDetail.css';
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { StatusBadge } from '@/components/StatusBadge'
+import { glpiTicketService } from '@/services/glpiService'
+import type { TicketDetail as TicketDetailType } from '@/types/glpi'
 
-// Reuse GLPI status mapping
-const GLPI_STATUS: Record<number, { label: string, className: string }> = {
-  1: { label: 'NEW', className: 'status-new' },
-  2: { label: 'IN PROGRESS', className: 'status-progress' },
-  3: { label: 'PLANNED', className: 'status-progress' },
-  4: { label: 'PENDING', className: 'status-progress' },
-  5: { label: 'SOLVED', className: 'status-resolved' },
-  6: { label: 'CLOSED', className: 'status-resolved' },
-};
+const statusVariant = (s: string): 'open' | 'pending' | 'closed' => {
+  if (s === 'closed' || s === 'solved') return 'closed'
+  if (s === 'pending') return 'pending'
+  return 'open'
+}
 
-export const TicketDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [ticket, setTicket] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
+const priorityVariant = (p: string): 'high' | 'medium' | 'low' => {
+  if (p === 'high' || p === 'urgent') return 'high'
+  if (p === 'medium') return 'medium'
+  return 'low'
+}
+
+export const TicketDetail = () => {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [ticket, setTicket] = useState<TicketDetailType | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
 
   useEffect(() => {
-    if (id) fetchTicketDetail(id);
-  }, [id]);
-
-  const fetchTicketDetail = async (ticketId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const sessionToken = localStorage.getItem('glpi_session_token') || sessionTokenFromFile;
-      
-      const response = await fetch(`${GLPI_BASE_URL}/apirest.php/Ticket/${ticketId}?expand_dropdowns=true`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'App-Token': GLPI_APP_TOKEN,
-          'Session-Token': sessionToken,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ticket: ${response.status}`);
+    const load = async () => {
+      setLoading(true)
+      try {
+        const detail = await glpiTicketService.getTicket(Number(id))
+        setTicket(detail)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Impossible de charger le ticket')
+      } finally {
+        setLoading(false)
       }
-
-      const data = await response.json();
-      setTicket(data);
-    } catch (err: any) {
-      console.error('Failed to fetch ticket details:', err);
-      setError(err.message || 'Error loading ticket details.');
-    } finally {
-      setLoading(false);
     }
-  };
+    void load()
+  }, [id])
 
   if (loading) {
-    return <div className="ticket-detail-page"><div style={{ padding: '40px', textAlign: 'center' }}>Loading ticket details...</div></div>;
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+        Chargement de la fiche…
+      </div>
+    )
   }
 
   if (error || !ticket) {
     return (
-      <div className="ticket-detail-page">
-        <div className="breadcrumb">
-          <span onClick={() => navigate('/admin/tickets')}>Tickets</span> 
-          <i className="bi bi-chevron-right"></i>
-          <span className="current">Error</span>
+      <div style={{ padding: '32px 32px 48px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13.5, color: '#64748b' }}>
+          <span style={{ cursor: 'pointer', color: '#4f46e5' }} onClick={() => navigate('/admin/tickets')}>Tickets</span>
+          <i className="bi bi-chevron-right" style={{ fontSize: 11 }} />
+          <span>Erreur</span>
         </div>
-        <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>
-          {error || 'Ticket not found.'}
-        </div>
+        <div style={{ color: '#ef4444', fontSize: 14 }}>{error ?? 'Ticket introuvable.'}</div>
       </div>
-    );
+    )
   }
 
-  const statusInfo = GLPI_STATUS[ticket.status] || { label: 'UNKNOWN', className: '' };
-
   return (
-    <div className="ticket-detail-page">
-      <div className="breadcrumb">
-        <span onClick={() => navigate('/admin/tickets')}>Tickets</span> 
-        <i className="bi bi-chevron-right"></i>
-        <span className="current">#{ticket.id}</span>
+    <div style={{ padding: '32px 32px 48px', maxWidth: 1200, fontFamily: 'Inter, system-ui, sans-serif' }}>
+
+      {/* Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13.5, color: '#64748b' }}>
+        <span
+          style={{ cursor: 'pointer', color: '#4f46e5', fontWeight: 500 }}
+          onClick={() => navigate('/admin/tickets')}
+        >
+          Tickets
+        </span>
+        <i className="bi bi-chevron-right" style={{ fontSize: 11 }} />
+        <span style={{ color: '#1e293b', fontWeight: 600 }}>#{ticket.id}</span>
       </div>
 
-      <div className="ticket-header-glass">
-        <div className="header-main">
-          <div className="title-section">
-            <span className="ticket-label">Ticket title</span>
-            <h1>{ticket.name || '(No title)'} <span>(#{ticket.id})</span></h1>
+      {/* Header card */}
+      <div style={{
+        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+        borderRadius: 20, padding: '28px 32px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(79,70,229,.25)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.6)', marginBottom: 6 }}>
+              Fiche ticket
+            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-.3px' }}>
+              #{ticket.id} · {ticket.name || '(Sans titre)'}
+            </h1>
           </div>
-          <div className="status-section">
-            <div className="status-item">
-              <span className="ticket-label">Status</span>
-              <span className={`badge-progress ${statusInfo.className}`} style={{ background: 'var(--blue)' }}>
-                <span className="dot"></span> {statusInfo.label}
-              </span>
-            </div>
-            <div className="status-item">
-              <span className="ticket-label">Date Created</span>
-              <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px' }}>
-                {ticket.date_creation || '-'}
-              </div>
-            </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <StatusBadge label={String(ticket.status)} variant={statusVariant(String(ticket.status))} />
+            <StatusBadge label={String(ticket.priority)} variant={priorityVariant(String(ticket.priority))} />
           </div>
         </div>
       </div>
 
-      <div className="ticket-content-split">
-        {/* Sidebar */}
-        <div className="sidebar-glass">
-          <h3>Ticket Info</h3>
-          
-          <div className="sidebar-section">
-            <h4>Content</h4>
-            <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-               <div dangerouslySetInnerHTML={{ __html: ticket.content || 'No content provided.' }} />
-            </div>
-          </div>
+      {/* Main two-column layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, marginBottom: 20 }}>
 
-          <div className="sidebar-section">
-            <h4>Requester ID</h4>
-            <div className="actor-card">
-              <div className="avatar">R</div>
-              <div className="actor-info">
-                <span className="name">{ticket.users_id_recipient || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
+        {/* Description + timeline */}
+        <div style={{
+          background: '#fff', borderRadius: 16, border: '1px solid #d0d7e1',
+          padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+        }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 16 }}>
+            <i className="bi bi-file-text" style={{ marginRight: 8, color: '#4f46e5' }} />
+            Description
+          </h2>
+          <div
+            style={{ fontSize: 13.5, color: '#475569', lineHeight: 1.6, background: '#f8fafc', padding: 16, borderRadius: 10, border: '1px solid #e2e8f0' }}
+            dangerouslySetInnerHTML={{ __html: ticket.content || ticket.description || 'Aucune description disponible.' }}
+          />
 
-          <div className="sidebar-section">
-            <h4>Assigned Tech ID</h4>
-            <div className="actor-card">
-              <div className="avatar bg-purple">T</div>
-              <div className="actor-info">
-                <span className="name">{ticket.users_id_assign || 'Unassigned'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Timeline */}
-        <div className="timeline-glass">
-          <div className="timeline-feed">
-            
-            {/* Timeline Item 1 - Creation */}
-            <div className="timeline-item">
-              <div className="timeline-time">
-                <span className="time">{ticket.date_creation?.split(' ')[1]?.substring(0,5)}</span>
-              </div>
-              <div className="timeline-marker">
-                <div className="avatar-small">R</div>
-                <div className="line"></div>
-              </div>
-              <div className="timeline-content">
-                <div className="content-header">
-                  <strong>Ticket Created</strong>
+          {/* Timeline */}
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '24px 0 14px' }}>
+            <i className="bi bi-clock-history" style={{ marginRight: 8, color: '#4f46e5' }} />
+            Historique
+          </h2>
+          {(ticket.history ?? []).length === 0 ? (
+            <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>Aucun historique disponible.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {ticket.history!.map(entry => (
+                <div key={entry.id} style={{
+                  background: '#f8fafc', borderRadius: 10, padding: '12px 16px',
+                  border: '1px solid #e2e8f0', fontSize: 13,
+                }}>
+                  <div style={{ fontWeight: 600, color: '#1e293b' }}>{entry.action}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>
+                    {entry.date}{entry.author ? ` · ${entry.author}` : ''}
+                  </div>
                 </div>
-                <div className="content-body">
-                  Initial request submitted
-                </div>
-              </div>
+              ))}
             </div>
+          )}
 
-            {/* Note: In a full GLPI integration, you would fetch /Ticket/{id}/ITILFollowup and /TicketTask etc. to populate this timeline. */}
-            <div className="timeline-item">
-              <div className="timeline-marker">
-                 <div className="icon-small bg-blue"><i className="bi bi-info"></i></div>
-                 <div className="line"></div>
-              </div>
-              <div className="timeline-content">
-                 <div className="content-body" style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
-                    Note: Full timeline (follow-ups, tasks, documents) requires fetching additional GLPI sub-endpoints (e.g. /Ticket/{ticket.id}/ITILFollowup).
-                 </div>
-              </div>
+          {/* Reply box */}
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '24px 0 14px' }}>
+            <i className="bi bi-reply-fill" style={{ marginRight: 8, color: '#4f46e5' }} />
+            Répondre
+          </h2>
+          <div style={{ border: '1.5px solid #d0d7e1', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', gap: 4, padding: '8px 12px', borderBottom: '1px solid #f1f4f9', background: '#f8fafc' }}>
+              {['bi-type-bold', 'bi-type-italic', 'bi-type-underline', 'bi-paperclip', 'bi-link-45deg'].map(icon => (
+                <button key={icon} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, padding: '2px 6px', borderRadius: 4 }}>
+                  <i className={`bi ${icon}`} />
+                </button>
+              ))}
             </div>
-
-          </div>
-
-          {/* Reply Box */}
-          <div className="reply-box">
-            <div className="reply-toolbar">
-              <button><i className="bi bi-type-bold"></i></button>
-              <button><i className="bi bi-type-italic"></i></button>
-              <button><i className="bi bi-type-underline"></i></button>
-              <span className="divider"></span>
-              <button><i className="bi bi-paperclip"></i></button>
-              <button><i className="bi bi-link-45deg"></i></button>
-            </div>
-            <textarea 
-              placeholder="Write a reply or solution..." 
+            <textarea
               value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-            ></textarea>
-            <div className="reply-footer">
-              <div className="reply-tabs">
-                <span className="active">Reply</span>
-                <span>Note</span>
-                <span>Resolution</span>
+              onChange={e => setReplyText(e.target.value)}
+              placeholder="Écrire une réponse ou une solution…"
+              style={{
+                width: '100%', minHeight: 100, padding: '14px 16px',
+                border: 'none', outline: 'none', resize: 'vertical',
+                fontSize: 13.5, color: '#1e293b', background: '#fff',
+                fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderTop: '1px solid #f1f4f9', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', gap: 8, fontSize: 13 }}>
+                {['Réponse', 'Note', 'Résolution'].map((tab, i) => (
+                  <span key={tab} style={{ padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontWeight: 500, color: i === 0 ? '#4f46e5' : '#64748b', background: i === 0 ? '#eef2ff' : 'transparent' }}>{tab}</span>
+                ))}
               </div>
-              <button className="btn-send">Send Reply</button>
+              <button style={{
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+                border: 'none', borderRadius: 8, padding: '8px 18px',
+                fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+              }}>
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Info card */}
+          <div style={{
+            background: '#fff', borderRadius: 16, border: '1px solid #d0d7e1',
+            padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+          }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 16 }}>
+              <i className="bi bi-info-circle" style={{ marginRight: 8, color: '#4f46e5' }} />
+              Informations
+            </h3>
+
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>Demandeur</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: '#4f46e5', fontWeight: 700, fontSize: 13 }}>R</span>
+                </div>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b' }}>{ticket.requester_name ?? ticket.requester?.name ?? 'Inconnu'}</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>Technicien assigné</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: '#7c3aed', fontWeight: 700, fontSize: 13 }}>T</span>
+                </div>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: '#1e293b' }}>{ticket.technician_name ?? ticket.technician?.name ?? 'Non assigné'}</span>
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid #f1f4f9', paddingTop: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 }}>Dates</p>
+              <div style={{ fontSize: 13, color: '#64748b', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>Créé le : <strong style={{ color: '#1e293b' }}>{ticket.date ?? '—'}</strong></span>
+                <span>Clôture : <strong style={{ color: '#1e293b' }}>{ticket.closedate ?? '—'}</strong></span>
+              </div>
             </div>
           </div>
 
+          {/* Documents card */}
+          <div style={{
+            background: '#fff', borderRadius: 16, border: '1px solid #d0d7e1',
+            padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+          }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 12 }}>
+              <i className="bi bi-paperclip" style={{ marginRight: 8, color: '#4f46e5' }} />
+              Documents
+            </h3>
+            {(ticket.documents ?? []).length === 0 ? (
+              <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>Aucun document.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ticket.documents!.map(doc => (
+                  <div key={doc.id} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px', border: '1px solid #e2e8f0', fontSize: 13, color: '#374151' }}>
+                    📎 {doc.filename}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Comments */}
+      <div style={{
+        background: '#fff', borderRadius: 16, border: '1px solid #d0d7e1',
+        padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+      }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 16 }}>
+          <i className="bi bi-chat-left-text" style={{ marginRight: 8, color: '#4f46e5' }} />
+          Commentaires
+        </h2>
+        {(ticket.comments ?? []).length === 0 ? (
+          <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>Aucun commentaire.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {ticket.comments!.map(comment => (
+              <div key={comment.id} style={{
+                background: '#f8fafc', borderRadius: 12, padding: '14px 18px',
+                border: '1px solid #e2e8f0', fontSize: 13.5, color: '#475569', lineHeight: 1.5,
+              }}>
+                <p>{comment.content}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                  {comment.date}{comment.author ? ` · ${comment.author}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
-  );
-};
+  )
+}
