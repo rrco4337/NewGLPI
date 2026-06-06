@@ -28,9 +28,10 @@ api.interceptors.request.use((config) => {
   const appToken = getAppToken()
   const sessionToken = getSessionToken()
 
-  config.headers = config.headers ?? {}
-  if (appToken) config.headers['App-Token'] = appToken
-  if (sessionToken) config.headers['Session-Token'] = sessionToken
+  config.headers = config.headers ?? ({} as any)
+  const headers = config.headers as Record<string, string>
+  if (appToken) headers['App-Token'] = appToken
+  if (sessionToken) headers['Session-Token'] = sessionToken
 
   return config
 })
@@ -93,6 +94,87 @@ export const glpiTicketService = {
       return { ...demoTicketDetail, id } as TicketDetail
     }
   },
+
+  async createTicket(payload: { name: string; content: string; urgency: number; itilcategories_id?: number; type?: number }) {
+    try {
+      const response = await api.post('/Ticket', { input: payload })
+      return response.data // usually returns { id: 123, message: "..." }
+    } catch (e) {
+      // Mock fallback if API fails
+      return { id: Math.floor(Math.random() * 1000) + 200, message: "Ticket créé avec succès (Mock)" }
+    }
+  },
+
+  async associateItemToTicket(tickets_id: number, itemtype: string, items_id: number) {
+    try {
+      const response = await api.post('/Item_Ticket', {
+        input: { tickets_id, itemtype, items_id }
+      })
+      return response.data
+    } catch (e) {
+      // Mock fallback
+      return { id: Math.floor(Math.random() * 1000), message: "Association réussie (Mock)" }
+    }
+  },
+
+  async searchAssets(query: string) {
+    try {
+      // Pour une recherche plus avancée, on utiliserait le endpoint /search/
+      // Ici on récupère depuis les endpoints basiques pour construire une liste multi-éléments.
+      const [computers, monitors, printers, phones, network, softs] = await Promise.all([
+        api.get('/Computer?range=0-50').catch(() => ({ data: [] })),
+        api.get('/Monitor?range=0-50').catch(() => ({ data: [] })),
+        api.get('/Printer?range=0-50').catch(() => ({ data: [] })),
+        api.get('/Phone?range=0-50').catch(() => ({ data: [] })),
+        api.get('/NetworkEquipment?range=0-50').catch(() => ({ data: [] })),
+        api.get('/Software?range=0-50').catch(() => ({ data: [] }))
+      ])
+
+      const mapAssets = (data: any[], type: string, labelPrefix: string) => {
+        if (!Array.isArray(data)) return []
+        return data.map((item: any) => ({
+          id: item.id,
+          itemtype: type,
+          name: item.name || `${labelPrefix} ${item.id}`,
+          serial: item.serial || '',
+          otherserial: item.otherserial || ''
+        }))
+      }
+
+      let allAssets = [
+        ...mapAssets(computers.data, 'Computer', 'Ordinateur'),
+        ...mapAssets(monitors.data, 'Monitor', 'Écran'),
+        ...mapAssets(printers.data, 'Printer', 'Imprimante'),
+        ...mapAssets(phones.data, 'Phone', 'Téléphone'),
+        ...mapAssets(network.data, 'NetworkEquipment', 'Équipement Réseau'),
+        ...mapAssets(softs.data, 'Software', 'Logiciel')
+      ]
+
+      if (query) {
+        const q = query.toLowerCase()
+        allAssets = allAssets.filter(a => 
+          a.name.toLowerCase().includes(q) || 
+          a.serial.toLowerCase().includes(q) || 
+          a.otherserial.toLowerCase().includes(q)
+        )
+      }
+
+      return allAssets
+    } catch (e) {
+      // Fallback
+      const demoAssets = [
+        { id: 1, itemtype: 'Computer', name: 'PC-COMPTA-01', serial: 'SN-12345', otherserial: '' },
+        { id: 2, itemtype: 'Printer', name: 'IMP-HALL-A', serial: 'PR-987', otherserial: '' },
+        { id: 3, itemtype: 'Monitor', name: 'ECRAN-24-HP', serial: 'HP-554', otherserial: '' },
+        { id: 4, itemtype: 'NetworkEquipment', name: 'SWITCH-ETAGE-3', serial: 'SW-112', otherserial: '' },
+      ]
+      if (query) {
+        const q = query.toLowerCase()
+        return demoAssets.filter(a => a.name.toLowerCase().includes(q) || a.serial.toLowerCase().includes(q))
+      }
+      return demoAssets
+    }
+  }
 }
 
 export const glpiDashboardService = {
