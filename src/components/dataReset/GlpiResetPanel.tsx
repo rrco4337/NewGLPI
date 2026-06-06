@@ -5,23 +5,23 @@ import { ResetReport } from '@/components/ResetReport/ResetReport'
 import type { ResetResult } from '@/pages/BackOffice/Settings'
 
 const PURGEABLE_ITEM_TYPES = [
-  { key: 'Ticket',            label: 'Tickets',              icon: '🎫', weight: 10 },
-  { key: 'Problem',           label: 'Problèmes',            icon: '⚠️',  weight: 11 },
-  { key: 'Change',            label: 'Changements',          icon: '🔄', weight: 12 },
-  { key: 'Computer',          label: 'Ordinateurs',          icon: '💻', weight: 30 },
-  { key: 'Monitor',           label: 'Écrans',               icon: '🖥️', weight: 31 },
-  { key: 'NetworkEquipment',  label: 'Équipements réseau',   icon: '🌐', weight: 32 },
-  { key: 'Peripheral',        label: 'Périphériques',        icon: '🔌', weight: 33 },
-  { key: 'Phone',             label: 'Téléphones',           icon: '📱', weight: 34 },
-  { key: 'Printer',           label: 'Imprimantes',          icon: '🖨️', weight: 35 },
-  { key: 'SoftwareLicense',   label: 'Licences logicielles', icon: '🔑', weight: 40 },
-  { key: 'Software',          label: 'Logiciels',            icon: '📦', weight: 41 },
-  { key: 'Document',          label: 'Documents',            icon: '📄', weight: 50 },
-  { key: 'Contract',          label: 'Contrats',             icon: '📝', weight: 51 },
-  { key: 'Supplier',          label: 'Fournisseurs',         icon: '🏢', weight: 52 },
-  { key: 'Contact',           label: 'Contacts',             icon: '👤', weight: 53 },
-  { key: 'Budget',            label: 'Budgets',              icon: '💰', weight: 54 },
-  { key: 'User',             label: 'Utilisateurs (non-admin)', icon: '👤', weight: 60 },
+  { key: 'Ticket',            label: 'Tickets',              icon: 'bi-ticket-detailed-fill',      weight: 10 },
+  { key: 'Problem',           label: 'Problèmes',            icon: 'bi-exclamation-triangle-fill', weight: 11 },
+  { key: 'Change',            label: 'Changements',          icon: 'bi-arrow-repeat',              weight: 12 },
+  { key: 'Computer',          label: 'Ordinateurs',          icon: 'bi-pc-display',                weight: 30 },
+  { key: 'Monitor',           label: 'Écrans',               icon: 'bi-display-fill',              weight: 31 },
+  { key: 'NetworkEquipment',  label: 'Équipements réseau',   icon: 'bi-globe',                     weight: 32 },
+  { key: 'Peripheral',        label: 'Périphériques',        icon: 'bi-plug-fill',                 weight: 33 },
+  { key: 'Phone',             label: 'Téléphones',           icon: 'bi-phone-fill',                weight: 34 },
+  { key: 'Printer',           label: 'Imprimantes',          icon: 'bi-printer-fill',              weight: 35 },
+  { key: 'SoftwareLicense',   label: 'Licences logicielles', icon: 'bi-key-fill',                  weight: 40 },
+  { key: 'Software',          label: 'Logiciels',            icon: 'bi-box-fill',                  weight: 41 },
+  { key: 'Document',          label: 'Documents',            icon: 'bi-file-earmark-text-fill',    weight: 50 },
+  { key: 'Contract',          label: 'Contrats',             icon: 'bi-file-earmark-text',         weight: 51 },
+  { key: 'Supplier',          label: 'Fournisseurs',         icon: 'bi-building-fill',             weight: 52 },
+  { key: 'Contact',           label: 'Contacts',             icon: 'bi-person-fill',               weight: 53 },
+  { key: 'Budget',            label: 'Budgets',              icon: 'bi-currency-euro',             weight: 54 },
+  { key: 'User',              label: 'Utilisateurs (non-admin)', icon: 'bi-person-fill',           weight: 60 },
 ]
 
 type PanelState = 'idle' | 'confirming' | 'resetting' | 'done'
@@ -73,7 +73,7 @@ export const GlpiResetPanel = () => {
       {state === 'idle' && (
         <>
           <div className="preserve-notice">
-            <div className="preserve-icon">🔒</div>
+            <div className="preserve-icon"><i className="bi bi-lock-fill" /></div>
             <div>
               <strong>Données préservées :</strong>
               <ul>

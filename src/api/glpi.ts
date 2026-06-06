@@ -105,15 +105,17 @@ export const initSession = async (
 /**
  * List all items of a given GLPI item type.
  * Uses range-based pagination. Returns an array of items.
+ * Pass expandDropdowns=true to resolve dropdown IDs to human-readable names.
  */
 export const listItems = async (
   itemType: string,
   range = '0-999',
   token?: string,
   appToken = GLPI_APP_TOKEN,
+  expandDropdowns = false,
 ) => {
   const sessionToken = token || localStorage.getItem('glpi_session_token') || sessionTokenFromFile
-  const result = await glpiRequest(`/${itemType}?range=${range}&expand_dropdowns=false`, {
+  const result = await glpiRequest(`/${itemType}?range=${range}&expand_dropdowns=${expandDropdowns}`, {
     method: 'GET',
     token: sessionToken,
     appToken,

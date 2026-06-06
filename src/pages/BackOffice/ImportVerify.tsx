@@ -237,7 +237,10 @@ export const ImportVerify = () => {
           </p>
         </div>
         <button className="iv-btn-refresh" onClick={fetchAll} disabled={state.loading}>
-          {state.loading ? '⏳ Chargement…' : '🔄 Actualiser'}
+          {state.loading
+            ? <><i className="bi bi-hourglass-split" style={{ marginRight: 6 }} />Chargement…</>
+            : <><i className="bi bi-arrow-repeat" style={{ marginRight: 6 }} />Actualiser</>
+          }
         </button>
       </div>
 
@@ -425,9 +428,9 @@ function ImageGrid({ docs, loading }: { docs: GlpiDocument[]; loading: boolean }
             {doc.blobUrl ? (
               <img src={doc.blobUrl} alt={doc.filename} className="iv-image" />
             ) : doc.blobError ? (
-              <div className="iv-image-err">⚠ Échec<br />du chargement</div>
+              <div className="iv-image-err"><i className="bi bi-exclamation-triangle-fill" /><br />Échec du chargement</div>
             ) : (
-              <div className="iv-image-placeholder">🖼</div>
+              <div className="iv-image-placeholder"><i className="bi bi-image" style={{ fontSize: 28, color: '#cbd5e1' }} /></div>
             )}
           </div>
           <div className="iv-image-meta">

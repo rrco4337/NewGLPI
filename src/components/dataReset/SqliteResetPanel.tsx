@@ -54,7 +54,7 @@ export const SqliteResetPanel = () => {
   if (state === 'error') {
     return (
       <div className="sqlite-error">
-        <p>❌ {errorMsg}</p>
+        <p><i className="bi bi-x-circle-fill" style={{ marginRight: 6, color: '#ef4444' }} />{errorMsg}</p>
         <button className="new-reset-button" onClick={fetchTables}>Réessayer</button>
       </div>
     )
@@ -78,7 +78,8 @@ export const SqliteResetPanel = () => {
     return (
       <div className="sqlite-result">
         <div className={`sqlite-result-banner ${result.success ? 'success' : 'error'}`}>
-          {result.success ? '✅' : '❌'} {result.message}
+          <i className={`bi ${result.success ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}`} style={{ marginRight: 7 }} />
+          {result.message}
         </div>
 
         <div className="report-summary">
@@ -101,7 +102,7 @@ export const SqliteResetPanel = () => {
               {result.resetTables.map(t => (
                 <tr key={t}>
                   <td className="table-name">{t}</td>
-                  <td><span className="status-badge ok">✅ Vidée</span></td>
+                  <td><span className="status-badge ok"><i className="bi bi-check-circle-fill" style={{ marginRight: 4 }} />Vidée</span></td>
                 </tr>
               ))}
             </tbody>
@@ -143,7 +144,7 @@ export const SqliteResetPanel = () => {
                     checked={selected.includes(table.name)}
                     onChange={() => toggle(table.name)}
                   />
-                  <span className="chip-icon">🗃️</span>
+                  <i className="bi bi-archive-fill chip-icon" />
                   <span className="chip-label">{table.name}</span>
                   <span className="sqlite-row-count">{table.rowCount} ligne{table.rowCount !== 1 ? 's' : ''}</span>
                 </label>
@@ -156,16 +157,16 @@ export const SqliteResetPanel = () => {
             onClick={() => setState('confirming')}
             disabled={selected.length === 0}
           >
-            <span>🗑️</span> Vider les tables ({selected.length} sélectionnée{selected.length > 1 ? 's' : ''})
+            <i className="bi bi-trash-fill" style={{ marginRight: 6 }} />Vider les tables ({selected.length} sélectionnée{selected.length > 1 ? 's' : ''})
           </button>
         </>
       )}
 
       {state === 'confirming' && (
         <ConfirmModal
-          title="⚠️ Confirmer la réinitialisation SQLite"
+          title="Confirmer la réinitialisation SQLite"
           message={`Toutes les lignes de ${selected.length} table(s) seront supprimées. Action irréversible.`}
-          details={selected.map(n => `🗃️ ${n}`)}
+          details={selected.map(n => n)}
           confirmText="Oui, vider"
           cancelText="Annuler"
           onConfirm={handleReset}
