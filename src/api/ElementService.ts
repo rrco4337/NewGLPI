@@ -48,7 +48,7 @@ class ElementService {
     this.appToken = import.meta.env.VITE_GLPI_APP_TOKEN || '';
   }
 
-  async initSession(user: string, password: string): Promise<boolean> {
+  async initSession(user: string, password: string): Promise<string | null> {
     try {
       const response = await fetch(`${this.glpiUrl}/apirest.php/initSession`, {
         method: 'POST',
@@ -59,14 +59,14 @@ class ElementService {
         },
       });
 
-      if (!response.ok) return false;
+      if (!response.ok) return null;
 
       const data = await response.json();
       this.sessionToken = data.session_token;
-      return true;
+      return this.sessionToken ?? null;
     } catch (error) {
       console.error('Erreur initSession:', error);
-      return false;
+      return null;
     }
   }
 

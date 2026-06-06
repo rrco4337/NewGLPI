@@ -5,6 +5,10 @@ export interface TicketCost {
   time_cost: number;
   fixed_cost: number;
 }
+export interface TicketItem {
+  id: number;
+  itemtype: string; // "Computer", "Monitor", etc.
+}
 
 export interface Ticket {
   id?: number;
@@ -16,7 +20,7 @@ export interface Ticket {
   description: string;
   status: string;         // "New"
   priority: string;       // "Medium"
-  items: string[];        // ["PC-ADM-001", "MN-FORM-002"]
+   items: TicketItem[];   // ["PC-ADM-001", "MN-FORM-002"]
   costs?: TicketCost[];
 }
 
@@ -178,7 +182,7 @@ class TicketService {
         'App-Token': this.appToken,
         'Session-Token': this.sessionToken,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ input: payload }),
     });
 
     if (!response.ok) {
@@ -210,41 +214,35 @@ class TicketService {
    * @param ticketId - ID GLPI du ticket
    * @param itemNames - Liste des noms d'éléments (ex: ["PC-ADM-001", "MN-FORM-002"])
    */
-  async linkItemsToTicket(ticketId: number, itemNames: string[]): Promise<void> {
-    if (!this.sessionToken) throw new Error('Session non initialisée');
+  async linkItemsToTicket(ticketId: number, items: TicketItem[]): Promise<void> {
+  if (!this.sessionToken) throw new Error('Session non initialisée');
 
-    for (const itemName of itemNames) {
-      const itemType = this.guessItemType(itemName);
-      const itemId = await this.getItemIdByName(itemName, itemType);
+for (const item of items) {
+    const linkPayload = {
+      itemtype: item.itemtype, // "Computer", "Monitor", etc.
+      items_id: item.id,
+      tickets_id: ticketId,
+      
+    };  
 
-      if (itemId) {
-        const linkPayload = {
-          tickets_id: ticketId,
-          items_id: itemId,
-          itemtype: itemType,
-        };
+  console.log(`Liaison: Ticket ${ticketId} -> ${item.itemtype} ID:${item.id}`);
+console.log(item);
+console.log(item.itemtype);
+    const response = await fetch(`${this.glpiUrl}/apirest.php/Item_Ticket`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'App-Token': this.appToken,
+        'Session-Token': this.sessionToken,
+      },
+      body: JSON.stringify({ input: linkPayload }), // ✅ wrapper input
+    });
 
-        console.log(`Liaison: Ticket ${ticketId} -> ${itemType} ${itemName} (ID: ${itemId})`);
-
-        const response = await fetch(`${this.glpiUrl}/apirest.php/Ticket_Item`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'App-Token': this.appToken,
-            'Session-Token': this.sessionToken,
-          },
-          body: JSON.stringify(linkPayload),
-        });
-
-        if (!response.ok && response.status !== 201) {
-          const error = await response.text();
-          console.error(`Erreur liaison ${itemName}:`, error);
-        }
-      } else {
-        console.warn(`Élément non trouvé dans GLPI: ${itemName}`);
-      }
+    if (!response.ok && response.status !== 201) {
+      console.error(`Erreur liaison ${item.itemtype} ${item.id}:`, await response.text());
     }
   }
+}
 
   /**
    * Ajoute des coûts à un ticket (via TicketCost dans GLPI)
@@ -268,7 +266,7 @@ class TicketService {
           'App-Token': this.appToken,
           'Session-Token': this.sessionToken,
         },
-        body: JSON.stringify(costPayload),
+        body: JSON.stringify({ input: costPayload }),
       });
 
       if (!response.ok && response.status !== 201) {

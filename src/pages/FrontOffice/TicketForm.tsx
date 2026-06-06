@@ -3,52 +3,101 @@ import { ticketService, type Ticket, type TicketCost } from '../../api/TicketSer
 import { elementService, type Element } from '../../api/ElementService';
 import './TicketForm.css';
 
+// Interface pour l'état local du formulaire
+interface FormDataState {
+  ref_ticket: string;
+  date: string;
+  heure: string;
+  type: string;
+  titre: string;
+  description: string;
+  status:  string;   // Peut être un ID numérique ou une chaîne pour le mapping
+  priority:  string; // Peut être un ID numérique ou une chaîne pour le mapping
+}
+const labelToEndpoint: Record<string, string> = {
+  'Ordinateur': 'Computer',
+  'Écran': 'Monitor',
+  'Équipement réseau': 'NetworkEquipment',
+  'Imprimante': 'Printer',
+  'Téléphone': 'Phone',
+  'Périphérique': 'Peripheral',
+  'Logiciel': 'Software',
+};
 const TicketForm: React.FC = () => {
-  // État du formulaire
-  const [titre, setTitre] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState('Incident');
-  const [status, setStatus] = useState('New');
-  const [priority, setPriority] = useState('Medium');
-  const [date, setDate] = useState('');
-  const [heure, setHeure] = useState('');
-  
-  // Éléments sélectionnés
+  // 1. État unifié du formulaire
+  const [formData, setFormData] = useState<FormDataState>({
+    ref_ticket: '',
+    date: '',
+    heure: '',
+    type: 'Incident',
+    status: 'New',
+    priority: 'Medium',
+    titre: '',
+    description: '',
+  });
+
+  // Éléments sélectionnés et liste globale
   const [elements, setElements] = useState<Element[]>([]);
   const [selectedElements, setSelectedElements] = useState<Element[]>([]);
   const [loadingElements, setLoadingElements] = useState(true);
-  
+
   // Coûts
   const [costs, setCosts] = useState<TicketCost[]>([]);
   const [durationSeconds, setDurationSeconds] = useState<number>(0);
   const [timeCost, setTimeCost] = useState<number>(0);
   const [fixedCost, setFixedCost] = useState<number>(0);
-  
-  // États généraux
-  const [loading, setLoading] = useState(false);
+
+  // États de l'application
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
 
-  // 1. Initialiser la session GLPI au chargement du composant
+  // Mappings pour GLPI (Conversion Text -> ID Numérique)
+
+  // Gestionnaire de changement générique pour les inputs
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Fonction de réinitialisation du formulaire
+  const resetForm = () => {
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    const formattedHeure = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
+
+    setFormData({
+      ref_ticket: '',
+      date: formattedDate,
+      heure: formattedHeure,
+      type: 'Incident',
+      status: 'New',
+      priority: 'Medium',
+      titre: '',
+      description: '',
+    });
+    setSelectedElements([]);
+    setCosts([]);
+    setError(null);
+  };
+
+  // 1. Initialiser la session GLPI au chargement pour les éléments
   useEffect(() => {
     const initSession = async () => {
       try {
-        setError(null);
-        // Identifiants GLPI par défaut (à adapter si besoin)
-        const success = await elementService.initSession('glpi', 'glpi');
-        
-        if (success) {
-          console.log('Session GLPI initialisée avec succès');
-          // Partager le token avec ticketService
-          ticketService.setSessionToken(elementService.getSessionToken?.() || null);
+              const sessionToken = await elementService.initSession('glpi', 'glpi');
+
+        if (sessionToken) {
+          console.log('Session GLPI initiale réussie');
+          ticketService.setSessionToken(sessionToken);
           setSessionReady(true);
         } else {
-          setError('Impossible de se connecter à GLPI. Vérifie que l\'API est activée et que les identifiants sont corrects.');
+          setError("Impossible de se connecter à GLPI au démarrage.");
         }
       } catch (err) {
-        console.error('Erreur lors de l\'initialisation de la session:', err);
-        setError('Erreur de connexion à GLPI. Vérifie que GLPI est accessible.');
+        console.error("Erreur lors de l'initialisation initiale:", err);
+        setError('Erreur de connexion à GLPI.');
       } finally {
         setLoadingElements(false);
       }
@@ -57,11 +106,11 @@ const TicketForm: React.FC = () => {
     initSession();
   }, []);
 
-  // 2. Charger les éléments disponibles UNIQUEMENT après que la session soit prête
+  // 2. Charger les éléments disponibles
   useEffect(() => {
     const loadElements = async () => {
       if (!sessionReady) return;
-      
+
       try {
         setLoadingElements(true);
         const data = await elementService.fetchAllElements();
@@ -75,112 +124,103 @@ const TicketForm: React.FC = () => {
     };
 
     loadElements();
-    
-    // Date par défaut = aujourd'hui
+
     const today = new Date();
     const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     const formattedHeure = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
-    setDate(formattedDate);
-    setHeure(formattedHeure);
+    
+    setFormData((prev) => ({
+      ...prev,
+      date: formattedDate,
+      heure: formattedHeure,
+    }));
   }, [sessionReady]);
 
-  // Ajouter un élément à la sélection
   const handleAddElement = (elementId: number) => {
-    const element = elements.find(e => e.id === elementId);
-    if (element && !selectedElements.some(e => e.id === element.id)) {
+    const element = elements.find((e) => e.id === elementId);
+    if (element && !selectedElements.some((e) => e.id === element.id)) {
       setSelectedElements([...selectedElements, element]);
     }
   };
 
-  // Retirer un élément de la sélection
   const handleRemoveElement = (elementId: number) => {
-    setSelectedElements(selectedElements.filter(e => e.id !== elementId));
+    setSelectedElements(selectedElements.filter((e) => e.id !== elementId));
   };
 
-  // Ajouter un coût
   const handleAddCost = () => {
     if (durationSeconds > 0 || timeCost > 0 || fixedCost > 0) {
-      setCosts([...costs, {
-        duration_seconds: durationSeconds,
-        time_cost: timeCost,
-        fixed_cost: fixedCost
-      }]);
-      // Réinitialiser les champs de coût
+      setCosts([
+        ...costs,
+        {
+          duration_seconds: durationSeconds,
+          time_cost: timeCost,
+          fixed_cost: fixedCost,
+        },
+      ]);
       setDurationSeconds(0);
       setTimeCost(0);
       setFixedCost(0);
     }
   };
 
-  // Retirer un coût
   const handleRemoveCost = (index: number) => {
     setCosts(costs.filter((_, i) => i !== index));
   };
 
-  // Soumettre le formulaire
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // Soumission du formulaire avec reconnexion flash et fix de types
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
     setSuccess(null);
 
-    // Validation
-    if (!titre.trim()) {
-      setError('Le titre est obligatoire');
-      setLoading(false);
+    if (!formData.titre || !formData.description) {
+      setError('Veuillez remplir tous les champs obligatoires (*)');
       return;
     }
-    if (!description.trim()) {
-      setError('La description est obligatoire');
-      setLoading(false);
-      return;
-    }
-    if (!date) {
-      setError('La date est obligatoire');
-      setLoading(false);
-      return;
-    }
-    if (!heure) {
-      setError('L\'heure est obligatoire');
-      setLoading(false);
-      return;
-    }
+
+    setIsSubmitting(true);
 
     try {
-      const newTicket: Ticket = {
-        ref_ticket: Date.now(), // ID temporaire
-        date: date,
-        heure: heure,
-        type: type,
-        titre: titre,
-        description: description,
-        status: status,
-        priority: priority,
-        items: selectedElements.map(e => e.name), // On utilise le nom pour l'identification
-        costs: costs.length > 0 ? costs : undefined
+      // Reconnexion flash "juste à temps" pour s'assurer d'avoir un jeton actif
+      console.log("Tentative de reconnexion flash à GLPI avant soumission...");
+      // ✅ Après — option B
+        const sessionToken = await elementService.initSession('glpi', 'glpi');
+        if (!sessionToken) {
+          throw new Error("Échec de la reconnexion à GLPI. Vérifie les identifiants.");
+        }
+        ticketService.setSessionToken(sessionToken);
+
+
+      // Conversion des types pour correspondre à l'interface Ticket
+      // Extraction des IDs d'éléments en tableau de strings (Element[] -> string[])
+        const formattedItems = selectedElements.map(e => ({
+        id: e.id,
+        itemtype: labelToEndpoint[e.item_type] || e.item_type, // fallback sur la valeur brute
+}));
+
+      const ticketData: Ticket = {
+        ref_ticket: formData.ref_ticket,
+        date: formData.date,
+        heure: formData.heure,
+        type: formData.type,
+        titre: formData.titre,
+        description: formData.description,
+        // Conversion string -> number via nos objets mapping
+        status: formData.status || 1, 
+        priority:formData.priority || 3,
+        items: formattedItems, 
+        costs: costs,            
       };
 
-      const ticketId = await ticketService.createTicket(newTicket);
-      
-      // Réinitialiser le formulaire
-      setTitre('');
-      setDescription('');
-      setType('Incident');
-      setStatus('New');
-      setPriority('Medium');
-      setSelectedElements([]);
-      setCosts([]);
-      
+      const ticketId = await ticketService.createTicket(ticketData);
+
       setSuccess(`Ticket créé avec succès ! ID GLPI: ${ticketId}`);
-      
-      // Faire défiler vers le haut
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+      resetForm();
     } catch (err) {
       console.error('Erreur création ticket:', err);
-      setError('Erreur lors de la création du ticket. Vérifie que GLPI est accessible.');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la création du ticket');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -191,32 +231,24 @@ const TicketForm: React.FC = () => {
         <p>Formulaire de création de ticket d'incident ou de demande</p>
       </div>
 
-      {success && (
-        <div className="alert alert-success">
-          ✅ {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="alert alert-error">
-          ❌ {error}
-        </div>
-      )}
+      {success && <div className="alert alert-success">✅ {success}</div>}
+      {error && <div className="alert alert-error">❌ {error}</div>}
 
       <form onSubmit={handleSubmit} className="ticket-form">
         {/* Section 1: Informations générales */}
         <div className="form-section">
           <h2>Informations générales</h2>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label>Titre du ticket *</label>
               <input
                 type="text"
-                value={titre}
-                onChange={(e) => setTitre(e.target.value)}
+                name="titre"
+                value={formData.titre}
+                onChange={handleInputChange}
                 placeholder="Ex: Panne imprimante, Problème réseau..."
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -225,11 +257,12 @@ const TicketForm: React.FC = () => {
             <div className="form-group">
               <label>Description *</label>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
                 placeholder="Décrivez le problème en détail..."
                 rows={5}
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -237,7 +270,7 @@ const TicketForm: React.FC = () => {
           <div className="form-row three-cols">
             <div className="form-group">
               <label>Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value)} disabled={loading}>
+              <select name="type" value={formData.type} onChange={handleInputChange} disabled={isSubmitting}>
                 <option value="Incident">Incident</option>
                 <option value="Demande">Demande</option>
                 <option value="Problème">Problème</option>
@@ -246,7 +279,7 @@ const TicketForm: React.FC = () => {
 
             <div className="form-group">
               <label>Statut</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} disabled={loading}>
+              <select name="status" value={formData.status} onChange={handleInputChange} disabled={isSubmitting}>
                 <option value="New">Nouveau</option>
                 <option value="Processing">En traitement</option>
                 <option value="Pending">En attente</option>
@@ -257,7 +290,7 @@ const TicketForm: React.FC = () => {
 
             <div className="form-group">
               <label>Priorité</label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value)} disabled={loading}>
+              <select name="priority" value={formData.priority} onChange={handleInputChange} disabled={isSubmitting}>
                 <option value="Low">Basse</option>
                 <option value="Medium">Moyenne</option>
                 <option value="High">Haute</option>
@@ -271,10 +304,11 @@ const TicketForm: React.FC = () => {
               <label>Date</label>
               <input
                 type="text"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
                 placeholder="JJ/MM/AAAA"
-                disabled={loading}
+                disabled={isSubmitting}
               />
               <small>Format: JJ/MM/AAAA</small>
             </div>
@@ -283,10 +317,11 @@ const TicketForm: React.FC = () => {
               <label>Heure</label>
               <input
                 type="text"
-                value={heure}
-                onChange={(e) => setHeure(e.target.value)}
+                name="heure"
+                value={formData.heure}
+                onChange={handleInputChange}
                 placeholder="HH:MM"
-                disabled={loading}
+                disabled={isSubmitting}
               />
               <small>Format: HH:MM</small>
             </div>
@@ -296,14 +331,18 @@ const TicketForm: React.FC = () => {
         {/* Section 2: Éléments concernés */}
         <div className="form-section">
           <h2>📦 Éléments concernés</h2>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label>Ajouter un élément</label>
               <div className="element-selector">
-                <select onChange={(e) => handleAddElement(parseInt(e.target.value))} value="" disabled={loadingElements || loading}>
+                <select
+                  onChange={(e) => handleAddElement(parseInt(e.target.value))}
+                  value=""
+                  disabled={loadingElements || isSubmitting}
+                >
                   <option value="">-- Sélectionner un élément --</option>
-                  {elements.map(element => (
+                  {elements.map((element) => (
                     <option key={element.id} value={element.id}>
                       [{element.item_type}] {element.name} - {element.user || 'Non assigné'}
                     </option>
@@ -317,7 +356,7 @@ const TicketForm: React.FC = () => {
             <div className="selected-elements">
               <label>Éléments liés au ticket :</label>
               <div className="elements-list">
-                {selectedElements.map(element => (
+                {selectedElements.map((element) => (
                   <div key={element.id} className="element-badge">
                     <span>
                       <strong>{element.name}</strong> ({element.item_type})
@@ -326,7 +365,7 @@ const TicketForm: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveElement(element.id)}
-                      disabled={loading}
+                      disabled={isSubmitting}
                     >
                       ✕
                     </button>
@@ -337,10 +376,10 @@ const TicketForm: React.FC = () => {
           )}
         </div>
 
-        {/* Section 3: Coûts (optionnel) */}
+        {/* Section 3: Coûts */}
         <div className="form-section">
           <h2>💰 Coûts d'intervention (optionnel)</h2>
-          
+
           <div className="form-row three-cols">
             <div className="form-group">
               <label>Durée (secondes)</label>
@@ -349,7 +388,7 @@ const TicketForm: React.FC = () => {
                 value={durationSeconds}
                 onChange={(e) => setDurationSeconds(parseInt(e.target.value) || 0)}
                 placeholder="0"
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -361,7 +400,7 @@ const TicketForm: React.FC = () => {
                 value={timeCost}
                 onChange={(e) => setTimeCost(parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -373,7 +412,7 @@ const TicketForm: React.FC = () => {
                 value={fixedCost}
                 onChange={(e) => setFixedCost(parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                disabled={loading}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -382,7 +421,7 @@ const TicketForm: React.FC = () => {
             type="button"
             onClick={handleAddCost}
             className="btn-secondary"
-            disabled={loading}
+            disabled={isSubmitting}
           >
             + Ajouter ce coût
           </button>
@@ -393,15 +432,10 @@ const TicketForm: React.FC = () => {
               {costs.map((cost, index) => (
                 <div key={index} className="cost-item">
                   <span>
-                    Durée: {cost.duration_seconds}s | 
-                    Coût horaire: {cost.time_cost}€ | 
-                    Coût fixe: {cost.fixed_cost}€
+                    Durée: {cost.duration_seconds}s | Coût horaire: {cost.time_cost}€ | Coût fixe:{' '}
+                    {cost.fixed_cost}€
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCost(index)}
-                    disabled={loading}
-                  >
+                  <button type="button" onClick={() => handleRemoveCost(index)} disabled={isSubmitting}>
                     ✕
                   </button>
                 </div>
@@ -412,11 +446,16 @@ const TicketForm: React.FC = () => {
 
         {/* Boutons d'action */}
         <div className="form-actions">
-          <button type="button" onClick={() => window.history.back()} className="btn-cancel" disabled={loading}>
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="btn-cancel"
+            disabled={isSubmitting}
+          >
             Annuler
           </button>
-          <button type="submit" className="btn-submit" disabled={loading}>
-            {loading ? 'Création en cours...' : '✓ Créer le ticket'}
+          <button type="submit" className="btn-submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Création en cours...' : '✓ Créer le ticket'}
           </button>
         </div>
       </form>
