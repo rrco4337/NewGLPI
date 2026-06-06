@@ -41,27 +41,27 @@ api.interceptors.response.use(
   (error) => Promise.reject(handleApiError(error)),
 )
 
-const demoTickets: GlpiTicket[] = [
-  { id: 101, name: 'Connexion réseau impossible', status: 'open', priority: 'high', requester_name: 'A. Razafindrakoto', technician_name: 'S. Martin', date: '2026-06-04', category: 'Réseau', content: 'Les postes du 3e étage ne parviennent plus à obtenir une adresse IP.' },
-  { id: 102, name: 'Mise à jour du logiciel de compta', status: 'pending', priority: 'medium', requester_name: 'L. Dupont', technician_name: 'J. Legrand', date: '2026-06-03', category: 'Logiciel', content: 'Demande de déploiement du correctif 4.2.1.' },
-  { id: 103, name: 'Imprimante multifonction HS', status: 'closed', priority: 'low', requester_name: 'M. Faye', technician_name: 'N. Bernard', date: '2026-06-01', category: 'Imprimante', content: 'Le bac papier est détecté vide malgré un chargement complet.' },
-]
+// const demoTickets: GlpiTicket[] = [
+//   { id: 101, name: 'Connexion réseau impossible', status: 'open', priority: 'high', requester_name: 'A. Razafindrakoto', technician_name: 'S. Martin', date: '2026-06-04', category: 'Réseau', content: 'Les postes du 3e étage ne parviennent plus à obtenir une adresse IP.' },
+//   { id: 102, name: 'Mise à jour du logiciel de compta', status: 'pending', priority: 'medium', requester_name: 'L. Dupont', technician_name: 'J. Legrand', date: '2026-06-03', category: 'Logiciel', content: 'Demande de déploiement du correctif 4.2.1.' },
+//   { id: 103, name: 'Imprimante multifonction HS', status: 'closed', priority: 'low', requester_name: 'M. Faye', technician_name: 'N. Bernard', date: '2026-06-01', category: 'Imprimante', content: 'Le bac papier est détecté vide malgré un chargement complet.' },
+// ]
 
-const demoTicketDetail: TicketDetail = {
-  ...demoTickets[0],
-  description: 'Le problème est apparu après la mise à jour du switch du couloir. Les utilisateurs du troisième étage signalent des déconnexions intermittentes.',
-  comments: [
-    { id: 1, date: '2026-06-04 10:15', author: 'S. Martin', content: 'Vérification des VLAN en cours.' },
-    { id: 2, date: '2026-06-04 10:45', author: 'A. Razafindrakoto', content: 'Le problème est toujours présent sur deux postes.' },
-  ],
-  history: [
-    { id: 1, date: '2026-06-04 09:30', action: 'Ticket créé', author: 'A. Razafindrakoto' },
-    { id: 2, date: '2026-06-04 10:10', action: 'Assignation à S. Martin', author: 'Support IT' },
-  ],
-  documents: [
-    { id: 1, filename: 'capture-switch.png', mime: 'image/png' },
-  ],
-}
+// const demoTicketDetail: TicketDetail = {
+//   ...demoTickets[0],
+//   description: 'Le problème est apparu après la mise à jour du switch du couloir. Les utilisateurs du troisième étage signalent des déconnexions intermittentes.',
+//   comments: [
+//     { id: 1, date: '2026-06-04 10:15', author: 'S. Martin', content: 'Vérification des VLAN en cours.' },
+//     { id: 2, date: '2026-06-04 10:45', author: 'A. Razafindrakoto', content: 'Le problème est toujours présent sur deux postes.' },
+//   ],
+//   history: [
+//     { id: 1, date: '2026-06-04 09:30', action: 'Ticket créé', author: 'A. Razafindrakoto' },
+//     { id: 2, date: '2026-06-04 10:10', action: 'Assignation à S. Martin', author: 'Support IT' },
+//   ],
+//   documents: [
+//     { id: 1, filename: 'capture-switch.png', mime: 'image/png' },
+//   ],
+// }
 
 export const glpiAuthService = {
   async initSession(username: string, password: string) {
@@ -80,9 +80,9 @@ export const glpiTicketService = {
   async listTickets() {
     try {
       const response = await api.get('/Ticket?range=0-49&order=DESC&sort=id')
-      return Array.isArray(response.data) ? response.data as GlpiTicket[] : demoTickets
+      return Array.isArray(response.data) ? response.data as GlpiTicket[] : false
     } catch {
-      return demoTickets
+      return false
     }
   },
 
@@ -91,7 +91,7 @@ export const glpiTicketService = {
       const response = await api.get(`/Ticket/${id}`)
       return response.data as TicketDetail
     } catch {
-      return { ...demoTicketDetail, id } as TicketDetail
+      return {id } as TicketDetail
     }
   },
 

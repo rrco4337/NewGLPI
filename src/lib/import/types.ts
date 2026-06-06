@@ -1,12 +1,21 @@
 // ──────────────── Parsed rows ────────────────
 
+export type GlpiItemType =
+  | 'Computer'
+  | 'Monitor'
+  | 'Printer'
+  | 'NetworkEquipment'
+  | 'Peripheral'
+  | 'Phone'
+  | 'Software'
+
 export type AssetRow = {
   rowIndex: number
   name: string
   status: string
   location: string
   manufacturer: string
-  itemType: 'Computer' | 'Monitor'
+  itemType: GlpiItemType
   model: string
   inventoryNumber: string
   user: string
@@ -106,7 +115,7 @@ export type CreatedRegistry = {
 }
 
 export type AssetInfo = {
-  itemtype: 'Computer' | 'Monitor'
+  itemtype: GlpiItemType
   id: number
 }
 

@@ -1,3 +1,5 @@
+import type { GlpiItemType } from './types'
+
 // ─── Numeric normalization ───────────────────────────────────────────────────
 
 /** Parse a numeric string that may use comma or dot as decimal separator. */
@@ -102,9 +104,10 @@ function parseTime(raw: string): { h: number; min: number; sec: number } | null 
 
 /** Returns true if the parsed date/time is logically valid. */
 function isValidDateTime(y: number, m: number, d: number, h: number, min: number): boolean {
-  if (m < 1 || m > 12 || d < 1 || d > 31) return false
+  if (m < 1 || m > 12 || d < 1) return false
   if (h < 0 || h > 23 || min < 0 || min > 59) return false
-  return true
+  const daysInMonth = new Date(y, m, 0).getDate()
+  return d <= daysInMonth
 }
 
 /**
@@ -152,13 +155,27 @@ const TICKET_PRIORITY_MAP: Record<string, number> = {
   major: 6, majeur: 6, lehibe: 6, critical: 6, critique: 6,
 }
 
-const ITEM_TYPE_MAP: Record<string, 'Computer' | 'Monitor'> = {
+const ITEM_TYPE_MAP: Record<string, GlpiItemType> = {
   computer: 'Computer', computers: 'Computer', ordinateur: 'Computer',
   ordinateurs: 'Computer', pc: 'Computer', poste: 'Computer',
   workstation: 'Computer', laptop: 'Computer', portable: 'Computer',
+  notebook: 'Computer',
   monitor: 'Monitor', monitors: 'Monitor', moniteur: 'Monitor',
-  moniteurs: 'Monitor', écran: 'Monitor', ecran: 'Monitor',
-  screen: 'Monitor', display: 'Monitor',
+  moniteurs: 'Monitor', printer: 'Printer', printers: 'Printer',
+  imprimante: 'Printer', imprimantes: 'Printer',
+  networkequipment: 'NetworkEquipment', 'network equipment': 'NetworkEquipment',
+  switch: 'NetworkEquipment', switches: 'NetworkEquipment',
+  router: 'NetworkEquipment', routeur: 'NetworkEquipment', routeurs: 'NetworkEquipment',
+  hub: 'NetworkEquipment', firewall: 'NetworkEquipment', ap: 'NetworkEquipment',
+  peripheral: 'Peripheral', scanner: 'Peripheral', scanners: 'Peripheral',
+  ups: 'Peripheral', onduleur: 'Peripheral', onduleurs: 'Peripheral',
+  keyboard: 'Peripheral', clavier: 'Peripheral',
+  mouse: 'Peripheral', souris: 'Peripheral', webcam: 'Peripheral',
+  phone: 'Phone', phones: 'Phone', mobile: 'Phone', smartphone: 'Phone',
+  tablet: 'Phone', tablette: 'Phone',
+  software: 'Software', logiciel: 'Software', logiciels: 'Software',
+  application: 'Software',
+  ecran: 'Monitor', screen: 'Monitor', display: 'Monitor',
 }
 
 export function mapTicketType(raw: string): number {
@@ -173,7 +190,7 @@ export function mapTicketPriority(raw: string): number {
   return TICKET_PRIORITY_MAP[raw.toLowerCase().trim()] ?? 3
 }
 
-export function mapItemType(raw: string): 'Computer' | 'Monitor' | null {
+export function mapItemType(raw: string): GlpiItemType | null {
   return ITEM_TYPE_MAP[raw.toLowerCase().trim()] ?? null
 }
 

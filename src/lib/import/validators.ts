@@ -53,7 +53,7 @@ export function validateCsv1(rows: RawRow[]): Csv1ValidationResult {
 
     const itemType = mapItemType(itemTypeRaw)
     if (!itemType) {
-      errors.push({ rowIndex: idx, column: 'item_type', severity: 'error', message: `Type d'objet invalide : "${itemTypeRaw}" — attendu: Computer, Monitor` })
+      errors.push({ rowIndex: idx, column: 'item_type', severity: 'error', message: `Type d'objet inconnu : "${itemTypeRaw}" — attendus : Computer, Monitor, Printer, NetworkEquipment, Peripheral, Phone, Software` })
     }
 
     if (name && seenNames.has(name.toLowerCase())) {
@@ -187,10 +187,13 @@ export function validateCsv3(
       errors.push({ rowIndex: idx, column: 'num_ticket', severity: 'error', message: `Num_Ticket ${numTicket} ne correspond à aucun Ref_Ticket du CSV 2` })
     }
 
-    const duration = parseStrictInteger(durRaw)
-    if (durRaw.trim() && duration === null) {
-      errors.push({ rowIndex: idx, column: 'duration_second', severity: 'error', message: `Duration_second invalide : "${durRaw}" — entier requis` })
+    const durationRaw = parseDecimal(durRaw)
+    if (durRaw.trim() && durationRaw === null) {
+      errors.push({ rowIndex: idx, column: 'duration_second', severity: 'error', message: `Duration_second invalide : "${durRaw}" — nombre requis` })
+    } else if (durationRaw !== null && !Number.isInteger(durationRaw)) {
+      errors.push({ rowIndex: idx, column: 'duration_second', severity: 'warning', message: `Duration_second "${durRaw}" arrondi à ${Math.round(durationRaw)} s` })
     }
+    const duration = durationRaw !== null ? Math.round(durationRaw) : null
 
     const timeCost = parseDecimal(timeCostRaw)
     if (timeCostRaw.trim() && timeCost === null) {
