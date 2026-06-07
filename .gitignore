@@ -33,6 +33,6 @@ backend/data/
 
 # Secrets & tokens — ne jamais versionner
 session-token.txt
-.env
+
 *.token
 *.secret
