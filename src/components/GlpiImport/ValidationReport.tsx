@@ -5,7 +5,11 @@ type Props = {
 }
 
 const ErrorList = ({ errors, max = 8 }: { errors: ValidationError[]; max?: number }) => {
-  const shown = errors.slice(0, max)
+  // Show errors before warnings so blocking issues are never hidden behind warnings
+  const sorted = [...errors].sort((a, b) =>
+    a.severity === b.severity ? 0 : a.severity === 'error' ? -1 : 1,
+  )
+  const shown = sorted.slice(0, max)
   return (
     <ul className="error-list">
       {shown.map((e, i) => (
@@ -17,9 +21,9 @@ const ErrorList = ({ errors, max = 8 }: { errors: ValidationError[]; max?: numbe
           <strong>{e.column}</strong> — {e.message}
         </li>
       ))}
-      {errors.length > max && (
+      {sorted.length > max && (
         <li style={{ color: '#888', fontStyle: 'italic' }}>
-          … et {errors.length - max} autre(s)
+          … et {sorted.length - max} autre(s)
         </li>
       )}
     </ul>

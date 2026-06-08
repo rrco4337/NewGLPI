@@ -5,13 +5,13 @@ import type {
   ParsedImage, ImageValidationResult,
 } from './types'
 import {
-  parseDecimal, parseStrictInteger, normalizeDatetime,
+  parseDecimal, parseTicketRef, normalizeDatetime,
   mapTicketType, mapTicketStatus, mapTicketPriority, mapItemType, parseItemsField,
 } from './normalizers'
 
 // ─── CSV 1 ────────────────────────────────────────────────────────────────────
 
-const REQUIRED_CSV1 = ['name', 'status', 'item_type', 'inventory_number']
+const REQUIRED_CSV1 = ['name', 'item_type']
 
 export function validateCsv1(rows: RawRow[]): Csv1ValidationResult {
   const errors: ValidationError[] = []
@@ -44,7 +44,7 @@ export function validateCsv1(rows: RawRow[]): Csv1ValidationResult {
     }
 
     if (!invNumber.trim()) {
-      errors.push({ rowIndex: idx, column: 'inventory_number', severity: 'error', message: 'Numéro d\'inventaire vide' })
+      errors.push({ rowIndex: idx, column: 'inventory_number', severity: 'warning', message: 'Numéro d\'inventaire vide — sera ignoré' })
     }
 
     if (!status.trim()) {
@@ -53,7 +53,7 @@ export function validateCsv1(rows: RawRow[]): Csv1ValidationResult {
 
     const itemType = mapItemType(itemTypeRaw)
     if (!itemType) {
-      errors.push({ rowIndex: idx, column: 'item_type', severity: 'error', message: `Type d'objet inconnu : "${itemTypeRaw}" — attendus : Computer, Monitor, Printer, NetworkEquipment, Peripheral, Phone, Software` })
+      errors.push({ rowIndex: idx, column: 'item_type', severity: 'warning', message: `Type d'objet non supporté : "${itemTypeRaw}" — ligne ignorée` })
     }
 
     if (name && seenNames.has(name.toLowerCase())) {
@@ -113,9 +113,9 @@ export function validateCsv2(rows: RawRow[]): Csv2ValidationResult {
     const heureRaw = row['heure'] ?? ''
     const titre = (row['titre'] ?? '').trim()
 
-    const refTicket = parseStrictInteger(refRaw)
+    const refTicket = parseTicketRef(refRaw)
     if (refTicket === null) {
-      errors.push({ rowIndex: idx, column: 'ref_ticket', severity: 'error', message: `Ref_Ticket invalide : "${refRaw}" — doit être un entier` })
+      errors.push({ rowIndex: idx, column: 'ref_ticket', severity: 'error', message: `Ref_Ticket invalide : "${refRaw}" — entier ou format "TK-001" attendu` })
     } else if (refTicket <= 0) {
       errors.push({ rowIndex: idx, column: 'ref_ticket', severity: 'error', message: `Ref_Ticket doit être > 0, reçu : ${refTicket}` })
     } else if (seenRefs.has(refTicket)) {
@@ -180,9 +180,9 @@ export function validateCsv3(
     const timeCostRaw = row['time_cost'] ?? '0'
     const fixedRaw = row['fixed_cost'] ?? '0'
 
-    const numTicket = parseStrictInteger(numRaw)
+    const numTicket = parseTicketRef(numRaw)
     if (numTicket === null) {
-      errors.push({ rowIndex: idx, column: 'num_ticket', severity: 'error', message: `Num_Ticket invalide : "${numRaw}" — entier requis, sans décimale` })
+      errors.push({ rowIndex: idx, column: 'num_ticket', severity: 'error', message: `Num_Ticket invalide : "${numRaw}" — entier ou format "TK-001" attendu` })
     } else if (!validTicketRefs.has(numTicket)) {
       errors.push({ rowIndex: idx, column: 'num_ticket', severity: 'error', message: `Num_Ticket ${numTicket} ne correspond à aucun Ref_Ticket du CSV 2` })
     }

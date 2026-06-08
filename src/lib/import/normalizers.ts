@@ -18,6 +18,25 @@ export function parseStrictInteger(raw: string): number | null {
   return n
 }
 
+/**
+ * Parse a ticket reference that may be a plain integer ("42")
+ * or a prefixed string ("TK-042", "TICKET-042", "T-042", etc.).
+ * Extracts the trailing digits and returns them as a positive integer.
+ */
+export function parseTicketRef(raw: string): number | null {
+  const s = raw.trim()
+  // Plain integer first
+  const plain = parseStrictInteger(s)
+  if (plain !== null && plain > 0) return plain
+  // Prefix pattern: optional letters/dashes then digits (e.g. TK-001, T-5, TICKET-099)
+  const match = s.match(/^[A-Za-z]+-?(\d+)$/)
+  if (match) {
+    const n = parseInt(match[1], 10)
+    return n > 0 ? n : null
+  }
+  return null
+}
+
 // ─── Date normalization ───────────────────────────────────────────────────────
 
 const FR_MONTHS: Record<string, number> = {
