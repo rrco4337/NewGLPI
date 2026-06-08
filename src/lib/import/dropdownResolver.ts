@@ -1,4 +1,8 @@
 import { listItems, createItem } from '@/api/glpi'
+import { createItemV2 } from '@/api/glpiV2'
+
+// Dropdown types only accessible via GLPI REST v2 (v1 returns ERROR_RESOURCE_NOT_FOUND_NOR_COMMONDBTM)
+const V2_DROPDOWN_TYPES = new Set(['SocketModel', 'PassiveDCEquipmentModel', 'CableType'])
 
 type ItemEntry = { id: number; name: string; firstname?: string; realname?: string; completename?: string }
 
@@ -39,7 +43,7 @@ export class DropdownResolver {
   // ── Preloading ───────────────────────────────────────────────────────────────
 
   async preloadAll(token?: string) {
-    await Promise.all([
+    await Promise.allSettled([
       this.load('State', token),
       this.load('Location', token),
       this.load('Manufacturer', token),
@@ -49,6 +53,12 @@ export class DropdownResolver {
       this.load('NetworkEquipmentModel', token),
       this.load('PeripheralModel', token),
       this.load('PhoneModel', token),
+      this.load('EnclosureModel', token),
+      this.load('PDUModel', token),
+      this.load('RackModel', token),
+      this.load('PassiveDCEquipmentModel', token),
+      this.load('CableType', token),
+      this.load('SocketModel', token),
     ])
   }
 
@@ -121,9 +131,15 @@ export class DropdownResolver {
     }
 
     try {
-      const res = await createItem(type, input, token)
-      const id: number = Array.isArray(res) ? res[0]?.id : res?.id
-      if (!id) throw new Error('No ID returned')
+      let id: number
+      if (V2_DROPDOWN_TYPES.has(type)) {
+        const res = await createItemV2(type, input)
+        id = res.id
+      } else {
+        const res = await createItem(type, input, token)
+        id = Array.isArray(res) ? res[0]?.id : res?.id
+        if (!id) throw new Error('No ID returned')
+      }
       const map = this.cache.get(type) ?? new Map<string, number>()
       map.set(label.toLowerCase().trim(), id)
       this.cache.set(type, map)

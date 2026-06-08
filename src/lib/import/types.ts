@@ -8,6 +8,15 @@ export type GlpiItemType =
   | 'Peripheral'
   | 'Phone'
   | 'Software'
+  | 'Enclosure'
+  | 'PDU'
+  | 'PassiveDCEquipment'
+  | 'Cable'
+  | 'Appliance'
+  | 'SoftwareLicense'
+  | 'Certificate'
+  | 'Socket'
+  | 'Rack'
 
 export type AssetRow = {
   rowIndex: number

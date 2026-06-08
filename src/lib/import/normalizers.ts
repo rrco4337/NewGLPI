@@ -195,6 +195,17 @@ const ITEM_TYPE_MAP: Record<string, GlpiItemType> = {
   software: 'Software', logiciel: 'Software', logiciels: 'Software',
   application: 'Software',
   ecran: 'Monitor', screen: 'Monitor', display: 'Monitor',
+  enclosure: 'Enclosure', baie: 'Enclosure', 'baie serveur': 'Enclosure',
+  pdu: 'PDU', 'power distribution unit': 'PDU', 'bandeau prise': 'PDU',
+  passivedcequipment: 'PassiveDCEquipment', 'passive dc': 'PassiveDCEquipment',
+  'équipement dc passif': 'PassiveDCEquipment', 'equipement dc passif': 'PassiveDCEquipment',
+  cable: 'Cable', câble: 'Cable', 'fibre optique': 'Cable', 'patch cord': 'Cable',
+  appliance: 'Appliance', applicatif: 'Appliance',
+  softwarelicense: 'SoftwareLicense', licence: 'SoftwareLicense', 'licence logiciel': 'SoftwareLicense',
+  'software license': 'SoftwareLicense', 'logiciel licence': 'SoftwareLicense',
+  certificate: 'Certificate', certificat: 'Certificate', 'certificat ssl': 'Certificate',
+  socket: 'Socket', 'prise réseau': 'Socket', 'prise rj45': 'Socket', 'wall socket': 'Socket',
+  rack: 'Rack', 'baie rack': 'Rack', 'armoire rack': 'Rack',
 }
 
 export function mapTicketType(raw: string): number {

@@ -1,10 +1,14 @@
 import { createItem, updateItem, deleteItems, listItems } from '@/api/glpi'
+import { createItemV2, deleteItemV2 } from '@/api/glpiV2'
 import { uploadDocumentToGlpi, linkDocumentToItem, ensureImageDocumentTypes } from '@/api/glpiDocuments'
 import { DropdownResolver } from './dropdownResolver'
 import type {
   AssetRow, TicketRow, CostRow, ParsedImage,
   ImportReport, CreatedRegistry, AssetInfo, ProgressUpdate, GlpiItemType,
 } from './types'
+
+// Types whose GLPI REST v1 endpoint is unavailable — routed to v2
+const V2_ONLY_TYPES = new Set<GlpiItemType>(['Socket'])
 
 // Maps each supported asset type to its GLPI model dropdown type and field name
 const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
@@ -14,6 +18,12 @@ const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
   NetworkEquipment: 'NetworkEquipmentModel',
   Peripheral: 'PeripheralModel',
   Phone: 'PhoneModel',
+  Enclosure: 'EnclosureModel',
+  PDU: 'PDUModel',
+  Rack: 'RackModel',
+  PassiveDCEquipment: 'PassiveDCEquipmentModel',
+  Cable: 'CableType',
+  Socket: 'SocketModel',
 }
 
 const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
@@ -23,6 +33,12 @@ const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
   NetworkEquipment: 'networkequipmentmodels_id',
   Peripheral: 'peripheralmodels_id',
   Phone: 'phonemodels_id',
+  Enclosure: 'enclosuremodels_id',
+  PDU: 'pdumodels_id',
+  Rack: 'rackmodels_id',
+  PassiveDCEquipment: 'passivedcequipmentmodels_id',
+  Cable: 'cabletypes_id',
+  Socket: 'socketmodels_id',
 }
 
 type OnProgress = (update: ProgressUpdate) => void
@@ -53,7 +69,11 @@ async function rollback(registry: CreatedRegistry, token?: string): Promise<stri
   const tryDelete = async (type: string, ids: number[]) => {
     if (!ids.length) return
     try {
-      await deleteItems(type, ids, token)
+      if (V2_ONLY_TYPES.has(type as GlpiItemType)) {
+        await Promise.all(ids.map(id => deleteItemV2(type, id)))
+      } else {
+        await deleteItems(type, ids, token)
+      }
     } catch (e: unknown) {
       errors.push(`Rollback ${type}: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -99,7 +119,7 @@ async function buildAssetInput(
 
   const modelGlpiType = MODEL_GLPI_TYPE[row.itemType]
   const modelId = modelGlpiType ? await resolver.ensureValue(modelGlpiType, row.model, token) : null
-  if (row.model && !modelId) warnings.push(`Modèle "${row.model}" non créé pour ${row.itemType}`)
+  if (row.model && modelGlpiType && !modelId) warnings.push(`Modèle "${row.model}" non créé pour ${row.itemType}`)
 
   const modelField = MODEL_FIELD[row.itemType]
 
@@ -177,7 +197,9 @@ export async function runImport(
 
   const createAsset = async (row: AssetRow) => {
     const input = await buildAssetInput(row, resolver, warnings, token)
-    const res = await createItem(row.itemType, input, token)
+    const res = V2_ONLY_TYPES.has(row.itemType)
+      ? await createItemV2(row.itemType, input)
+      : await createItem(row.itemType, input, token)
     const id = Array.isArray(res) ? res[0]?.id : res?.id
     if (!id) throw new Error(`Pas d'ID retourné pour l'actif "${row.name}"`)
     return { name: row.name, id: id as number, itemType: row.itemType }
@@ -289,13 +311,23 @@ export async function runImport(
           continue
         }
         try {
-          const linkRes = await createItem('Item_Ticket', {
-            tickets_id: ticketId,
-            itemtype: info.itemtype,
-            items_id: info.id,
-          }, token)
-          const linkId = Array.isArray(linkRes) ? linkRes[0]?.id : linkRes?.id
-          if (linkId) registry.itemTickets.push({ id: linkId as number })
+          let linkId: number | undefined
+          if (V2_ONLY_TYPES.has(info.itemtype)) {
+            const linkRes = await createItemV2('Item_Ticket', {
+              tickets_id: ticketId,
+              itemtype: info.itemtype,
+              items_id: info.id,
+            }, 'Assistance')
+            linkId = linkRes.id
+          } else {
+            const linkRes = await createItem('Item_Ticket', {
+              tickets_id: ticketId,
+              itemtype: info.itemtype,
+              items_id: info.id,
+            }, token)
+            linkId = Array.isArray(linkRes) ? linkRes[0]?.id : linkRes?.id
+          }
+          if (linkId) registry.itemTickets.push({ id: linkId })
         } catch (e: unknown) {
           warnings.push(`Lien ticket ${t.refTicket} ↔ "${assetName}": ${e instanceof Error ? e.message : String(e)}`)
         }
