@@ -138,7 +138,7 @@ export function validateCsv2(rows: RawRow[]): Csv2ValidationResult {
       rowIndex: idx,
       refTicket,
       date: datetime,
-      type: mapTicketType(row['type'] ?? ''),
+      type: mapTicketType(row['ticket_type'] ?? ''),
       title: titre,
       description: (row['description'] ?? '').trim(),
       status: mapTicketStatus(row['status'] ?? ''),

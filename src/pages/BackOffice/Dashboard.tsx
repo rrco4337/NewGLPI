@@ -26,8 +26,8 @@ export const Dashboard = () => {
             </article>
             <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Tickets Total</p>
-              <p className="mt-3 text-4xl font-semibold text-slate-900">{data.ticketsByStatus.open}</p>
-              <p className="mt-1 text-sm text-sky-600">Priorité élevée</p>
+              <p className="mt-3 text-4xl font-semibold text-slate-900">{data.totalTickets}</p>
+              <p className="mt-1 text-sm text-sky-600">{data.ticketsByStatus.open} ouverts</p>
             </article>
             {/* <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Tickets en attente</p>
@@ -84,18 +84,18 @@ export const Dashboard = () => {
                     <th className="px-4 py-3">Titre</th>
                     <th className="px-4 py-3">Statut</th>
                     <th className="px-4 py-3">Priorité</th>
-                    <th className="px-4 py-3">Demandeur</th>
-                    <th className="px-4 py-3">Technicien</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {[{ id: 101, name: 'Connexion réseau impossible', status: 'open', priority: 'high', requester: 'A. Razafindrakoto', technician: 'S. Martin' }, { id: 102, name: 'Mise à jour logiciel de compta', status: 'pending', priority: 'medium', requester: 'L. Dupont', technician: 'J. Legrand' }, { id: 103, name: 'Imprimante multifonction HS', status: 'closed', priority: 'low', requester: 'M. Faye', technician: 'N. Bernard' }].map((ticket) => (
+                  {data.recentTickets.map((ticket) => (
                     <tr key={ticket.id} className="hover:bg-slate-50">
                       <td className="px-4 py-4 text-slate-700">#{ticket.id} · {ticket.name}</td>
-                      <td className="px-4 py-4"><StatusBadge label={ticket.status} variant={ticket.status === 'closed' ? 'closed' : ticket.status === 'pending' ? 'pending' : 'open'} /></td>
-                      <td className="px-4 py-4"><StatusBadge label={ticket.priority} variant={ticket.priority === 'high' ? 'high' : ticket.priority === 'medium' ? 'medium' : 'low'} /></td>
-                      <td className="px-4 py-4 text-slate-600">{ticket.requester}</td>
-                      <td className="px-4 py-4 text-slate-600">{ticket.technician}</td>
+                      <td className="px-4 py-4"><StatusBadge label={ticket.statusLabel} variant={ticket.statusVariant} /></td>
+                      <td className="px-4 py-4"><StatusBadge label={ticket.priorityLabel} variant={ticket.priorityVariant} /></td>
+                      <td className="px-4 py-4 text-slate-600">{ticket.ticketType}</td>
+                      <td className="px-4 py-4 text-slate-500">{ticket.date}</td>
                     </tr>
                   ))}
                 </tbody>

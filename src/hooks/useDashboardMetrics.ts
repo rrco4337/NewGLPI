@@ -7,6 +7,16 @@ export const useDashboardMetrics = () => {
     totalTickets: number
     assetBreakdown: Array<{ label: string; value: number; accent: string; detail: string }>
     ticketsByStatus: { open: number; closed: number; pending: number; incidents: number; requests: number }
+    recentTickets: Array<{
+      id: number
+      name: string
+      statusLabel: string
+      statusVariant: 'open' | 'pending' | 'closed'
+      priorityLabel: string
+      priorityVariant: 'low' | 'medium' | 'high'
+      ticketType: string
+      date: string
+    }>
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

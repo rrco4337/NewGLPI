@@ -15,7 +15,7 @@ export const COLUMN_SYNONYMS: Record<string, string[]> = {
     'manufacturer', 'fabricant', 'mpanamboatra', 'marque', 'brand', 'constructeur',
   ],
   item_type: [
-    'item_type', 'itemtype', 'type', 'karazana', 'type_objet',
+    'item_type', 'itemtype', 'karazana', 'type_objet',
     'type_element', 'type_actif', 'asset_type',
   ],
   model: [
@@ -31,6 +31,10 @@ export const COLUMN_SYNONYMS: Record<string, string[]> = {
   ],
 
   // ── CSV 2 – Tickets ─────────────────────────────────────────
+  ticket_type: [
+    'type', 'ticket_type', 'type_ticket', 'karazana_taratasy',
+    'incident_type', 'request_type',
+  ],
   ref_ticket: [
     'ref_ticket', 'ref', 'id', 'num', 'numero_ticket', 'ticket_id', 'nifankaiky',
     'reference', 'ticket_ref',

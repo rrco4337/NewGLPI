@@ -93,3 +93,54 @@ export async function deleteItemV2(itemType: string, id: number): Promise<void> 
     throw new Error(`GLPI v2 DELETE ${res.status}: ${detail}`)
   }
 }
+
+export async function listItemsV2(
+  itemType: string,
+  namespace = 'Assets',
+): Promise<Array<{ id: number }>> {
+  const token = await acquireToken()
+  const res = await fetch(`${V2_BASE}/${namespace}/${itemType}?range=0-9999`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return Array.isArray(data) ? data : []
+}
+
+export async function purgeAllItemsV2(
+  itemType: string,
+  namespace = 'Assets',
+): Promise<{ deleted: number; errors: string[] }> {
+  const errors: string[] = []
+  let deleted = 0
+
+  try {
+    const token = await acquireToken()
+
+    const listRes = await fetch(`${V2_BASE}/${namespace}/${itemType}?range=0-9999`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!listRes.ok) {
+      errors.push(`Liste ${itemType} (v2 ${listRes.status}): ${await listRes.text()}`)
+      return { deleted, errors }
+    }
+
+    const items: Array<{ id: number }> = await listRes.json()
+    if (!Array.isArray(items) || items.length === 0) return { deleted, errors }
+
+    await Promise.all(
+      items.map(async item => {
+        try {
+          await deleteItemV2(itemType, item.id)
+          deleted++
+        } catch (e: unknown) {
+          errors.push(`${itemType}#${item.id}: ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }),
+    )
+  } catch (e: unknown) {
+    errors.push(`${itemType}: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  return { deleted, errors }
+}
