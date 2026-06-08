@@ -298,6 +298,25 @@ export const fetchDocumentItems = async (
 }
 
 /**
+ * Update a single item in GLPI by ID.
+ */
+export const updateItem = async (
+  itemType: string,
+  id: number,
+  data: Record<string, unknown>,
+  token?: string,
+  appToken = GLPI_APP_TOKEN,
+) => {
+  const sessionToken = token || localStorage.getItem('glpi_session_token') || sessionTokenFromFile
+  return glpiRequest(`/${itemType}/${id}`, {
+    method: 'PUT',
+    token: sessionToken,
+    appToken,
+    body: { input: { id, ...data } },
+  })
+}
+
+/**
  * Import a single item into GLPI.
  */
 export const createItem = async (

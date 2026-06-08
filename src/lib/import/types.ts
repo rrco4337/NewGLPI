@@ -108,6 +108,7 @@ export type ProgressUpdate = {
 export type CreatedRegistry = {
   computers: Array<{ name: string; id: number }>
   monitors: Array<{ name: string; id: number }>
+  otherAssets: Array<{ name: string; id: number; itemtype: string }>
   tickets: Array<{ ref: number; id: number }>
   documents: Array<{ name: string; id: number }>
   ticketCosts: Array<{ id: number }>
@@ -127,6 +128,7 @@ export type ImportReport = {
     users: number
     computers: number
     monitors: number
+    otherAssets: number
     tickets: number
     documents: number
     costs: number

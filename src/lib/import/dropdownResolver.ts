@@ -45,6 +45,10 @@ export class DropdownResolver {
       this.load('Manufacturer', token),
       this.load('ComputerModel', token),
       this.load('MonitorModel', token),
+      this.load('PrinterModel', token),
+      this.load('NetworkEquipmentModel', token),
+      this.load('PeripheralModel', token),
+      this.load('PhoneModel', token),
     ])
   }
 

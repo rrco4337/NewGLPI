@@ -6,13 +6,14 @@ type Props = {
 }
 
 const STATS = [
-  { key: 'users',     label: 'Utilisateurs',  icon: 'bi-person-fill' },
-  { key: 'computers', label: 'Ordinateurs',   icon: 'bi-pc-display' },
-  { key: 'monitors',  label: 'Moniteurs',     icon: 'bi-display-fill' },
-  { key: 'tickets',   label: 'Tickets',       icon: 'bi-ticket-detailed-fill' },
-  { key: 'documents', label: 'Images',        icon: 'bi-file-zip-fill' },
-  { key: 'costs',     label: 'Coûts',         icon: 'bi-currency-euro' },
-  { key: 'itemLinks', label: 'Liens actifs',  icon: 'bi-link-45deg' },
+  { key: 'users',       label: 'Utilisateurs',      icon: 'bi-person-fill' },
+  { key: 'computers',   label: 'Ordinateurs',        icon: 'bi-pc-display' },
+  { key: 'monitors',    label: 'Moniteurs',          icon: 'bi-display-fill' },
+  { key: 'otherAssets', label: 'Autres équipements', icon: 'bi-hdd-network-fill' },
+  { key: 'tickets',     label: 'Tickets',            icon: 'bi-ticket-detailed-fill' },
+  { key: 'documents',   label: 'Images',             icon: 'bi-file-zip-fill' },
+  { key: 'costs',       label: 'Coûts',              icon: 'bi-currency-euro' },
+  { key: 'itemLinks',   label: 'Liens actifs',       icon: 'bi-link-45deg' },
 ] as const
 
 export const ImportFinalReport = ({ report, onReset }: Props) => {

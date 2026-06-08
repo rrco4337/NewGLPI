@@ -1,10 +1,29 @@
-import { createItem, deleteItems, listItems } from '@/api/glpi'
+import { createItem, updateItem, deleteItems, listItems } from '@/api/glpi'
 import { uploadDocumentToGlpi, linkDocumentToItem, ensureImageDocumentTypes } from '@/api/glpiDocuments'
 import { DropdownResolver } from './dropdownResolver'
 import type {
   AssetRow, TicketRow, CostRow, ParsedImage,
-  ImportReport, CreatedRegistry, AssetInfo, ProgressUpdate,
+  ImportReport, CreatedRegistry, AssetInfo, ProgressUpdate, GlpiItemType,
 } from './types'
+
+// Maps each supported asset type to its GLPI model dropdown type and field name
+const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
+  Computer: 'ComputerModel',
+  Monitor: 'MonitorModel',
+  Printer: 'PrinterModel',
+  NetworkEquipment: 'NetworkEquipmentModel',
+  Peripheral: 'PeripheralModel',
+  Phone: 'PhoneModel',
+}
+
+const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
+  Computer: 'computermodels_id',
+  Monitor: 'monitormodels_id',
+  Printer: 'printermodels_id',
+  NetworkEquipment: 'networkequipmentmodels_id',
+  Peripheral: 'peripheralmodels_id',
+  Phone: 'phonemodels_id',
+}
 
 type OnProgress = (update: ProgressUpdate) => void
 
@@ -44,6 +63,17 @@ async function rollback(registry: CreatedRegistry, token?: string): Promise<stri
   await tryDelete('Item_Ticket', registry.itemTickets.map(i => i.id))
   await tryDelete('Ticket', registry.tickets.map(t => t.id))
   await tryDelete('Document', registry.documents.map(d => d.id))
+
+  // Delete other asset types grouped by itemtype
+  const otherByType = new Map<string, number[]>()
+  for (const a of registry.otherAssets) {
+    if (!otherByType.has(a.itemtype)) otherByType.set(a.itemtype, [])
+    otherByType.get(a.itemtype)!.push(a.id)
+  }
+  for (const [type, ids] of otherByType) {
+    await tryDelete(type, ids)
+  }
+
   await tryDelete('Monitor', registry.monitors.map(m => m.id))
   await tryDelete('Computer', registry.computers.map(c => c.id))
 
@@ -67,9 +97,11 @@ async function buildAssetInput(
   const manufacturerId = await resolver.ensureValue('Manufacturer', row.manufacturer, token)
   if (row.manufacturer && !manufacturerId) warnings.push(`Fabricant "${row.manufacturer}" non créé (manufacturers_id = 0)`)
 
-  const modelType = row.itemType === 'Computer' ? 'ComputerModel' : 'MonitorModel'
-  const modelId = await resolver.ensureValue(modelType, row.model, token)
+  const modelGlpiType = MODEL_GLPI_TYPE[row.itemType]
+  const modelId = modelGlpiType ? await resolver.ensureValue(modelGlpiType, row.model, token) : null
   if (row.model && !modelId) warnings.push(`Modèle "${row.model}" non créé pour ${row.itemType}`)
+
+  const modelField = MODEL_FIELD[row.itemType]
 
   const userId = row.user ? resolver.resolveUser(row.user) : null
   if (row.user && !userId) {
@@ -82,9 +114,7 @@ async function buildAssetInput(
     states_id: stateId ?? 0,
     locations_id: locationId ?? 0,
     manufacturers_id: manufacturerId ?? 0,
-    ...(row.itemType === 'Computer'
-      ? { computermodels_id: modelId ?? 0 }
-      : { monitormodels_id: modelId ?? 0 }),
+    ...(modelField && modelId ? { [modelField]: modelId } : {}),
     ...(userId ? { users_id: userId } : {}),
   }
 }
@@ -100,7 +130,7 @@ export async function runImport(
   token?: string,
 ): Promise<ImportReport> {
   const registry: CreatedRegistry = {
-    computers: [], monitors: [], tickets: [],
+    computers: [], monitors: [], otherAssets: [], tickets: [],
     documents: [], ticketCosts: [], itemTickets: [],
   }
   const warnings: string[] = []
@@ -139,6 +169,7 @@ export async function runImport(
   const assetNameToInfo = new Map<string, AssetInfo>()
   const computers = assets.filter(a => a.itemType === 'Computer')
   const monitors = assets.filter(a => a.itemType === 'Monitor')
+  const otherAssets = assets.filter(a => a.itemType !== 'Computer' && a.itemType !== 'Monitor')
 
   onProgress({ phase: 'assets', message: `Création de ${assets.length} actifs…`, current: 0, total: assets.length })
 
@@ -158,7 +189,7 @@ export async function runImport(
     if (!r.ok) {
       errors.push(`Ordinateur "${computers[i].name}": ${r.error.message}`)
       const rollbackErrors = await rollback(registry, token)
-      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
+      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: 0, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
     }
     registry.computers.push({ name: r.value.name, id: r.value.id })
     assetNameToInfo.set(r.value.name.toLowerCase(), { itemtype: 'Computer', id: r.value.id })
@@ -172,10 +203,24 @@ export async function runImport(
     if (!r.ok) {
       errors.push(`Moniteur "${monitors[i].name}": ${r.error.message}`)
       const rollbackErrors = await rollback(registry, token)
-      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
+      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
     }
     registry.monitors.push({ name: r.value.name, id: r.value.id })
     assetNameToInfo.set(r.value.name.toLowerCase(), { itemtype: 'Monitor', id: r.value.id })
+    assetDone++
+    onProgress({ phase: 'assets', message: `Actifs créés : ${assetDone}/${assets.length}`, current: assetDone, total: assets.length })
+  }
+
+  const otherResults = await runBatch(otherAssets, 5, createAsset)
+  for (let i = 0; i < otherResults.length; i++) {
+    const r = otherResults[i]
+    if (!r.ok) {
+      errors.push(`Actif "${otherAssets[i].name}" (${otherAssets[i].itemType}): ${r.error.message}`)
+      const rollbackErrors = await rollback(registry, token)
+      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
+    }
+    registry.otherAssets.push({ name: r.value.name, id: r.value.id, itemtype: r.value.itemType })
+    assetNameToInfo.set(r.value.name.toLowerCase(), { itemtype: r.value.itemType, id: r.value.id })
     assetDone++
     onProgress({ phase: 'assets', message: `Actifs créés : ${assetDone}/${assets.length}`, current: assetDone, total: assets.length })
   }
@@ -217,11 +262,13 @@ export async function runImport(
 
   for (let i = 0; i < tickets.length; i++) {
     const t = tickets[i]
+    // Create with status=1 (New) so GLPI allows linking items.
+    // Closed/Resolved tickets reject Item_Ticket creation.
     const input: Record<string, unknown> = {
       name: t.title,
       content: t.description || t.title,
       type: t.type,
-      status: t.status,
+      status: 1,
       priority: t.priority,
       date: t.date,
     }
@@ -254,11 +301,20 @@ export async function runImport(
         }
       }
 
+      // Set the final status after all items are linked
+      if (t.status !== 1) {
+        try {
+          await updateItem('Ticket', ticketId, { status: t.status }, token)
+        } catch (e: unknown) {
+          warnings.push(`Ticket ${t.refTicket}: statut final (${t.status}) non appliqué — ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
+
       onProgress({ phase: 'tickets', message: `Tickets : ${i + 1}/${tickets.length}`, current: i + 1, total: tickets.length })
     } catch (e: unknown) {
       errors.push(`Ticket ${t.refTicket}: ${e instanceof Error ? e.message : String(e)}`)
       const rollbackErrors = await rollback(registry, token)
-      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: 0, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
+      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: 0, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
     }
   }
 
@@ -291,7 +347,7 @@ export async function runImport(
     } catch (e: unknown) {
       errors.push(`Coût ticket ${c.numTicket}: ${e instanceof Error ? e.message : String(e)}`)
       const rollbackErrors = await rollback(registry, token)
-      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: registry.ticketCosts.length, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
+      return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: registry.ticketCosts.length, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
     }
 
     onProgress({ phase: 'costs', message: `Coûts : ${i + 1}/${costs.length}`, current: i + 1, total: costs.length })
@@ -307,6 +363,7 @@ export async function runImport(
       users: usersCreated,
       computers: registry.computers.length,
       monitors: registry.monitors.length,
+      otherAssets: registry.otherAssets.length,
       tickets: registry.tickets.length,
       documents: registry.documents.length,
       costs: registry.ticketCosts.length,

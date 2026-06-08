@@ -1,0 +1,41 @@
+Name,Status,Location,Manufacturer,Item_Type,Model,Inventory_Number,User
+PC-ADM-001,En production,Administration,Dell,Computer,OptiPlex 7010,ITU-2026-0001,Rakoto Jean
+PC-ADM-002,En production,Administration,HP,Computer,ProDesk 400 G9,ITU-2026-0002,Rasoanaivo Marie
+PC-ADM-003,En production,Administration,Lenovo,Computer,ThinkCentre M70q,ITU-2026-0003,Andriantsoa Luc
+PC-ADM-004,En panne,Administration,Dell,Computer,OptiPlex 5000,ITU-2026-0004,Razafindrakoto Haja
+PC-ADM-005,En production,Administration,HP,Computer,EliteDesk 800 G9,ITU-2026-0005,Randriamahefa Zo
+PC-COMPTA-001,En production,Comptabilité,Lenovo,Computer,ThinkCentre M70,ITU-2026-0006,Rakotondranaivo Paul
+PC-COMPTA-002,Maintenance,Comptabilité,Dell,Computer,OptiPlex 7020,ITU-2026-0007,Rabe Hanitra
+PC-COMPTA-003,En production,Comptabilité,HP,Computer,ProDesk 405 G8,ITU-2026-0008,Ranaivo Soa
+PC-LAB-001,En production,Laboratoire IA,HP,Computer,EliteDesk 800 G8,ITU-2026-0009,ITU Labs
+PC-LAB-002,En production,Laboratoire IA,Lenovo,Computer,ThinkCentre M75,ITU-2026-0010,ITU Labs
+PC-LAB-003,En production,Laboratoire IA,Dell,Computer,OptiPlex 7090,ITU-2026-0011,ITU Labs
+PC-LAB-004,En stock,Magasin Informatique,HP,Computer,EliteDesk 600 G9,ITU-2026-0012,
+PC-BIB-001,En production,Bibliothèque,HP,Computer,ProDesk 600 G6,ITU-2026-0013,Bibliothèque
+PC-BIB-002,En production,Bibliothèque,Dell,Computer,OptiPlex 3090,ITU-2026-0014,Bibliothèque
+PC-DIR-001,En production,Direction,Lenovo,Computer,ThinkPad X1 Carbon,ITU-2026-0015,Directeur Général
+PC-DIR-002,En stock,Magasin Informatique,Dell,Computer,Latitude 7440,ITU-2026-0016,
+MN-ADM-001,En production,Administration,Samsung,Monitor,S27A600,ITU-2026-0017,Rakoto Jean
+MN-ADM-002,En production,Administration,LG,Monitor,27UK650-W,ITU-2026-0018,Rasoanaivo Marie
+MN-FORM-001,En production,Salle 301,Dell,Monitor,P2422H,ITU-2026-0019,Salle 301
+MN-FORM-002,En panne,Salle 301,Dell,Monitor,AC1000,ITU-2026-0020,Rakoto Michel
+MN-LAB-001,En production,Laboratoire IA,LG,Monitor,34WN80C-B,ITU-2026-0021,ITU Labs
+MN-LAB-002,En production,Laboratoire IA,Samsung,Monitor,S32A600,ITU-2026-0022,ITU Labs
+MN-COMPTA-001,En production,Comptabilité,HP,Monitor,E24 G5,ITU-2026-0023,Rakotondranaivo Paul
+PR-ADM-001,En production,Administration,HP,Printer,LaserJet Pro M404dn,ITU-2026-0024,Secrétariat
+PR-COMPTA-001,Maintenance,Comptabilité,Brother,Printer,HL-L5100DN,ITU-2026-0025,Comptabilité
+PR-BIB-001,En production,Bibliothèque,Epson,Printer,EcoTank ET-4850,ITU-2026-0026,Bibliothèque
+PR-LAB-001,En stock,Magasin Informatique,HP,Printer,Color LaserJet Pro M255dw,ITU-2026-0027,
+SW-RES-001,En production,Salle Serveur,Cisco,NetworkEquipment,Catalyst 2960-X,ITU-2026-0028,Infrastructure
+SW-RES-002,En production,Salle Serveur,HP,NetworkEquipment,Aruba 2530-24G,ITU-2026-0029,Infrastructure
+RT-RES-001,En production,Salle Serveur,Cisco,NetworkEquipment,ISR 4321,ITU-2026-0030,Infrastructure
+AP-RES-001,En production,Salle 301,Ubiquiti,NetworkEquipment,UniFi AP AC Pro,ITU-2026-0031,Infrastructure
+AP-RES-002,En panne,Administration,Ubiquiti,NetworkEquipment,UniFi AP AC Lite,ITU-2026-0032,Infrastructure
+PH-ADM-001,En production,Administration,Logitech,Peripheral,MX Keys,ITU-2026-0033,Rakoto Jean
+PH-ADM-002,En production,Administration,Logitech,Peripheral,MX Master 3,ITU-2026-0034,Rasoanaivo Marie
+PH-LAB-001,En production,Laboratoire IA,Jabra,Peripheral,Evolve2 75,ITU-2026-0035,ITU Labs
+PH-DIR-001,En production,Direction,Logitech,Peripheral,Webcam C930e,ITU-2026-0036,Directeur Général
+PH-MOB-001,En production,Direction,Apple,Phone,iPhone 14 Pro,ITU-2026-0037,Directeur Général
+PH-MOB-002,En production,Administration,Samsung,Phone,Galaxy S23,ITU-2026-0038,Rakoto Jean
+PH-MOB-003,En stock,Magasin Informatique,Samsung,Phone,Galaxy A54,ITU-2026-0039,
+PH-FIX-001,En production,Secrétariat,Cisco,Phone,IP Phone 8851,ITU-2026-0040,Secrétariat
