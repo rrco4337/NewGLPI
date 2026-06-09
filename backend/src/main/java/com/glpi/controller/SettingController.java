@@ -30,6 +30,11 @@ public class SettingController {
     
     @PutMapping("/{key}")
     public Setting updateSetting(@PathVariable String key, @RequestBody String value) {
-        return settingService.updateSetting(key, value);
+
+          String cleanedValue = value;
+    if (cleanedValue.startsWith("\"") && cleanedValue.endsWith("\"")) {
+        cleanedValue = cleanedValue.substring(1, cleanedValue.length() - 1);
+    }
+        return settingService.updateSetting(key, cleanedValue);
     }
 }

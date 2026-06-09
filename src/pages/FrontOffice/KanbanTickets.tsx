@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { glpiTicketService } from '@/services/glpiService'
 import type { GlpiTicket, TicketDetail as TicketDetailType } from '@/types/glpi'
+import { useSettings } from '@/hooks/useKanbanSetting'
 import './KanbanTickets.css'
 
 // ─── Status mapping ────────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ const getColKey = (status: string | number): ColKey => {
 const getTargetStatus = (toCol: ColKey, currentStatus: string | number): number => {
   if (toCol === 'new') return 1
   if (toCol === 'closed') return 5
-  // In Progress: keep status 2 or 4 if already there, otherwise set to 2 (Traitement assigné)
+  // In Progress: keep status 2 or 4 if already there, otherwise set to 2
   const n = typeof currentStatus === 'number' ? currentStatus : parseInt(currentStatus as string, 10)
   return n === 2 || n === 4 ? n : 2
 }
@@ -68,7 +69,7 @@ export const KanbanTickets = () => {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
 
-  // Drag & Drop — use ref so drop handler always reads current value
+  // Drag & Drop
   const draggingRef = useRef<number | null>(null)
   const [draggingId,  setDraggingId]  = useState<number | null>(null)
   const [dragOverCol, setDragOverCol] = useState<ColKey | null>(null)
@@ -97,6 +98,8 @@ export const KanbanTickets = () => {
   const [closeNote,   setCloseNote]   = useState('')
   const [closeSaving, setCloseSaving] = useState(false)
 
+  const { settings, loading: settingsLoading } = useSettings()
+
   // ── Load tickets ──────────────────────────────────────────────────────────────
   const loadTickets = useCallback(async () => {
     setLoading(true)
@@ -104,14 +107,17 @@ export const KanbanTickets = () => {
     try {
       const data = await glpiTicketService.listTickets()
       setTickets(data || [])
-    } catch {
+    } catch (err) {
+      console.error('Failed to load tickets:', err)
       setError('Impossible de charger les tickets.')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { void loadTickets() }, [loadTickets])
+  useEffect(() => { 
+    void loadTickets() 
+  }, [loadTickets])
 
   // ── Ticket detail ─────────────────────────────────────────────────────────────
   const openDetail = async (id: number) => {
@@ -121,12 +127,18 @@ export const KanbanTickets = () => {
     try {
       const t = await glpiTicketService.getTicket(id)
       setDetailTicket(t)
+    } catch (err) {
+      console.error('Failed to load ticket detail:', err)
+      setError('Impossible de charger les détails du ticket.')
     } finally {
       setDetailLoading(false)
     }
   }
 
-  const closeDetail = () => { setDetailId(null); setDetailTicket(null) }
+  const closeDetail = () => { 
+    setDetailId(null)
+    setDetailTicket(null)
+  }
 
   // ── Drag & Drop ───────────────────────────────────────────────────────────────
   const handleDragStart = (id: number) => {
@@ -153,6 +165,7 @@ export const KanbanTickets = () => {
     const id = draggingRef.current
     draggingRef.current = null
     setDraggingId(null)
+    
     if (!id) return
 
     const ticket = tickets.find(t => t.id === id)
@@ -167,73 +180,159 @@ export const KanbanTickets = () => {
     }
 
     const newStatus = getTargetStatus(toCol, ticket.status)
-    // Optimistic update — keep UI responsive
+    
+    // Optimistic update
     setTickets(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t))
-    await glpiTicketService.updateTicket(id, { status: newStatus })
+    
+    try {
+      await glpiTicketService.updateTicket(id, { status: newStatus })
+    } catch (err) {
+      console.error('Failed to update ticket:', err)
+      // Rollback on error
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status: ticket.status } : t))
+      setError('Erreur lors du déplacement du ticket.')
+    }
   }
 
   // ── Confirm close ─────────────────────────────────────────────────────────────
   const handleConfirmClose = async () => {
     if (!closeDialog) return
+    
     setCloseSaving(true)
     const { ticketId } = closeDialog
     const payload: Record<string, unknown> = { status: 5 }
     if (closeNote.trim()) payload.solution = closeNote.trim()
 
+    const originalTicket = tickets.find(t => t.id === ticketId)
+    
+    // Optimistic update
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 5 } : t))
-    await glpiTicketService.updateTicket(ticketId, payload)
-
-    setCloseDialog(null)
-    setCloseNote('')
-    setCloseSaving(false)
+    
+    try {
+      await glpiTicketService.updateTicket(ticketId, payload)
+      setCloseDialog(null)
+      setCloseNote('')
+      await loadTickets() // Refresh to get updated data
+    } catch (err) {
+      console.error('Failed to close ticket:', err)
+      // Rollback
+      if (originalTicket) {
+        setTickets(prev => prev.map(t => t.id === ticketId ? originalTicket : t))
+      }
+      setError('Erreur lors de la clôture du ticket.')
+    } finally {
+      setCloseSaving(false)
+    }
   }
 
   // ── Create ticket ─────────────────────────────────────────────────────────────
   const handleCtSearch = async () => {
     if (!ctSearchQ.trim()) return
+    
     setCtSearching(true)
+    setCtError(null)
     try {
-      setCtResults(await glpiTicketService.searchAssets(ctSearchQ))
+      const results = await glpiTicketService.searchAssets(ctSearchQ)
+      setCtResults(results)
+    } catch (err) {
+      console.error('Failed to search assets:', err)
+      setCtError('Erreur lors de la recherche d\'équipements.')
+      setCtResults([])
     } finally {
       setCtSearching(false)
     }
   }
 
   const addCtAsset = (a: Asset) => {
-    if (!ctAssets.find(x => x.id === a.id && x.itemtype === a.itemtype))
+    if (!ctAssets.find(x => x.id === a.id && x.itemtype === a.itemtype)) {
       setCtAssets(prev => [...prev, a])
+    }
     setCtResults([])
     setCtSearchQ('')
   }
 
-  const removeCtAsset = (a: Asset) =>
+  const removeCtAsset = (a: Asset) => {
     setCtAssets(prev => prev.filter(x => !(x.id === a.id && x.itemtype === a.itemtype)))
+  }
 
   const resetCreateForm = () => {
-    setCtTitle(''); setCtDesc(''); setCtUrgency(3); setCtType(1)
-    setCtAssets([]); setCtResults([]); setCtSearchQ(''); setCtError(null); setCtSuccess(false)
+    setCtTitle('')
+    setCtDesc('')
+    setCtUrgency(3)
+    setCtType(1)
+    setCtAssets([])
+    setCtResults([])
+    setCtSearchQ('')
+    setCtError(null)
+    setCtSuccess(false)
   }
 
   const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!ctTitle.trim() || !ctDesc.trim()) { setCtError('Titre et description requis.'); return }
-    setCtSaving(true); setCtError(null)
+    
+    if (!ctTitle.trim()) {
+      setCtError('Le titre est requis.')
+      return
+    }
+    if (!ctDesc.trim()) {
+      setCtError('La description est requise.')
+      return
+    }
+    
+    setCtSaving(true)
+    setCtError(null)
+    
     try {
-      const res = await glpiTicketService.createTicket({ name: ctTitle, content: ctDesc, urgency: ctUrgency, type: ctType })
+      const res = await glpiTicketService.createTicket({ 
+        name: ctTitle.trim(), 
+        content: ctDesc.trim(), 
+        urgency: ctUrgency, 
+        type: ctType 
+      })
+      
       if (res?.id) {
-        for (const asset of ctAssets)
-          await glpiTicketService.associateItemToTicket(res.id, asset.itemtype, asset.id)
+        // Associate assets
+        for (const asset of ctAssets) {
+          try {
+            await glpiTicketService.associateItemToTicket(res.id, asset.itemtype, asset.id)
+          } catch (err) {
+            console.error(`Failed to associate asset ${asset.id}:`, err)
+          }
+        }
+        
         setCtSuccess(true)
         await loadTickets()
-        setTimeout(() => { setShowCreate(false); resetCreateForm() }, 1500)
+        
+        setTimeout(() => { 
+          setShowCreate(false)
+          resetCreateForm()
+        }, 1500)
       } else {
         setCtError('Erreur lors de la création du ticket.')
       }
     } catch (err: unknown) {
-      setCtError(err instanceof Error ? err.message : 'Erreur inconnue.')
+      console.error('Failed to create ticket:', err)
+      setCtError(err instanceof Error ? err.message : 'Erreur inconnue lors de la création du ticket.')
     } finally {
       setCtSaving(false)
     }
+  }
+
+  // Helper to get column configuration
+  const getColumnConfig = () => {
+    if (!settings) {
+      return [
+        { key: 'new', label: 'Nouveau', cls: 'kb-col-new', color: '#4caf50' },
+        { key: 'progress', label: 'En cours', cls: 'kb-col-progress', color: '#2196f3' },
+        { key: 'closed', label: 'Terminé', cls: 'kb-col-closed', color: '#9e9e9e' }
+      ]
+    }
+    
+    return [
+      { key: 'new', label: settings.status_name_new || 'Nouveau', cls: 'kb-col-new', color: settings.kanban_color_new || '#4caf50' },
+      { key: 'progress', label: settings.status_name_in_progress || 'En cours', cls: 'kb-col-progress', color: settings.kanban_color_in_progress || '#2196f3' },
+      { key: 'closed', label: settings.status_name_done || 'Terminé', cls: 'kb-col-closed', color: settings.kanban_color_done || '#9e9e9e' }
+    ]
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -243,39 +342,60 @@ export const KanbanTickets = () => {
       {/* Header */}
       <div className="kb-header">
         <h2 className="kb-title">Tickets — Vue Kanban</h2>
-        <button className="kb-refresh-btn" onClick={loadTickets} disabled={loading} title="Rafraîchir">
+        <button 
+          className="kb-refresh-btn" 
+          onClick={() => void loadTickets()} 
+          disabled={loading} 
+          title="Rafraîchir"
+        >
           <i className={`bi bi-arrow-clockwise${loading ? ' kb-spin' : ''}`} />
           Rafraîchir
         </button>
       </div>
 
-      {error && <div className="kb-error"><i className="bi bi-exclamation-triangle" /> {error}</div>}
+      {error && (
+        <div className="kb-error">
+          <i className="bi bi-exclamation-triangle" /> 
+          {error}
+          <button onClick={() => setError(null)} className="kb-error-close">×</button>
+        </div>
+      )}
 
-      {loading ? (
-        <div className="kb-loading"><div className="kb-ring" /> Chargement des tickets…</div>
+      {(loading || settingsLoading) ? (
+        <div className="kb-loading">
+          <div className="kb-ring" /> 
+          Chargement des tickets...
+        </div>
       ) : (
         <div className="kb-board">
-          {COLUMNS.map(col => {
-            const colTickets = tickets.filter(t => getColKey(t.status) === col.key)
+          {getColumnConfig().map(col => {
+            const colTickets = tickets.filter(t => getColKey(t.status) === col.key as ColKey)
             const isOver = dragOverCol === col.key && draggingId !== null
 
             return (
               <div
                 key={col.key}
                 className={`kb-col ${col.cls}${isOver ? ' kb-col-over' : ''}`}
-                onDragOver={e => handleDragOver(e, col.key)}
+                style={{ backgroundColor: col.color + '20' }}
+                onDragOver={e => handleDragOver(e, col.key as ColKey)}
                 onDragLeave={() => setDragOverCol(null)}
-                onDrop={e => handleDrop(e, col.key)}
+                onDrop={e => void handleDrop(e, col.key as ColKey)}
               >
                 {/* Column header */}
                 <div className="kb-col-header">
-                  <span className="kb-col-title">{col.label}</span>
-                  <span className="kb-col-count">{colTickets.length}</span>
+                  <span className="kb-col-title" style={{ color: col.color }}>
+                    {col.label}
+                  </span>
+                  <span className="kb-col-count" style={{ backgroundColor: col.color + '40' }}>
+                    {colTickets.length}
+                  </span>
                 </div>
 
                 {/* Drop zone hint */}
                 {isOver && (
-                  <div className="kb-drop-hint">Déposer ici</div>
+                  <div className="kb-drop-hint">
+                    Déposer ici
+                  </div>
                 )}
 
                 {/* Empty state */}
@@ -294,7 +414,7 @@ export const KanbanTickets = () => {
                     draggable
                     onDragStart={() => handleDragStart(ticket.id)}
                     onDragEnd={handleDragEnd}
-                    onClick={() => openDetail(ticket.id)}
+                    onClick={() => void openDetail(ticket.id)}
                   >
                     <div className="kb-card-name">
                       {ticket.name || `Ticket #${ticket.id}`}
@@ -345,7 +465,12 @@ export const KanbanTickets = () => {
 
       {/* ── Close Dialog ─────────────────────────────────────────────────────── */}
       {closeDialog && (
-        <div className="kb-overlay" onClick={() => { if (!closeSaving) { setCloseDialog(null); setCloseNote('') } }}>
+        <div className="kb-overlay" onClick={() => { 
+          if (!closeSaving) { 
+            setCloseDialog(null)
+            setCloseNote('')
+          } 
+        }}>
           <div className="kb-dialog" onClick={e => e.stopPropagation()}>
             <div className="kb-dialog-header">
               <i className="bi bi-check-circle" />
@@ -368,13 +493,24 @@ export const KanbanTickets = () => {
             <div className="kb-dialog-actions">
               <button
                 className="kb-btn-secondary"
-                onClick={() => { setCloseDialog(null); setCloseNote('') }}
+                onClick={() => { 
+                  setCloseDialog(null)
+                  setCloseNote('')
+                }}
                 disabled={closeSaving}
               >
                 Annuler
               </button>
-              <button className="kb-btn-primary" onClick={handleConfirmClose} disabled={closeSaving}>
-                {closeSaving ? <><i className="bi bi-arrow-repeat kb-spin" /> Enregistrement…</> : 'Confirmer la clôture'}
+              <button 
+                className="kb-btn-primary" 
+                onClick={() => void handleConfirmClose()} 
+                disabled={closeSaving}
+              >
+                {closeSaving ? (
+                  <><i className="bi bi-arrow-repeat kb-spin" /> Enregistrement…</>
+                ) : (
+                  'Confirmer la clôture'
+                )}
               </button>
             </div>
           </div>
@@ -383,11 +519,22 @@ export const KanbanTickets = () => {
 
       {/* ── Create Ticket Modal ───────────────────────────────────────────────── */}
       {showCreate && (
-        <div className="kb-overlay" onClick={() => { if (!ctSaving) { setShowCreate(false); resetCreateForm() } }}>
+        <div className="kb-overlay" onClick={() => { 
+          if (!ctSaving) { 
+            setShowCreate(false)
+            resetCreateForm()
+          } 
+        }}>
           <div className="kb-modal" onClick={e => e.stopPropagation()}>
             <div className="kb-modal-header">
               <h3><i className="bi bi-plus-circle" /> Nouveau ticket</h3>
-              <button className="kb-modal-close" onClick={() => { setShowCreate(false); resetCreateForm() }}>
+              <button 
+                className="kb-modal-close" 
+                onClick={() => { 
+                  setShowCreate(false)
+                  resetCreateForm()
+                }}
+              >
                 <i className="bi bi-x-lg" />
               </button>
             </div>
@@ -399,7 +546,11 @@ export const KanbanTickets = () => {
               </div>
             ) : (
               <form onSubmit={handleCreateSubmit} className="kb-form">
-                {ctError && <div className="kb-form-error"><i className="bi bi-exclamation-circle" /> {ctError}</div>}
+                {ctError && (
+                  <div className="kb-form-error">
+                    <i className="bi bi-exclamation-circle" /> {ctError}
+                  </div>
+                )}
 
                 <div className="kb-field">
                   <label>Titre *</label>
@@ -408,6 +559,7 @@ export const KanbanTickets = () => {
                     value={ctTitle}
                     onChange={e => setCtTitle(e.target.value)}
                     placeholder="Ex : Connexion réseau impossible"
+                    disabled={ctSaving}
                     required
                   />
                 </div>
@@ -419,6 +571,7 @@ export const KanbanTickets = () => {
                     onChange={e => setCtDesc(e.target.value)}
                     placeholder="Décrivez le problème en détail…"
                     rows={4}
+                    disabled={ctSaving}
                     required
                   />
                 </div>
@@ -426,14 +579,22 @@ export const KanbanTickets = () => {
                 <div className="kb-field-row">
                   <div className="kb-field">
                     <label>Type</label>
-                    <select value={ctType} onChange={e => setCtType(Number(e.target.value))}>
+                    <select 
+                      value={ctType} 
+                      onChange={e => setCtType(Number(e.target.value))}
+                      disabled={ctSaving}
+                    >
                       <option value={1}>Incident</option>
                       <option value={2}>Demande</option>
                     </select>
                   </div>
                   <div className="kb-field">
                     <label>Urgence</label>
-                    <select value={ctUrgency} onChange={e => setCtUrgency(Number(e.target.value))}>
+                    <select 
+                      value={ctUrgency} 
+                      onChange={e => setCtUrgency(Number(e.target.value))}
+                      disabled={ctSaving}
+                    >
                       <option value={5}>Très haute</option>
                       <option value={4}>Haute</option>
                       <option value={3}>Moyenne</option>
@@ -450,13 +611,25 @@ export const KanbanTickets = () => {
                       type="text"
                       value={ctSearchQ}
                       onChange={e => setCtSearchQ(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleCtSearch() } }}
+                      onKeyDown={e => { 
+                        if (e.key === 'Enter') { 
+                          e.preventDefault()
+                          void handleCtSearch()
+                        } 
+                      }}
                       placeholder="Nom ou numéro de série…"
+                      disabled={ctSaving}
                     />
-                    <button type="button" className="kb-btn-search" onClick={handleCtSearch} disabled={ctSearching || !ctSearchQ.trim()}>
+                    <button 
+                      type="button" 
+                      className="kb-btn-search" 
+                      onClick={() => void handleCtSearch()} 
+                      disabled={ctSearching || !ctSearchQ.trim() || ctSaving}
+                    >
                       {ctSearching ? <i className="bi bi-arrow-repeat kb-spin" /> : <i className="bi bi-search" />}
                     </button>
                   </div>
+                  
                   {ctResults.length > 0 && (
                     <ul className="kb-search-results">
                       {ctResults.map(a => (
@@ -468,12 +641,13 @@ export const KanbanTickets = () => {
                       ))}
                     </ul>
                   )}
+                  
                   {ctAssets.length > 0 && (
                     <div className="kb-asset-tags">
                       {ctAssets.map(a => (
                         <span key={`${a.itemtype}-${a.id}`} className="kb-asset-tag">
                           {a.name}
-                          <button type="button" onClick={() => removeCtAsset(a)}>×</button>
+                          <button type="button" onClick={() => removeCtAsset(a)} disabled={ctSaving}>×</button>
                         </span>
                       ))}
                     </div>
@@ -481,11 +655,27 @@ export const KanbanTickets = () => {
                 </div>
 
                 <div className="kb-form-actions">
-                  <button type="button" className="kb-btn-secondary" onClick={() => { setShowCreate(false); resetCreateForm() }}>
+                  <button 
+                    type="button" 
+                    className="kb-btn-secondary" 
+                    onClick={() => { 
+                      setShowCreate(false)
+                      resetCreateForm()
+                    }}
+                    disabled={ctSaving}
+                  >
                     Annuler
                   </button>
-                  <button type="submit" className="kb-btn-primary" disabled={ctSaving}>
-                    {ctSaving ? <><i className="bi bi-arrow-repeat kb-spin" /> Création…</> : 'Créer le ticket'}
+                  <button 
+                    type="submit" 
+                    className="kb-btn-primary" 
+                    disabled={ctSaving}
+                  >
+                    {ctSaving ? (
+                      <><i className="bi bi-arrow-repeat kb-spin" /> Création…</>
+                    ) : (
+                      'Créer le ticket'
+                    )}
                   </button>
                 </div>
               </form>
@@ -506,15 +696,18 @@ export const KanbanTickets = () => {
             </div>
 
             {detailLoading && (
-              <div className="kb-loading"><div className="kb-ring" /> Chargement…</div>
+              <div className="kb-loading">
+                <div className="kb-ring" /> Chargement…
+              </div>
             )}
 
             {!detailLoading && detailTicket && (
               <div className="kb-detail-body">
-
                 {/* Badges */}
                 <div className="kb-detail-badges">
-                  <span className="kb-badge kb-badge-status">{statusLabel(detailTicket.status)}</span>
+                  <span className="kb-badge kb-badge-status">
+                    {statusLabel(detailTicket.status)}
+                  </span>
                   {detailTicket.priority !== undefined && (
                     <span className={`kb-badge ${priorityCls(detailTicket.priority)}`}>
                       {priorityLabel(detailTicket.priority)}
@@ -545,7 +738,7 @@ export const KanbanTickets = () => {
                   </div>
                 )}
 
-                {/* Solution — visible uniquement si ticket résolu/clos ET solution présente */}
+                {/* Solution */}
                 {detailTicket.solution && CLOSED_STATUSES.includes(detailTicket.status as never) && (
                   <div className="kb-detail-section">
                     <div className="kb-section-label kb-section-label-solution">
@@ -582,7 +775,9 @@ export const KanbanTickets = () => {
                   </div>
                   <div className="kb-meta-item">
                     <span className="kb-meta-label">Date création</span>
-                    <span className="kb-meta-value">{String(detailTicket.date || '').split(' ')[0] || '—'}</span>
+                    <span className="kb-meta-value">
+                      {String(detailTicket.date || '').split(' ')[0] || '—'}
+                    </span>
                   </div>
                   <div className="kb-meta-item">
                     <span className="kb-meta-label">Date clôture</span>
@@ -599,7 +794,9 @@ export const KanbanTickets = () => {
                     {detailTicket.comments!.map(c => (
                       <div key={c.id} className="kb-comment">
                         <p className="kb-comment-text">{c.content}</p>
-                        <span className="kb-comment-meta">{c.date}{c.author ? ` · ${c.author}` : ''}</span>
+                        <span className="kb-comment-meta">
+                          {c.date}{c.author ? ` · ${c.author}` : ''}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -614,7 +811,9 @@ export const KanbanTickets = () => {
                     {detailTicket.history!.map(h => (
                       <div key={h.id} className="kb-history-item">
                         <span>{h.action}</span>
-                        <span className="kb-history-meta">{h.date}{h.author ? ` · ${h.author}` : ''}</span>
+                        <span className="kb-history-meta">
+                          {h.date}{h.author ? ` · ${h.author}` : ''}
+                        </span>
                       </div>
                     ))}
                   </div>
