@@ -2,19 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { StatusBadge } from '@/components/StatusBadge'
 import { glpiTicketService } from '@/services/glpiService'
+import { getTicketPriorityLabel, getTicketPriorityVariant, getTicketStatusLabel, getTicketStatusVariant } from '@/lib/ticketStatus'
 import type { TicketDetail as TicketDetailType } from '@/types/glpi'
-
-const statusVariant = (s: string): 'open' | 'pending' | 'closed' => {
-  if (s === 'closed' || s === 'solved') return 'closed'
-  if (s === 'pending') return 'pending'
-  return 'open'
-}
-
-const priorityVariant = (p: string): 'high' | 'medium' | 'low' => {
-  if (p === 'high' || p === 'urgent') return 'high'
-  if (p === 'medium') return 'medium'
-  return 'low'
-}
 
 export const TicketDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -91,8 +80,8 @@ export const TicketDetail = () => {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <StatusBadge label={String(ticket.status)} variant={statusVariant(String(ticket.status))} />
-            <StatusBadge label={String(ticket.priority)} variant={priorityVariant(String(ticket.priority))} />
+            <StatusBadge label={getTicketStatusLabel(ticket.status)} variant={getTicketStatusVariant(ticket.status)} />
+            <StatusBadge label={getTicketPriorityLabel(ticket.priority)} variant={getTicketPriorityVariant(ticket.priority)} />
           </div>
         </div>
       </div>

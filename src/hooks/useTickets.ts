@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { glpiTicketService } from '@/services/glpiService'
+import { normalizeTicketPriority, normalizeTicketStatus } from '@/lib/ticketStatus'
 import type { GlpiTicket } from '@/types/glpi'
 
 export const useTickets = () => {
@@ -7,8 +8,8 @@ export const useTickets = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [status, setStatus] = useState('all')
-  const [priority, setPriority] = useState('all')
+  const [status, setStatus] = useState<'all' | 'new' | 'in-progress' | 'pending' | 'closed'>('all')
+  const [priority, setPriority] = useState<'all' | 'low' | 'medium' | 'high'>('all')
   const [sortKey, setSortKey] = useState<'id' | 'date' | 'priority'>('id')
   const [page, setPage] = useState(1)
 
@@ -38,9 +39,11 @@ export const useTickets = () => {
 
     return tickets
       .filter((ticket) => {
+        const ticketStatus = normalizeTicketStatus(ticket.status)
+        const ticketPriority = normalizeTicketPriority(ticket.priority)
         const matchesQuery = !normalized || [ticket.name, ticket.requester_name, ticket.technician_name, ticket.category].some((value) => value?.toLowerCase().includes(normalized))
-        const matchesStatus = status === 'all' || ticket.status === status
-        const matchesPriority = priority === 'all' || ticket.priority === priority
+        const matchesStatus = status === 'all' || ticketStatus === status
+        const matchesPriority = priority === 'all' || ticketPriority === priority
         return matchesQuery && matchesStatus && matchesPriority
       })
       .sort((left, right) => {
