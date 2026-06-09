@@ -119,8 +119,11 @@ export const KanbanTickets = () => {
     setDetailTicket(null)
     setDetailLoading(true)
     try {
-      const t = await glpiTicketService.getTicket(id)
-      setDetailTicket(t)
+      const [t, solution] = await Promise.all([
+        glpiTicketService.getTicket(id),
+        glpiTicketService.getTicketSolution(id),
+      ])
+      setDetailTicket({ ...t, solution: solution ?? t.solution })
     } finally {
       setDetailLoading(false)
     }
@@ -177,11 +180,12 @@ export const KanbanTickets = () => {
     if (!closeDialog) return
     setCloseSaving(true)
     const { ticketId } = closeDialog
-    const payload: Record<string, unknown> = { status: 5 }
-    if (closeNote.trim()) payload.solution = closeNote.trim()
 
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 5 } : t))
-    await glpiTicketService.updateTicket(ticketId, payload)
+    await glpiTicketService.updateTicket(ticketId, { status: 5 })
+    if (closeNote.trim()) {
+      await glpiTicketService.createSolution(ticketId, closeNote.trim())
+    }
 
     setCloseDialog(null)
     setCloseNote('')
@@ -545,8 +549,8 @@ export const KanbanTickets = () => {
                   </div>
                 )}
 
-                {/* Solution — visible uniquement si ticket résolu/clos ET solution présente */}
-                {detailTicket.solution && CLOSED_STATUSES.includes(detailTicket.status as never) && (
+                {/* Solution — visible si solution présente */}
+                {detailTicket.solution && (
                   <div className="kb-detail-section">
                     <div className="kb-section-label kb-section-label-solution">
                       <i className="bi bi-check2-circle" /> Solution apportée

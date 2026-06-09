@@ -29,7 +29,7 @@ backend/data/
 *.db
 
 # CSS files (styles gérés via Tailwind CDN inline)
-*.css
+
 
 # Secrets & tokens — ne jamais versionner
 session-token.txt

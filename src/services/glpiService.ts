@@ -120,6 +120,30 @@ export const glpiTicketService = {
     }
   },
 
+  async createSolution(ticketId: number, content: string) {
+    try {
+      const response = await api.post('/ITILSolution', {
+        input: { itemtype: 'Ticket', items_id: ticketId, content },
+      })
+      return response.data
+    } catch (e) {
+      console.error('Erreur création solution:', e)
+      return null
+    }
+  },
+
+  async getTicketSolution(ticketId: number): Promise<string | null> {
+    try {
+      const response = await api.get(
+        `/ITILSolution?searchText[itemtype]=Ticket&searchText[items_id]=${ticketId}&order=DESC&sort=id&range=0-0`,
+      )
+      const items = Array.isArray(response.data) ? response.data : []
+      return (items[0]?.content as string) ?? null
+    } catch {
+      return null
+    }
+  },
+
   async associateItemToTicket(tickets_id: number, itemtype: string, items_id: number) {
     try {
       const response = await api.post('/Item_Ticket', {

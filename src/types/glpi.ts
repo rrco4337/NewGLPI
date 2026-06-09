@@ -22,7 +22,7 @@ export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type GlpiTicket = {
   id: number
   name: string
-  status: TicketStatus | string
+  status: TicketStatus | string | number
   priority: TicketPriority | string
   requester_name?: string
   requester?: { name?: string; firstname?: string; realname?: string }
