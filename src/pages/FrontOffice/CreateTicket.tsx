@@ -133,9 +133,9 @@ export function CreateTicket() {
             <h2>1. Informations Générales</h2>
             <div className="form-group">
               <label htmlFor="title">Titre du ticket *</label>
-              <input 
-                type="text" 
-                id="title" 
+              <input
+                type="text"
+                id="title"
                 placeholder="Ex: Problème de connexion au réseau"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
@@ -144,8 +144,8 @@ export function CreateTicket() {
             </div>
             <div className="form-group">
               <label htmlFor="description">Description détaillée *</label>
-              <textarea 
-                id="description" 
+              <textarea
+                id="description"
                 rows={5}
                 placeholder="Décrivez votre problème en détail..."
                 value={description}
@@ -175,12 +175,12 @@ export function CreateTicket() {
           <div className="form-section">
             <h2>2. Éléments Concernés</h2>
             <p className="section-help">Recherchez et ajoutez les équipements (PC, Imprimante, etc.) concernés par ce ticket.</p>
-            
+
             <div className="asset-search-wrapper">
               <div className="search-input-group">
                 <i className="bi bi-search search-icon" style={{ fontSize: 20 }} />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Rechercher par nom, numéro de série..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
