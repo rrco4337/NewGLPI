@@ -99,7 +99,7 @@ export const KanbanTickets = () => {
   const [closeSaving, setCloseSaving] = useState(false)
 
   const { settings, loading: settingsLoading } = useSettings()
-
+  const [useMalagasy, setUseMalagasy] = useState(false)
   // ── Load tickets ──────────────────────────────────────────────────────────────
   const loadTickets = useCallback(async () => {
     setLoading(true)
@@ -323,22 +323,31 @@ export const KanbanTickets = () => {
   }
 
   // Helper to get column configuration
-  const getColumnConfig = () => {
-    if (!settings) {
-      return [
-        { key: 'new', label: 'Nouveau', cls: 'kb-col-new', color: '#4caf50' },
-        { key: 'progress', label: 'En cours', cls: 'kb-col-progress', color: '#2196f3' },
-        { key: 'closed', label: 'Terminé', cls: 'kb-col-closed', color: '#9e9e9e' }
-      ]
-    }
-    
+  // Helper to get column configuration with language toggle
+const getColumnConfig = () => {
+  if (!settings) {
     return [
-      { key: 'new', label: settings.status_name_new || 'Nouveau', cls: 'kb-col-new', color: settings.kanban_color_new || '#4caf50' },
-      { key: 'progress', label: settings.status_name_in_progress || 'En cours', cls: 'kb-col-progress', color: settings.kanban_color_in_progress || '#2196f3' },
-      { key: 'closed', label: settings.status_name_done || 'Terminé', cls: 'kb-col-closed', color: settings.kanban_color_done || '#9e9e9e' }
+      { key: 'new', label: 'New', cls: 'kb-col-new', color: '#4caf50' },
+      { key: 'progress', label: 'In Progress', cls: 'kb-col-progress', color: '#2196f3' },
+      { key: 'closed', label: 'Closed', cls: 'kb-col-closed', color: '#9e9e9e' }
     ]
   }
-
+  
+  // Choix des libellés selon la langue
+  const labels = {
+    // Si useMalagasy = true → utilise les valeurs de la base (malgache)
+    // Si useMalagasy = false → utilise les valeurs originales (anglais)
+    new: useMalagasy ? (settings.status_name_new || 'Vaovao') : 'New',
+    progress: useMalagasy ? (settings.status_name_in_progress || 'Efa manao') : 'In Progress',
+    closed: useMalagasy ? (settings.status_name_done || 'Vita') : 'Closed'
+  }
+  
+  return [
+    { key: 'new', label: labels.new, cls: 'kb-col-new', color: settings.kanban_color_new || '#4caf50' },
+    { key: 'progress', label: labels.progress, cls: 'kb-col-progress', color: settings.kanban_color_in_progress || '#2196f3' },
+    { key: 'closed', label: labels.closed, cls: 'kb-col-closed', color: settings.kanban_color_done || '#9e9e9e' }
+  ]
+}
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="kb-page">
@@ -346,6 +355,14 @@ export const KanbanTickets = () => {
       {/* Header */}
       <div className="kb-header">
         <h2 className="kb-title">Tickets — Vue Kanban</h2>
+            <button 
+      className={`kb-lang-btn ${useMalagasy ? 'active' : ''}`}
+      onClick={() => setUseMalagasy(!useMalagasy)}
+      title={useMalagasy ? "Afficher en français" : "Afficher en malgache"}
+    >
+      <i className="bi bi-translate"></i>
+      {useMalagasy ? '🇲🇬 Malagasy' : 'Original'}
+    </button>
         <button 
           className="kb-refresh-btn" 
           onClick={() => void loadTickets()} 
