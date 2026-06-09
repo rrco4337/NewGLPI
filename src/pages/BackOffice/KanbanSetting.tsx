@@ -21,8 +21,11 @@ const KanbanSetting: React.FC = () => {
     status_name_in_progress: 'En cours',
     status_name_done: 'Terminé'
   });
+  
+  const [originalSettings, setOriginalSettings] = useState<SettingsState>({} as SettingsState);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savingField, setSavingField] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Charger les paramètres au démarrage
@@ -35,6 +38,7 @@ const KanbanSetting: React.FC = () => {
       setLoading(true);
       const settingsMap = await KanbanSettingApi.getSettingsMap();
       setSettings(prev => ({ ...prev, ...settingsMap }));
+      setOriginalSettings({ ...prev, ...settingsMap });
     } catch (error) {
       console.error('Erreur chargement:', error);
       setMessage({ type: 'error', text: 'Erreur lors du chargement des paramètres' });
@@ -43,13 +47,15 @@ const KanbanSetting: React.FC = () => {
     }
   };
 
+  // Pour les couleurs : sauvegarde immédiate (c'est normal pour un color picker)
   const handleColorChange = async (key: string, value: string) => {
     // Mise à jour immédiate de l'UI
     setSettings(prev => ({ ...prev, [key]: value }));
     
     try {
-      setSaving(key);
+      setSavingField(key);
       await KanbanSettingApi.updateSetting(key, value);
+      setOriginalSettings(prev => ({ ...prev, [key]: value }));
       setMessage({ type: 'success', text: `${key} mis à jour` });
       setTimeout(() => setMessage(null), 2000);
     } catch (error) {
@@ -58,12 +64,71 @@ const KanbanSetting: React.FC = () => {
       // Recharger pour restaurer l'ancienne valeur
       await loadSettings();
     } finally {
-      setSaving(null);
+      setSavingField(null);
     }
   };
 
-  const handleTextChange = (key: string, value: string) => {
-    handleColorChange(key, value);
+  // Pour les textes : sauvegarde uniquement via bouton
+  const handleTextLocalChange = (key: string, value: string) => {
+    // Met à jour seulement l'UI locale
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveText = async (key: string) => {
+    const newValue = settings[key];
+    const oldValue = originalSettings[key];
+    
+    if (newValue === oldValue) return;
+    
+    try {
+      setSavingField(key);
+      await KanbanSettingApi.updateSetting(key, newValue);
+      setOriginalSettings(prev => ({ ...prev, [key]: newValue }));
+      setMessage({ type: 'success', text: `${key} mis à jour` });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+      setMessage({ type: 'error', text: `Erreur lors de la mise à jour de ${key}` });
+      // Restaurer l'ancienne valeur
+      setSettings(prev => ({ ...prev, [key]: oldValue }));
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const handleSaveAllTexts = async () => {
+    setSaving(true);
+    const changes = [];
+    
+    if (settings.status_name_new !== originalSettings.status_name_new) {
+      changes.push(KanbanSettingApi.updateSetting('status_name_new', settings.status_name_new));
+    }
+    if (settings.status_name_in_progress !== originalSettings.status_name_in_progress) {
+      changes.push(KanbanSettingApi.updateSetting('status_name_in_progress', settings.status_name_in_progress));
+    }
+    if (settings.status_name_done !== originalSettings.status_name_done) {
+      changes.push(KanbanSettingApi.updateSetting('status_name_done', settings.status_name_done));
+    }
+    
+    if (changes.length === 0) {
+      setMessage({ type: 'success', text: 'Aucune modification' });
+      setTimeout(() => setMessage(null), 2000);
+      setSaving(false);
+      return;
+    }
+    
+    try {
+      await Promise.all(changes);
+      setOriginalSettings({ ...settings });
+      setMessage({ type: 'success', text: 'Tous les libellés ont été mis à jour' });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
+      await loadSettings();
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -90,9 +155,9 @@ const KanbanSetting: React.FC = () => {
               type="color"
               value={settings.kanban_color_new}
               onChange={(e) => handleColorChange('kanban_color_new', e.target.value)}
-              disabled={saving === 'kanban_color_new'}
+              disabled={savingField === 'kanban_color_new'}
             />
-            {saving === 'kanban_color_new' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_new' && <span className="saving-indicator">💾</span>}
           </div>
 
           <div className="setting-item">
@@ -102,9 +167,9 @@ const KanbanSetting: React.FC = () => {
               type="color"
               value={settings.kanban_color_in_progress}
               onChange={(e) => handleColorChange('kanban_color_in_progress', e.target.value)}
-              disabled={saving === 'kanban_color_in_progress'}
+              disabled={savingField === 'kanban_color_in_progress'}
             />
-            {saving === 'kanban_color_in_progress' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_in_progress' && <span className="saving-indicator">💾</span>}
           </div>
 
           <div className="setting-item">
@@ -114,9 +179,9 @@ const KanbanSetting: React.FC = () => {
               type="color"
               value={settings.kanban_color_done}
               onChange={(e) => handleColorChange('kanban_color_done', e.target.value)}
-              disabled={saving === 'kanban_color_done'}
+              disabled={savingField === 'kanban_color_done'}
             />
-            {saving === 'kanban_color_done' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_done' && <span className="saving-indicator">💾</span>}
           </div>
         </div>
       </div>
@@ -129,11 +194,17 @@ const KanbanSetting: React.FC = () => {
             <input
               type="text"
               value={settings.status_name_new}
-              onChange={(e) => handleTextChange('status_name_new', e.target.value)}
+              onChange={(e) => handleTextLocalChange('status_name_new', e.target.value)}
               placeholder="Vaovao"
-              disabled={saving === 'status_name_new'}
+              disabled={savingField === 'status_name_new'}
             />
-            {saving === 'status_name_new' && <span className="saving-indicator">💾</span>}
+            <button 
+              className="save-text-btn"
+              onClick={() => handleSaveText('status_name_new')}
+              disabled={savingField === 'status_name_new' || settings.status_name_new === originalSettings.status_name_new}
+            >
+              {savingField === 'status_name_new' ? '💾' : '💾 Enregistrer'}
+            </button>
           </div>
 
           <div className="setting-item">
@@ -141,11 +212,17 @@ const KanbanSetting: React.FC = () => {
             <input
               type="text"
               value={settings.status_name_in_progress}
-              onChange={(e) => handleTextChange('status_name_in_progress', e.target.value)}
+              onChange={(e) => handleTextLocalChange('status_name_in_progress', e.target.value)}
               placeholder="Efa manao"
-              disabled={saving === 'status_name_in_progress'}
+              disabled={savingField === 'status_name_in_progress'}
             />
-            {saving === 'status_name_in_progress' && <span className="saving-indicator">💾</span>}
+            <button 
+              className="save-text-btn"
+              onClick={() => handleSaveText('status_name_in_progress')}
+              disabled={savingField === 'status_name_in_progress' || settings.status_name_in_progress === originalSettings.status_name_in_progress}
+            >
+              {savingField === 'status_name_in_progress' ? '💾' : '💾 Enregistrer'}
+            </button>
           </div>
 
           <div className="setting-item">
@@ -153,12 +230,28 @@ const KanbanSetting: React.FC = () => {
             <input
               type="text"
               value={settings.status_name_done}
-              onChange={(e) => handleTextChange('status_name_done', e.target.value)}
+              onChange={(e) => handleTextLocalChange('status_name_done', e.target.value)}
               placeholder="Vita"
-              disabled={saving === 'status_name_done'}
+              disabled={savingField === 'status_name_done'}
             />
-            {saving === 'status_name_done' && <span className="saving-indicator">💾</span>}
+            <button 
+              className="save-text-btn"
+              onClick={() => handleSaveText('status_name_done')}
+              disabled={savingField === 'status_name_done' || settings.status_name_done === originalSettings.status_name_done}
+            >
+              {savingField === 'status_name_done' ? '💾' : '💾 Enregistrer'}
+            </button>
           </div>
+        </div>
+        
+        <div className="settings-actions">
+          <button 
+            className="save-all-btn"
+            onClick={handleSaveAllTexts}
+            disabled={saving}
+          >
+            {saving ? '💾 Enregistrement...' : '💾 Enregistrer tous les libellés'}
+          </button>
         </div>
       </div>
 
