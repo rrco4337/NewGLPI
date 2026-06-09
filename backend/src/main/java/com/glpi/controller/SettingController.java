@@ -1,0 +1,35 @@
+package com.glpi.controller;
+
+import com.glpi.model.Setting;
+import com.glpi.service.SettingService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/backoffice/settings")
+@CrossOrigin(origins = {
+    "http://localhost:5173",  // Vite par défaut
+    "http://localhost:3000",   // React create-react-app
+    "http://localhost:8080"    // Autres
+})
+public class SettingController {
+    
+    @Autowired
+    private SettingService settingService;
+    
+    @GetMapping
+    public List<Setting> getAllSettings() {
+        return settingService.getAllSettings();
+    }
+    
+    @GetMapping("/{key}")
+    public String getSetting(@PathVariable String key) {
+        return settingService.getSetting(key, "");
+    }
+    
+    @PutMapping("/{key}")
+    public Setting updateSetting(@PathVariable String key, @RequestBody String value) {
+        return settingService.updateSetting(key, value);
+    }
+}
