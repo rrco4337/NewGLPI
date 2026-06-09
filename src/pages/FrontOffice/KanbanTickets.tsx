@@ -457,9 +457,10 @@ export const KanbanTickets = () => {
 
                 {/* Add button — only on New column */}
                 {col.key === 'new' && (
-                  <button className="kb-add-btn" onClick={() => setShowCreate(true)}>
+                 
+                  <a href="/create-ticket" className="kb-add-btn">
                     <i className="bi bi-plus-circle" /> Ajouter un ticket
-                  </button>
+                  </a>
                 )}
               </div>
             )
