@@ -8,8 +8,13 @@ import type {
 } from './types'
 
 // Types whose GLPI REST v1 endpoint is unavailable — routed to v2
-const V2_ONLY_TYPES = new Set<GlpiItemType>(['Socket'])
-
+const V2_ONLY_TYPES = new Set<GlpiItemType>([
+  'Socket',
+  'Appliance',
+  'Software',
+  'SoftwareLicense',
+  'Certificate',
+])
 // Maps each supported asset type to its GLPI model dropdown type and field name
 const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
   Computer: 'ComputerModel',
@@ -24,6 +29,10 @@ const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
   PassiveDCEquipment: 'PassiveDCEquipmentModel',
   Cable: 'CableType',
   Socket: 'SocketModel',
+  Appliance:       'ApplianceType',
+   
+    SoftwareLicense: 'LicenseType',
+    Certificate:     'CertificateType',
 }
 
 const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
@@ -39,6 +48,9 @@ const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
   PassiveDCEquipment: 'passivedcequipmentmodels_id',
   Cable: 'cabletypes_id',
   Socket: 'socketmodels_id',
+  Appliance:       'appliancetypes_id',
+SoftwareLicense: 'licensetypes_id',
+Certificate:     'certificatetypes_id',
 }
 
 type OnProgress = (update: ProgressUpdate) => void
@@ -127,6 +139,8 @@ async function buildAssetInput(
   if (row.user && !userId) {
     warnings.push(`Utilisateur "${row.user}" non résolu pour l'actif "${row.name}" — champ users_id ignoré`)
   }
+
+ 
 
   return {
     name: row.name,

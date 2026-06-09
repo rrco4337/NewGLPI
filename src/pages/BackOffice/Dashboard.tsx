@@ -16,6 +16,7 @@ export const Dashboard = () => {
       {loading && <div className="rounded-3xl bg-white p-6 text-slate-500 shadow-sm ring-1 ring-slate-200">Chargement des métriques…</div>}
       {error && <div className="rounded-3xl bg-rose-50 p-6 text-rose-600 shadow-sm ring-1 ring-rose-200">{error}</div>}
 
+     <Link to="/admin/kanban-settings" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Voir parametres Kanban</Link>
       {data && (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
