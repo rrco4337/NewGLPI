@@ -182,9 +182,13 @@ export const KanbanTickets = () => {
     const { ticketId } = closeDialog
 
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 5 } : t))
-    await glpiTicketService.updateTicket(ticketId, { status: 5 })
+
     if (closeNote.trim()) {
+      // Créer la solution EN PREMIER — GLPI passe le ticket en Résolu automatiquement
       await glpiTicketService.createSolution(ticketId, closeNote.trim())
+    } else {
+      // Pas de note : changer le statut manuellement
+      await glpiTicketService.updateTicket(ticketId, { status: 5 })
     }
 
     setCloseDialog(null)

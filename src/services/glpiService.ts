@@ -39,7 +39,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(handleApiError(error)),
+  (error) => {
+    const ax = error as import('axios').AxiosError
+    if (ax?.response?.status === 400) {
+      console.error('[GLPI 400] url:', ax.config?.url)
+      console.error('[GLPI 400] body envoyé:', ax.config?.data)
+      console.error('[GLPI 400] réponse GLPI:', JSON.stringify(ax.response.data))
+    }
+    return Promise.reject(handleApiError(error))
+  },
 )
 
 // const demoTickets: GlpiTicket[] = [
@@ -125,21 +133,25 @@ export const glpiTicketService = {
       const response = await api.post('/ITILSolution', {
         input: { itemtype: 'Ticket', items_id: ticketId, content },
       })
+      console.log('[createSolution] réponse GLPI:', response.data)
       return response.data
-    } catch (e) {
-      console.error('Erreur création solution:', e)
+    } catch (e: unknown) {
+      const ax = e as import('axios').AxiosError
+      console.error('[createSolution] status:', ax?.response?.status)
+      console.error('[createSolution] body:', JSON.stringify(ax?.response?.data))
       return null
     }
   },
 
   async getTicketSolution(ticketId: number): Promise<string | null> {
     try {
-      const response = await api.get(
-        `/ITILSolution?searchText[itemtype]=Ticket&searchText[items_id]=${ticketId}&order=DESC&sort=id&range=0-0`,
-      )
+      const response = await api.get(`/Ticket/${ticketId}/ITILSolution`)
+      console.log(`[getTicketSolution] ticket ${ticketId} →`, response.data)
       const items = Array.isArray(response.data) ? response.data : []
-      return (items[0]?.content as string) ?? null
-    } catch {
+      const last = items[items.length - 1]
+      return (last?.content as string) ?? null
+    } catch (e) {
+      console.error(`[getTicketSolution] erreur ticket ${ticketId}:`, e)
       return null
     }
   },
