@@ -9,8 +9,9 @@ const NAV = [
   { to: '/admin/import',        icon: 'bi-cloud-upload-fill',    label: 'Import GLPI' },
   { to: '/admin/verify-import', icon: 'bi-patch-check-fill',     label: 'Vérif. Import' },
   { to: '/admin/users',         icon: 'bi-people-fill',          label: 'Utilisateurs' },
-  { to: '/admin/reset',         icon: 'bi-arrow-counterclockwise', label: 'Réinitialisation' },
-  { to: '/admin/settings',      icon: 'bi-gear-fill',            label: 'Paramètres' },
+  { to: '/admin/reset',            icon: 'bi-arrow-counterclockwise', label: 'Réinitialisation' },
+  { to: '/admin/settings',         icon: 'bi-gear-fill',              label: 'Paramètres' },
+  { to: '/admin/kanban-settings',  icon: 'bi-sliders',                label: 'Kanban Settings' },
 ]
 
 export const DashboardLayout = () => {

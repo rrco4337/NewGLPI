@@ -10,6 +10,7 @@ import { Settings } from '@/pages/BackOffice/Settings'
 import { Reset } from '@/pages/BackOffice/Reset'
 import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from '@/pages/BackOffice/TicketDetail'
+import KanbanSetting from '@/pages/BackOffice/KanbanSetting'
 
 export const appRoutes = (
   <>
@@ -28,6 +29,7 @@ export const appRoutes = (
       <Route path="users" element={<div style={{ padding: '2rem' }}><h2>Users Module</h2><p>Coming soon...</p></div>} />
       <Route path="settings" element={<Settings />} />
       <Route path="reset" element={<Reset />} />
+      <Route path="kanban-settings" element={<KanbanSetting />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </>

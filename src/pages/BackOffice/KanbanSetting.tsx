@@ -146,7 +146,7 @@ const KanbanSetting: React.FC = () => {
       )}
 
       <div className="settings-section">
-        <h2>🎨 Couleurs du tableau Kanban</h2>
+        <h2>Couleurs du tableau Kanban</h2>
         <div className="settings-grid">
           <div className="setting-item">
             <label>Statut "Nouveau" :</label>
@@ -157,7 +157,7 @@ const KanbanSetting: React.FC = () => {
               onChange={(e) => handleColorChange('kanban_color_new', e.target.value)}
               disabled={savingField === 'kanban_color_new'}
             />
-            {savingField === 'kanban_color_new' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_new' && <i className="bi bi-arrow-repeat saving-indicator" />}
           </div>
 
           <div className="setting-item">
@@ -169,7 +169,7 @@ const KanbanSetting: React.FC = () => {
               onChange={(e) => handleColorChange('kanban_color_in_progress', e.target.value)}
               disabled={savingField === 'kanban_color_in_progress'}
             />
-            {savingField === 'kanban_color_in_progress' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_in_progress' && <i className="bi bi-arrow-repeat saving-indicator" />}
           </div>
 
           <div className="setting-item">
@@ -181,13 +181,13 @@ const KanbanSetting: React.FC = () => {
               onChange={(e) => handleColorChange('kanban_color_done', e.target.value)}
               disabled={savingField === 'kanban_color_done'}
             />
-            {savingField === 'kanban_color_done' && <span className="saving-indicator">💾</span>}
+            {savingField === 'kanban_color_done' && <i className="bi bi-arrow-repeat saving-indicator" />}
           </div>
         </div>
       </div>
 
       <div className="settings-section">
-        <h2>🌍 Libellés en malgache</h2>
+        <h2>Libellés en malgache</h2>
         <div className="settings-grid">
           <div className="setting-item">
             <label>Nouveau (Vaovao) :</label>
@@ -198,12 +198,14 @@ const KanbanSetting: React.FC = () => {
               placeholder="Vaovao"
               disabled={savingField === 'status_name_new'}
             />
-            <button 
+            <button
               className="save-text-btn"
               onClick={() => handleSaveText('status_name_new')}
               disabled={savingField === 'status_name_new' || settings.status_name_new === originalSettings.status_name_new}
             >
-              {savingField === 'status_name_new' ? '💾' : '💾 Enregistrer'}
+              {savingField === 'status_name_new'
+                ? <i className="bi bi-arrow-repeat saving-indicator" />
+                : <><i className="bi bi-check2" /> Enregistrer</>}
             </button>
           </div>
 
@@ -216,12 +218,14 @@ const KanbanSetting: React.FC = () => {
               placeholder="Efa manao"
               disabled={savingField === 'status_name_in_progress'}
             />
-            <button 
+            <button
               className="save-text-btn"
               onClick={() => handleSaveText('status_name_in_progress')}
               disabled={savingField === 'status_name_in_progress' || settings.status_name_in_progress === originalSettings.status_name_in_progress}
             >
-              {savingField === 'status_name_in_progress' ? '💾' : '💾 Enregistrer'}
+              {savingField === 'status_name_in_progress'
+                ? <i className="bi bi-arrow-repeat saving-indicator" />
+                : <><i className="bi bi-check2" /> Enregistrer</>}
             </button>
           </div>
 
@@ -234,12 +238,14 @@ const KanbanSetting: React.FC = () => {
               placeholder="Vita"
               disabled={savingField === 'status_name_done'}
             />
-            <button 
+            <button
               className="save-text-btn"
               onClick={() => handleSaveText('status_name_done')}
               disabled={savingField === 'status_name_done' || settings.status_name_done === originalSettings.status_name_done}
             >
-              {savingField === 'status_name_done' ? '💾' : '💾 Enregistrer'}
+              {savingField === 'status_name_done'
+                ? <i className="bi bi-arrow-repeat saving-indicator" />
+                : <><i className="bi bi-check2" /> Enregistrer</>}
             </button>
           </div>
         </div>
@@ -250,7 +256,9 @@ const KanbanSetting: React.FC = () => {
             onClick={handleSaveAllTexts}
             disabled={saving}
           >
-            {saving ? '💾 Enregistrement...' : '💾 Enregistrer tous les libellés'}
+            {saving
+            ? <><i className="bi bi-arrow-repeat saving-indicator" /> Enregistrement...</>
+            : <><i className="bi bi-floppy" /> Enregistrer tous les libellés</>}
           </button>
         </div>
       </div>
