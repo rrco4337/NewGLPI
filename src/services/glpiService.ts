@@ -110,6 +110,16 @@ export const glpiTicketService = {
     }
   },
 
+  async updateTicket(id: number, payload: Record<string, unknown>) {
+    try {
+      const response = await api.put(`/Ticket/${id}`, { input: { id, ...payload } })
+      return response.data
+    } catch (e) {
+      console.error('Erreur mise à jour ticket:', e)
+      return null
+    }
+  },
+
   async associateItemToTicket(tickets_id: number, itemtype: string, items_id: number) {
     try {
       const response = await api.post('/Item_Ticket', {
