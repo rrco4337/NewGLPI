@@ -38,7 +38,7 @@ const KanbanSetting: React.FC = () => {
       setLoading(true);
       const settingsMap = await KanbanSettingApi.getSettingsMap();
       setSettings(prev => ({ ...prev, ...settingsMap }));
-      setOriginalSettings({ ...prev, ...settingsMap });
+      setOriginalSettings(prev => ({ ...prev, ...settingsMap }));
     } catch (error) {
       console.error('Erreur chargement:', error);
       setMessage({ type: 'error', text: 'Erreur lors du chargement des paramètres' });

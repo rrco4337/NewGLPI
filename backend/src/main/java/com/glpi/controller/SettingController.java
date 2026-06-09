@@ -8,11 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/backoffice/settings")
-@CrossOrigin(origins = {
-    "http://localhost:5173",  // Vite par défaut
-    "http://localhost:3000",   // React create-react-app
-    "http://localhost:8080"    // Autres
-})
 public class SettingController {
     
     @Autowired
