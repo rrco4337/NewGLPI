@@ -14,6 +14,7 @@ import { ImportVerify } from './pages/BackOffice/ImportVerify'
 import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from './pages/BackOffice/TicketDetail'
 import ProtectedRoute from './components/Security/ProtectedRoute';
+import KanbanSetting from './pages/BackOffice/KanbanSetting'
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
         <Route path="reset" element={<Reset />} />
         <Route path="import" element={<GlpiImport />} />
         <Route path="verify-import" element={<ImportVerify />} />
+        <Route path="kanban-settings" element={<KanbanSetting />} />
       </Route>
 </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

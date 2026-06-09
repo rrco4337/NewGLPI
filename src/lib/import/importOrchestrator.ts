@@ -134,6 +134,8 @@ async function buildAssetInput(
     warnings.push(`Utilisateur "${row.user}" non résolu pour l'actif "${row.name}" — champ users_id ignoré`)
   }
 
+ 
+
   return {
     name: row.name,
     otherserial: row.inventoryNumber || undefined,
