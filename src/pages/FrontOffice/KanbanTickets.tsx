@@ -545,6 +545,19 @@ export const KanbanTickets = () => {
                   </div>
                 )}
 
+                {/* Solution — visible uniquement si ticket résolu/clos ET solution présente */}
+                {detailTicket.solution && CLOSED_STATUSES.includes(detailTicket.status as never) && (
+                  <div className="kb-detail-section">
+                    <div className="kb-section-label kb-section-label-solution">
+                      <i className="bi bi-check2-circle" /> Solution apportée
+                    </div>
+                    <div
+                      className="kb-solution-content"
+                      dangerouslySetInnerHTML={{ __html: detailTicket.solution }}
+                    />
+                  </div>
+                )}
+
                 {/* Meta grid */}
                 <div className="kb-meta-grid">
                   <div className="kb-meta-item">

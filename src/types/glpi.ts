@@ -34,6 +34,7 @@ export type GlpiTicket = {
   type?: string
   content?: string
   description?: string
+  solution?: string
   users_id_lastupdater?: number
   entities_id?: number
 }
