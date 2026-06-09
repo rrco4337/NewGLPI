@@ -140,7 +140,7 @@ export async function uploadDocumentToGlpi(
  */
 export async function linkDocumentToItem(
   documentId: number,
-  itemtype: 'Computer' | 'Monitor',
+  itemtype: string,
   itemsId: number,
   token?: string,
 ): Promise<void> {

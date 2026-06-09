@@ -8,14 +8,11 @@ import type {
 } from './types'
 
 // Types whose GLPI REST v1 endpoint is unavailable — routed to v2
-const V2_ONLY_TYPES = new Set<GlpiItemType>([
-  'Socket',
-  'Appliance',
-  'Software',
-  'SoftwareLicense',
-  'Certificate',
-])
-// Maps each supported asset type to its GLPI model dropdown type and field name
+const V2_ONLY_TYPES = new Set<GlpiItemType>(['Socket'])
+
+// Maps each supported asset type to its GLPI model dropdown type and field name.
+// Types absent from this map have no model endpoint and are silently skipped
+// (Cable, Software, Appliance, Certificate, SoftwareLicense, Socket).
 const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
   Computer: 'ComputerModel',
   Monitor: 'MonitorModel',
@@ -28,11 +25,6 @@ const MODEL_GLPI_TYPE: Partial<Record<GlpiItemType, string>> = {
   Rack: 'RackModel',
   PassiveDCEquipment: 'PassiveDCEquipmentModel',
   Cable: 'CableType',
-  Socket: 'SocketModel',
-  Appliance:       'ApplianceType',
-   
-    SoftwareLicense: 'LicenseType',
-    Certificate:     'CertificateType',
 }
 
 const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
@@ -47,10 +39,12 @@ const MODEL_FIELD: Partial<Record<GlpiItemType, string>> = {
   Rack: 'rackmodels_id',
   PassiveDCEquipment: 'passivedcequipmentmodels_id',
   Cable: 'cabletypes_id',
-  Socket: 'socketmodels_id',
-  Appliance:       'appliancetypes_id',
-SoftwareLicense: 'licensetypes_id',
-Certificate:     'certificatetypes_id',
+}
+
+// GLPI 10+ requires the fully-qualified PHP class name for v2-only types in Item_Ticket.itemtype.
+// Using the short name (e.g. 'Socket') causes a PHP 500 crash in v1.
+const ITEM_TICKET_ITEMTYPE: Partial<Record<GlpiItemType, string>> = {
+  Socket: 'Glpi\\Socket',
 }
 
 type OnProgress = (update: ProgressUpdate) => void
@@ -178,7 +172,7 @@ export async function runImport(
   } catch (e: unknown) {
     const msg = `Erreur lors du chargement des listes GLPI: ${e instanceof Error ? e.message : String(e)}`
     errors.push(msg)
-    return { success: false, rolledBack: false, rollbackErrors: [], created: { users: 0, computers: 0, monitors: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
+    return { success: false, rolledBack: false, rollbackErrors: [], created: { users: 0, computers: 0, monitors: 0, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
   }
   onProgress({ phase: 'dropdowns', message: 'Listes chargées', current: 1, total: 1 })
 
@@ -325,23 +319,14 @@ export async function runImport(
           continue
         }
         try {
-          let linkId: number | undefined
-          if (V2_ONLY_TYPES.has(info.itemtype)) {
-            const linkRes = await createItemV2('Item_Ticket', {
-              tickets_id: ticketId,
-              itemtype: info.itemtype,
-              items_id: info.id,
-            }, 'Assistance')
-            linkId = linkRes.id
-          } else {
-            const linkRes = await createItem('Item_Ticket', {
-              tickets_id: ticketId,
-              itemtype: info.itemtype,
-              items_id: info.id,
-            }, token)
-            linkId = Array.isArray(linkRes) ? linkRes[0]?.id : linkRes?.id
-          }
-          if (linkId) registry.itemTickets.push({ id: linkId })
+          const linkItemtype = ITEM_TICKET_ITEMTYPE[info.itemtype] ?? info.itemtype
+          const linkRes = await createItem('Item_Ticket', {
+            tickets_id: ticketId,
+            itemtype: linkItemtype,
+            items_id: info.id,
+          }, token)
+          const linkId = Array.isArray(linkRes) ? linkRes[0]?.id : linkRes?.id
+          if (linkId) registry.itemTickets.push({ id: linkId as number })
         } catch (e: unknown) {
           warnings.push(`Lien ticket ${t.refTicket} ↔ "${assetName}": ${e instanceof Error ? e.message : String(e)}`)
         }

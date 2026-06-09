@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import type { GlpiTicket, TicketDetail } from '@/types/glpi'
+import { listItemsV2, isV2Configured } from '@/api/glpiV2'
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '')
 
@@ -109,6 +110,16 @@ export const glpiTicketService = {
     }
   },
 
+  async updateTicket(id: number, payload: Record<string, unknown>) {
+    try {
+      const response = await api.put(`/Ticket/${id}`, { input: { id, ...payload } })
+      return response.data
+    } catch (e) {
+      console.error('Erreur mise à jour ticket:', e)
+      return null
+    }
+  },
+
   async associateItemToTicket(tickets_id: number, itemtype: string, items_id: number) {
     try {
       const response = await api.post('/Item_Ticket', {
@@ -195,16 +206,32 @@ export const glpiDashboardService = {
         softsResponse,
         networkResponse,
         peripheralsResponse,
-        phonesResponse
+        phonesResponse,
+        racksResponse,
+        pduResponse,
+        enclosureResponse,
+        passiveDCResponse,
+        cableResponse,
+        applianceResponse,
+        licenseResponse,
+        certificateResponse,
       ] = await Promise.allSettled([
-        api.get('/Ticket?range=0-999'),  // Augmenter la limite pour avoir tous les tickets
+        api.get('/Ticket?range=0-999'),
         api.get('/Computer?range=0-999'),
         api.get('/Monitor?range=0-999'),
         api.get('/Printer?range=0-999'),
         api.get('/Software?range=0-999'),
         api.get('/NetworkEquipment?range=0-999'),
         api.get('/Peripheral?range=0-999'),
-        api.get('/Phone?range=0-999')
+        api.get('/Phone?range=0-999'),
+        api.get('/Rack?range=0-999'),
+        api.get('/PDU?range=0-999'),
+        api.get('/Enclosure?range=0-999'),
+        api.get('/PassiveDCEquipment?range=0-999'),
+        api.get('/Cable?range=0-999'),
+        api.get('/Appliance?range=0-999'),
+        api.get('/SoftwareLicense?range=0-999'),
+        api.get('/Certificate?range=0-999'),
       ]);
 
       // Fonction helper pour extraire les données
@@ -223,8 +250,32 @@ export const glpiDashboardService = {
       const network = getDataLength(networkResponse);
       const peripherals = getDataLength(peripheralsResponse);
       const phones = getDataLength(phonesResponse);
+      const racks = getDataLength(racksResponse);
+      const pdus = getDataLength(pduResponse);
+      const enclosures = getDataLength(enclosureResponse);
+      const passiveDC = getDataLength(passiveDCResponse);
+      const cables = getDataLength(cableResponse);
+      const appliances = getDataLength(applianceResponse);
+      const licenses = getDataLength(licenseResponse);
+      const certificates = getDataLength(certificateResponse);
 
-      const totalAssets = computers + monitors + printers + softs + network + peripherals + phones;
+      // Detect expired session: if the three most basic types all rejected, session is likely dead
+      if (
+        computersResponse.status === 'rejected' &&
+        monitorsResponse.status === 'rejected' &&
+        printersResponse.status === 'rejected'
+      ) {
+        const reason = String((computersResponse as PromiseRejectedResult).reason)
+        if (reason.includes('401') || /session|token/i.test(reason)) {
+          throw new Error('Session GLPI expirée — reconnectez-vous')
+        }
+      }
+
+      // v2-only types (Socket) must be counted separately via v2 API
+      const sockets = isV2Configured() ? (await listItemsV2('Socket')).length : 0
+
+      const totalAssets = computers + monitors + printers + softs + network + peripherals + phones
+        + racks + pdus + enclosures + passiveDC + cables + appliances + licenses + certificates + sockets;
 
       // Analyse des tickets par statut
       let ticketsData: any[] = [];
@@ -305,19 +356,89 @@ export const glpiDashboardService = {
           detail: 'Claviers, souris, webcams',
           icon: '⌨️'
         },
-        { 
-          label: 'Téléphones', 
-          value: phones, 
-          accent: 'linear-gradient(135deg, #facc15, #eab308)', 
+        {
+          label: 'Téléphones',
+          value: phones,
+          accent: 'linear-gradient(135deg, #facc15, #eab308)',
           detail: 'Postes téléphoniques',
-          icon: '📞'
-        }
+        },
+        {
+          label: 'Racks',
+          value: racks,
+          accent: 'linear-gradient(135deg, #64748b, #334155)',
+          detail: 'Baies serveur',
+        },
+        {
+          label: 'PDU',
+          value: pdus,
+          accent: 'linear-gradient(135deg, #f59e0b, #b45309)',
+          detail: 'Bandeaux de prises',
+        },
+        {
+          label: 'Châssis',
+          value: enclosures,
+          accent: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+          detail: 'Enclosures',
+        },
+        {
+          label: 'DC Passif',
+          value: passiveDC,
+          accent: 'linear-gradient(135deg, #10b981, #065f46)',
+          detail: 'Équipements passifs DC',
+        },
+        {
+          label: 'Câbles',
+          value: cables,
+          accent: 'linear-gradient(135deg, #f43f5e, #be123c)',
+          detail: 'Câblage réseau',
+        },
+        {
+          label: 'Applicatifs',
+          value: appliances,
+          accent: 'linear-gradient(135deg, #0ea5e9, #0369a1)',
+          detail: 'Applications virtuelles',
+        },
+        {
+          label: 'Licences',
+          value: licenses,
+          accent: 'linear-gradient(135deg, #a3e635, #65a30d)',
+          detail: 'Licences logicielles',
+        },
+        {
+          label: 'Certificats',
+          value: certificates,
+          accent: 'linear-gradient(135deg, #fb923c, #c2410c)',
+          detail: 'Certificats SSL/TLS',
+        },
+        {
+          label: 'Prises réseau',
+          value: sockets,
+          accent: 'linear-gradient(135deg, #6366f1, #4338ca)',
+          detail: 'Sockets RJ45 / SFP',
+        },
       ];
+
+      const STATUS_LABEL: Record<number, string> = { 1: 'Nouveau', 2: 'En cours', 3: 'Planifié', 4: 'En attente', 5: 'Résolu', 6: 'Clos' }
+      const STATUS_VARIANT: Record<number, 'open' | 'pending' | 'closed'> = { 1: 'open', 2: 'open', 3: 'open', 4: 'pending', 5: 'closed', 6: 'closed' }
+      const PRIORITY_LABEL: Record<number, string> = { 1: 'Très basse', 2: 'Basse', 3: 'Moyenne', 4: 'Haute', 5: 'Très haute', 6: 'Majeure' }
+      const PRIORITY_VARIANT: Record<number, 'low' | 'medium' | 'high'> = { 1: 'low', 2: 'low', 3: 'medium', 4: 'high', 5: 'high', 6: 'high' }
+
+      const recentTickets = ticketsData.slice(0, 5).map((t: any) => ({
+        id: t.id as number,
+        name: (t.name as string) ?? '',
+        statusLabel: STATUS_LABEL[t.status as number] ?? String(t.status),
+        statusVariant: (STATUS_VARIANT[t.status as number] ?? 'open') as 'open' | 'pending' | 'closed',
+        priorityLabel: PRIORITY_LABEL[t.priority as number] ?? String(t.priority),
+        priorityVariant: (PRIORITY_VARIANT[t.priority as number] ?? 'medium') as 'low' | 'medium' | 'high',
+        ticketType: t.type === 2 ? 'Demande' : 'Incident',
+        date: (t.date as string)?.split(' ')[0] ?? '',
+      }))
 
       return {
         totalAssets,
-        assetBreakdown: assetBreakdown.filter(a => a.value > 0), // Ne montrer que les catégories avec des éléments
+        assetBreakdown: assetBreakdown.filter(a => a.value > 0),
         totalTickets: ticketsData.length,
+        recentTickets,
         ticketsByStatus: {
           open: ticketsByStatus.new + ticketsByStatus.processing,
           closed: ticketsByStatus.closed,
@@ -325,7 +446,6 @@ export const glpiDashboardService = {
           solved: ticketsByStatus.solved,
           incidents,
           requests,
-          // Détails supplémentaires
           details: ticketsByStatus
         },
         // Ajout de métadonnées utiles

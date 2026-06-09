@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
 import { purgeAllItems, purgeNonAdminUsers } from '@/api/glpi'
+import { purgeAllItemsV2 } from '@/api/glpiV2'
 import { ConfirmModal } from '@/components/ConfirmModal/ConfirmModal'
 import { ResetReport } from '@/components/ResetReport/ResetReport'
 import type { ResetResult } from '@/pages/BackOffice/Settings'
 
-const PURGEABLE_ITEM_TYPES = [
+const PURGEABLE_ITEM_TYPES: Array<{ key: string; label: string; icon: string; weight: number; v2?: boolean }> = [
   { key: 'Ticket',            label: 'Tickets',              icon: 'bi-ticket-detailed-fill',      weight: 10 },
   { key: 'Problem',           label: 'Problèmes',            icon: 'bi-exclamation-triangle-fill', weight: 11 },
   { key: 'Change',            label: 'Changements',          icon: 'bi-arrow-repeat',              weight: 12 },
@@ -14,8 +15,16 @@ const PURGEABLE_ITEM_TYPES = [
   { key: 'Peripheral',        label: 'Périphériques',        icon: 'bi-plug-fill',                 weight: 33 },
   { key: 'Phone',             label: 'Téléphones',           icon: 'bi-phone-fill',                weight: 34 },
   { key: 'Printer',           label: 'Imprimantes',          icon: 'bi-printer-fill',              weight: 35 },
-  { key: 'SoftwareLicense',   label: 'Licences logicielles', icon: 'bi-key-fill',                  weight: 40 },
-  { key: 'Software',          label: 'Logiciels',            icon: 'bi-box-fill',                  weight: 41 },
+  { key: 'Rack',               label: 'Racks',                icon: 'bi-server',                    weight: 36 },
+  { key: 'Enclosure',         label: 'Châssis',              icon: 'bi-hdd-rack-fill',             weight: 37 },
+  { key: 'PDU',               label: 'PDU',                  icon: 'bi-lightning-fill',            weight: 38 },
+  { key: 'PassiveDCEquipment',label: 'DC Passif',            icon: 'bi-diagram-3-fill',            weight: 39 },
+  { key: 'Cable',             label: 'Câbles',               icon: 'bi-ethernet',                  weight: 40 },
+  { key: 'Appliance',         label: 'Applicatifs',          icon: 'bi-cpu-fill',                  weight: 41 },
+  { key: 'SoftwareLicense',   label: 'Licences logicielles', icon: 'bi-key-fill',                  weight: 42 },
+  { key: 'Software',          label: 'Logiciels',            icon: 'bi-box-fill',                  weight: 43 },
+  { key: 'Certificate',       label: 'Certificats',          icon: 'bi-patch-check-fill',          weight: 44 },
+  { key: 'Socket',            label: 'Prises réseau',        icon: 'bi-outlet',                    weight: 45, v2: true },
   { key: 'Document',          label: 'Documents',            icon: 'bi-file-earmark-text-fill',    weight: 50 },
   { key: 'Contract',          label: 'Contrats',             icon: 'bi-file-earmark-text',         weight: 51 },
   { key: 'Supplier',          label: 'Fournisseurs',         icon: 'bi-building-fill',             weight: 52 },
@@ -52,6 +61,8 @@ export const GlpiResetPanel = () => {
       let result: { deleted: number; skipped?: number; errors: string[] }
       if (type.key === 'User') {
         result = await purgeNonAdminUsers()
+      } else if (type.v2) {
+        result = await purgeAllItemsV2(type.key)
       } else {
         result = await purgeAllItems(type.key)
       }

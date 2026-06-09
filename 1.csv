@@ -1,0 +1,33 @@
+Name,Status,Location,Manufacturer,Item_Type,Model,Inventory_Number,User
+TEST-PC-001,En production,Administration,Dell,Computer,OptiPlex 7010,TEST-001,Rakoto Jean
+TEST-PC-002,Maintenance,Comptabilité,HP,Computer,ProDesk 400 G9,TEST-002,Rasoanaivo Marie
+TEST-MON-001,En production,Laboratoire IA,Dell,Monitor,AC1000,TEST-003,
+TEST-MON-002,En stock,Salle 301,LG,Monitor,LG27UP,TEST-004,Rakotondranaivo Paul
+TEST-PRT-001,En panne,Bibliothèque,HP,Printer,LaserJet Pro,TEST-005,ITU Labs
+TEST-PRT-002,En production,Magasin Informatique,Xerox,Printer,WorkCentre 5845,TEST-006,
+TEST-PHN-001,En production,Administration,Apple,Phone,iPhone 13,TEST-007,Rabe Hanitra
+TEST-PHN-002,Maintenance,Comptabilité,Samsung,Phone,Galaxy S21,TEST-008,
+TEST-NET-001,En stock,Laboratoire IA,Cisco,NetworkEquipment,Catalyst 2960,TEST-009,
+TEST-NET-002,En production,Administration,Juniper,NetworkEquipment,EX4100,TEST-010,
+TEST-PER-001,En production,Magasin Informatique,Logitech,Peripheral,MX Master 3,TEST-011,Rakoto Michel
+TEST-PER-002,En stock,Bibliothèque,Razer,Peripheral,Pro Type Ultra,TEST-012,
+TEST-ENC-001,En production,Laboratoire IA,IBM,Enclosure,Power9,TEST-013,
+TEST-ENC-002,Maintenance,Salle 301,HP,Enclosure,BladeSystem,TEST-014,
+TEST-PDU-001,En production,Laboratoire IA,APC,PDU,Metered,TEST-015,ITU Labs
+TEST-PDU-002,En stock,Laboratoire IA,Eaton,PDU,Basic PDU,TEST-016,
+TEST-PSV-001,En production,Comptabilité,Dell,PassiveDCEquipment,Rack Shelf,TEST-017,
+TEST-PSV-002,Maintenance,Laboratoire IA,Rittal,PassiveDCEquipment,KX,TEST-018,
+TEST-CBL-001,En production,Administration,Belkin,Cable,Cat6,TEST-019,
+TEST-CBL-002,En stock,Laboratoire IA,Panduit,Cable,Cat6A,TEST-020,
+TEST-SCK-001,En panne,Salle 301,Panduit,Socket,RJ45,TEST-021,
+TEST-SCK-002,En production,Laboratoire IA,Leviton,Socket,eXtreme Cat6,TEST-022,
+TEST-APP-001,En production,Bibliothèque,VMware,Appliance,vCenter,TEST-023,Rasoanaivo Marie
+TEST-APP-002,En stock,Administration,Citrix,Appliance,NetScaler,TEST-024,
+TEST-SFT-001,En production,Magasin Informatique,,Software,Microsoft Office,,
+TEST-SFT-002,En stock,Administration,,Software,Adobe Creative Cloud,TEST-025,
+TEST-LIC-001,En production,Administration,Microsoft,SoftwareLicense,Office 365,TEST-026,Rakoto Jean
+TEST-LIC-002,Maintenance,Comptabilité,Adobe,SoftwareLicense,Creative Cloud,TEST-027,
+TEST-CRT-001,En production,Laboratoire IA,,Certificate,SSL Comodo,TEST-028,
+TEST-CRT-002,En stock,Salle 301,,Certificate,Let's Encrypt,TEST-029,
+TEST-RCK-001,En production,Laboratoire IA,Dell,Rack,PowerEdge R750,TEST-030,
+TEST-RCK-002,Maintenance,Laboratoire IA,HP,Rack,ProLiant DL360,TEST-031,

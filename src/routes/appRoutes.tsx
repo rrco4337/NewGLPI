@@ -3,6 +3,7 @@ import { FrontOfficeLayout } from '@/layouts/FrontOfficeLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Home } from '@/pages/FrontOffice/Home'
 import { CreateTicket } from '@/pages/FrontOffice/CreateTicket'
+import { KanbanTickets } from '@/pages/FrontOffice/KanbanTickets'
 import { Login } from '@/pages/BackOffice/Login'
 import { Dashboard } from '@/pages/BackOffice/Dashboard'
 import { Settings } from '@/pages/BackOffice/Settings'
@@ -15,6 +16,7 @@ export const appRoutes = (
     <Route path="/" element={<FrontOfficeLayout />}>
       <Route index element={<Home />} />
       <Route path="create-ticket" element={<CreateTicket />} />
+      <Route path="kanban" element={<KanbanTickets />} />
     </Route>
     <Route path="/admin/login" element={<Login />} />
     <Route path="/admin" element={<DashboardLayout />}>
