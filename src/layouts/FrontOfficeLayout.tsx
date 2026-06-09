@@ -10,6 +10,9 @@ export const FrontOfficeLayout = () => {
           <span>NewGLPI</span>
         </Link>
         <div className="fo-nav-actions">
+          <Link to="/kanban" className="fo-nav-btn">
+            <i className="bi bi-kanban" /> Mes tickets
+          </Link>
           <Link to="/create-ticket" className="fo-nav-btn primary">
             <i className="bi bi-plus-circle" /> Créer un ticket
           </Link>

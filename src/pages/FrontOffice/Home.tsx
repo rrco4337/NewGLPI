@@ -262,7 +262,10 @@ export const Home = () => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const curPage    = Math.min(page, totalPages)
-  const paginated  = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
+  const paginated  = useMemo(
+    () => filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE),
+    [filtered, curPage],
+  )
 
   // ── Load images for current page items ───────────────────────────────────────
   useEffect(() => {
