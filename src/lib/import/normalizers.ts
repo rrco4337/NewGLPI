@@ -158,7 +158,7 @@ const TICKET_TYPE_MAP: Record<string, number> = {
 const TICKET_STATUS_MAP: Record<string, number> = {
   new: 1, nouveau: 1, vaovao: 1,
   processing: 2, 'en cours': 2, 'in progress': 2, mizotra: 2,
-  assigned: 2,
+  assigned: 2, 'in progress (assigned)': 2, 'en cours (assigné)': 2, 'en cours (assigne)': 2,
   planned: 3, planifié: 3, 'en attente assignation': 3,
   pending: 4, 'en attente': 4, miandry: 4, waiting: 4,
   solved: 5, résolu: 5, resolu: 5, voahasoavina: 5, resolved: 5,

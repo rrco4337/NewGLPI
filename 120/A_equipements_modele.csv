@@ -1,0 +1,61 @@
+Name,Status,Location,Manufacturer,Item_Type,Model,Inventory_Number,User
+EQP-001,Perdu,Salle 301,Microsoft,Computer,Model-18,ITU-2026-0001,Rakotondranaivo Paul
+EQP-002,Au rebut,Bibliothèque,Cisco,Monitor,Model-74,ITU-2026-0002,Rasoanaivo Marie
+EQP-003,Maintenance,Administration,Lenovo,Computer,,ITU-2026-0003,Rabe Hanitra
+EQP-004,Retiré,Bibliothèque,Lenovo,Phone,Model-21,ITU-2026-0004,Rakotondranaivo Paul
+EQP-005,Maintenance,Bibliothèque,,Phone,Model-70,ITU-2026-0005,Bibliothèque
+EQP-006,Maintenance,Magasin Informatique,Dell,Monitor,Model-70,ITU-2026-0006,Rakoto Jean
+EQP-007,En panne,Salle 301,Cisco,Monitor,Model-80,ITU-2026-0007,Bibliothèque
+EQP-008,Retiré,Administration,Dell,Computer,Model-70,ITU-2026-0008,Rakotondranaivo Paul
+EQP-009,En panne,Laboratoire IA,Lenovo,Phone,Model-13,ITU-2026-0009,
+EQP-010,En stock,Bibliothèque,Lenovo,Computer,Model-92,ITU-2026-0010,
+EQP-011,En stock,Administration,,Computer,Model-20,ITU-2026-0011,ITU Labs
+EQP-012,En panne,Magasin Informatique,Microsoft,Monitor,,ITU-2026-0012,Bibliothèque
+EQP-013,Au rebut,Laboratoire IA,Microsoft,Phone,Model-22,ITU-2026-0013,Bibliothèque
+EQP-014,Perdu,Laboratoire IA,Lenovo,Computer,Model-16,ITU-2026-0014,Rasoanaivo Marie
+EQP-015,Maintenance,Laboratoire IA,Microsoft,Phone,,ITU-2026-0015,ITU Labs
+EQP-016,Retiré,Salle 301,Microsoft,Monitor,,ITU-2026-0016,Rasoanaivo Marie
+EQP-017,Maintenance,Laboratoire IA,Cisco,Monitor,Model-90,ITU-2026-0017,Bibliothèque
+EQP-018,En stock,Comptabilité,Microsoft,Computer,Model-96,ITU-2026-0018,Rakotondranaivo Paul
+EQP-019,En production,Laboratoire IA,Lenovo,Phone,Model-18,ITU-2026-0019,Rasoanaivo Marie
+EQP-020,En panne,Salle 301,Lenovo,Monitor,,ITU-2026-0020,Rasoanaivo Marie
+EQP-021,Volé,Bibliothèque,Cisco,Computer,Model-14,ITU-2026-0021,
+EQP-022,En stock,Bibliothèque,Apple,Phone,Model-90,ITU-2026-0022,Bibliothèque
+EQP-023,En production,Magasin Informatique,,Monitor,,ITU-2026-0023,Rasoanaivo Marie
+EQP-024,En production,Salle 301,HP,Computer,Model-84,ITU-2026-0024,Rasoanaivo Marie
+EQP-025,En panne,Administration,Lenovo,Phone,Model-47,ITU-2026-0025,ITU Labs
+EQP-026,Perdu,Magasin Informatique,Cisco,Monitor,Model-24,ITU-2026-0026,Rasoanaivo Marie
+EQP-027,Au rebut,Comptabilité,Lenovo,Phone,Model-14,ITU-2026-0027,Rakoto Jean
+EQP-028,En stock,Laboratoire IA,HP,Phone,Model-12,ITU-2026-0028,ITU Labs
+EQP-029,Retiré,Laboratoire IA,,Phone,,ITU-2026-0029,Rasoanaivo Marie
+EQP-030,Maintenance,Magasin Informatique,Cisco,Computer,Model-22,ITU-2026-0030,
+EQP-031,En stock,Salle 301,Microsoft,Monitor,Model-43,ITU-2026-0031,Rasoanaivo Marie
+EQP-032,En stock,Laboratoire IA,Lenovo,Monitor,,ITU-2026-0032,Rakotondranaivo Paul
+EQP-033,Perdu,Magasin Informatique,Apple,Computer,Model-32,ITU-2026-0033,Bibliothèque
+EQP-034,Retiré,Laboratoire IA,Apple,Phone,Model-26,ITU-2026-0034,Rakoto Michel
+EQP-035,En panne,Salle 301,Cisco,Monitor,,ITU-2026-0035,Rakoto Michel
+EQP-036,Maintenance,Bibliothèque,,Monitor,Model-60,ITU-2026-0036,Rakotondranaivo Paul
+EQP-037,Maintenance,Laboratoire IA,Cisco,Computer,Model-96,ITU-2026-0037,Bibliothèque
+EQP-038,Volé,Administration,Cisco,Computer,,ITU-2026-0038,ITU Labs
+EQP-039,Volé,Administration,Cisco,Monitor,Model-45,ITU-2026-0039,Rabe Hanitra
+EQP-040,Perdu,Magasin Informatique,,Computer,Model-83,ITU-2026-0040,Rabe Hanitra
+EQP-041,Au rebut,Comptabilité,HP,Phone,Model-86,ITU-2026-0041,Rakotondranaivo Paul
+EQP-042,En stock,Magasin Informatique,Cisco,Monitor,Model-93,ITU-2026-0042,Rakotondranaivo Paul
+EQP-043,En stock,Magasin Informatique,Dell,Computer,Model-53,ITU-2026-0043,Rasoanaivo Marie
+EQP-044,Retiré,Magasin Informatique,HP,Computer,Model-76,ITU-2026-0044,
+EQP-045,Maintenance,Bibliothèque,Apple,Computer,Model-30,ITU-2026-0045,ITU Labs
+EQP-046,En production,Administration,,Computer,Model-57,ITU-2026-0046,Rabe Hanitra
+EQP-047,En panne,Salle 301,Lenovo,Phone,Model-88,ITU-2026-0047,
+EQP-048,Volé,Bibliothèque,Dell,Monitor,,ITU-2026-0048,ITU Labs
+EQP-049,En stock,Comptabilité,Microsoft,Computer,,ITU-2026-0049,Rasoanaivo Marie
+EQP-050,En production,Bibliothèque,,Phone,Model-72,ITU-2026-0050,Bibliothèque
+EQP-051,Retiré,Magasin Informatique,Apple,Phone,,ITU-2026-0051,Rakoto Michel
+EQP-052,Volé,Bibliothèque,Dell,Monitor,Model-23,ITU-2026-0052,ITU Labs
+EQP-053,En stock,Bibliothèque,HP,Computer,,ITU-2026-0053,Rakoto Jean
+EQP-054,En stock,Comptabilité,Apple,Phone,Model-28,ITU-2026-0054,Bibliothèque
+EQP-055,Volé,Salle 301,HP,Phone,,ITU-2026-0055,Rabe Hanitra
+EQP-056,En stock,Magasin Informatique,,Monitor,Model-82,ITU-2026-0056,Rakoto Jean
+EQP-057,Au rebut,Administration,HP,Monitor,Model-57,ITU-2026-0057,Rabe Hanitra
+EQP-058,Volé,Administration,Apple,Monitor,Model-76,ITU-2026-0058,Rakoto Michel
+EQP-059,En production,Administration,Microsoft,Computer,Model-70,ITU-2026-0059,Bibliothèque
+EQP-060,En production,Bibliothèque,Cisco,Phone,Model-17,ITU-2026-0060,

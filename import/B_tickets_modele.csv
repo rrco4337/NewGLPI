@@ -1,0 +1,121 @@
+Ref_Ticket,Date,Heure,Type,Titre,Description,STATuS,PRIORITY,Items
+1,25/10/2025,22:32,Incident,Problème 1,Description détaillée du ticket 1,Closed,Very High,"[""EQP-020"",""EQP-003"",""EQP-024""]"
+2,2023-09-01,00:59,Request,Problème 2,Description détaillée du ticket 2,In Progress (assigned),Major,"[""EQP-023"",""EQP-044"",""EQP-023""]"
+3,18/03/2024,18:31,Incident,Problème 3,Description détaillée du ticket 3,In Progress (assigned),Very Low,[]
+4,23/2/2026,16:29,Request,Problème 4,Description détaillée du ticket 4,In Progress (assigned),High,"[""EQP-026"",""EQP-023"",""EQP-036"",""EQP-037""]"
+5,2025-10-05,10:04,Request,Problème 5,Description détaillée du ticket 5,In Progress (assigned),Very High,"[""EQP-043""]"
+6,1/5/2024,09:02,Request,Problème 6,Description détaillée du ticket 6,In Progress (assigned),High,"[""EQP-028"",""EQP-029"",""EQP-019"",""EQP-058""]"
+7,19/4/2025,23:29,Incident,Problème 7,Description détaillée du ticket 7,New,Major,"[""EQP-043"",""EQP-016""]"
+8,2025-03-08,05:28,Request,Problème 8,Description détaillée du ticket 8,In Progress (assigned),Major,"[""EQP-007"",""EQP-012"",""EQP-021""]"
+9,2023-05-14,08:27,Incident,Problème 9,Description détaillée du ticket 9,In Progress (assigned),High,"[""EQP-001"",""EQP-017"",""EQP-033"",""EQP-025"",""EQP-001""]"
+10,24/5/2023,07:00,Request,Problème 10,Description détaillée du ticket 10,In Progress (assigned),High,"[""EQP-015""]"
+11,16/2/2025,20:08,Incident,Problème 11,Description détaillée du ticket 11,New,Major,"[""EQP-047"",""EQP-040"",""EQP-046"",""EQP-047""]"
+12,2025-02-25,06:57,Request,Problème 12,Description détaillée du ticket 12,Closed,High,"[""EQP-050"",""EQP-027""]"
+13,2024-05-09,00:17,Request,Problème 13,Description détaillée du ticket 13,Closed,Low,"[""EQP-056"",""EQP-019""]"
+14,10/03/2025,12:58,Request,Problème 14,Description détaillée du ticket 14,Closed,High,"[""EQP-039""]"
+15,2024-03-06,00:52,Incident,Problème 15,Description détaillée du ticket 15,Closed,Major,"[""EQP-037"",""EQP-037""]"
+16,8/3/2026,17:11,Request,Problème 16,Description détaillée du ticket 16,In Progress (assigned),Medium,"[""EQP-030"",""EQP-023"",""EQP-056""]"
+17,2024-11-03,01:23,Request,Problème 17,Description détaillée du ticket 17,New,Major,
+18,21/01/2025,10:34,Request,Problème 18,Description détaillée du ticket 18,Closed,Very High,"[""EQP-023""]"
+19,08/06/2023,21:07,Incident,Problème 19,Description détaillée du ticket 19,In Progress (assigned),High,[]
+20,26/8/2024,21:17,Incident,Problème 20,Description détaillée du ticket 20,Closed,Medium,[]
+21,2024-02-15,00:01,Incident,Problèm 21,Description détaillée du ticket 21,Closed,High,"[""EQP-016""]"
+22,06/05/2026,13:01,Incident,Problème 22,Description détaillée du ticket 22,In Progress (assigned),Major,"[""EQP-017"",""EQP-017""]"
+23,2025-06-03,19:45,Incident,Problème 23,Description détaillée du ticket 23,Closed,Medium,"[""EQP-042"",""EQP-003"",""EQP-042""]"
+24,10/8/2024,02:23,Incident,Problème 24,Description détaillée du ticket 24,In Progress (assigned),Major,"[""EQP-002"",""EQP-037"",""EQP-058"",""EQP-022""]"
+25,18/02/2023,17:36,Incident,Problème 25,Description détaillée du ticket 25,New,Very Low,"[""EQP-042"",""EQP-017"",""EQP-049""]"
+26,2024-09-01,23:50,Request,Problème 26,Description détaillée du ticket 26,Closed,Low,"[""EQP-034""]"
+27,2023-10-16,18:44,Request,Problème 27,Description détaillée du ticket 27,Closed,High,[]
+28,19/1/2026,05:04,Request,Problème 28,Description détaillée du ticket 28,Closed,Major,"[""EQP-006""]"
+29,18/07/2024,23:02,Request,Problème 29,Description détaillée du ticket 29,In Progress (assigned),Major,"[""EQP-006"",""EQP-049"",""EQP-029"",""EQP-027""]"
+30,2024-08-13,07:08,Incident,Problème 30,Description détaillée du ticket 30,In Progress (assigned),Low,"[""EQP-056""]"
+31,21/6/2025,18:30,Request,Problème 31,Description détaillée du ticket 31,In Progress (assigned),Major,[]
+32,14/11/2023,03:20,Incident,Problème 32,Description détaillée du ticket 32,Closed,Low,"[""EQP-057"",""EQP-035"",""EQP-057""]"
+33,15/11/2023,07:35,Incident,Problème 33,Description détaillée du ticket 33,Closed,High,"[""EQP-012"",""EQP-039"",""EQP-050"",""EQP-012""]"
+34,22/02/2024,00:58,Incident,Problème 34,Description détaillée du ticket 34,In Progress (assigned),Medium,"[""EQP-034"",""EQP-001"",""EQP-052""]"
+35,2024-02-12,16:23,Request,Problème 35,Description détaillée du ticket 35,Closed,Very Low,"[""EQP-036"",""EQP-055"",""EQP-033"",""EQP-052""]"
+36,2025-06-12,09:10,Incident,Problème 36,Description détaillée du ticket 36,Closed,Very Low,[]
+37,2024-07-06,11:20,Incident,Problème 37,Description détaillée du ticket 37,In Progress (assigned),Major,"[""EQP-006"",""EQP-006""]"
+38,14/1/2025,04:18,Request,Problème 38,Description détaillée du ticket 38,Closed,Very High,"[""EQP-030"",""EQP-053"",""EQP-005"",""EQP-003""]"
+39,2023-12-08,10:35,Incident,Problème 39,Description détaillée du ticket 39,New,Very Low,"[""EQP-051"",""EQP-016""]"
+40,2026-08-04,22:00,Request,Problème 40,Description détaillée du ticket 40,New,Very Low,"[""EQP-047"",""EQP-002""]"
+41,19/10/2026,21:52,Incident,Problème 41,Description détaillée du ticket 41,In Progress (assigned),Major,"[""EQP-035"",""EQP-011"",""EQP-012""]"
+42,2026-11-03,03:56,Request,Problème 42,Description détaillée du ticket 42,In Progress (assigned),Major,[]
+43,2024-01-14,04:08,Incident,Problème 43,Description détaillée du ticket 43,Closed,Medium,"[""EQP-030"",""EQP-058"",""EQP-021""]"
+44,2025-12-05,09:47,Request,Problème 44,Description détaillée du ticket 44,Closed,Low,"[""EQP-012"",""EQP-030"",""EQP-003"",""EQP-037"",""EQP-012""]"
+45,2026-02-01,16:05,Incident,Problème 45,Description détaillée du ticket 45,In Progress (assigned),High,"[""EQP-042"",""EQP-040"",""EQP-056"",""EQP-037"",""EQP-042""]"
+46,14/04/2025,10:37,Request,Problème 46,Description détaillée du ticket 46,In Progress (assigned),Very Low,"[""EQP-047"",""EQP-028""]"
+47,09/01/2024,18:52,Request,Problème 47,Description détaillée du ticket 47,In Progress (assigned),High,"[""EQP-018"",""EQP-001"",""EQP-053""]"
+48,2025-01-23,07:02,Request,Problème 48,Description détaillée du ticket 48,In Progress (assigned),High,"[""EQP-059"",""EQP-004"",""EQP-040"",""EQP-010""]"
+49,2023-03-27,12:30,Request,Problème 49,Description détaillée du ticket 49,Closed,Medium,"[""EQP-012""]"
+50,4/1/2023,09:39,Request,Problème 50,Description détaillée du ticket 50,In Progress (assigned),Medium,"[""EQP-016"",""EQP-054""]"
+51,23/3/2024,09:45,Request,Problème 51,Description détaillée du ticket 51,Closed,Very Low,"[""EQP-053"",""EQP-053""]"
+52,21/9/2024,16:34,Incident,Problème 52,Description détaillée du ticket 52,In Progress (assigned),Very Low,"[""EQP-008"",""EQP-038"",""EQP-040"",""EQP-008""]"
+53,20/05/2025,02:14,Request,Problème 53,Description détaillée du ticket 53,In Progress (assigned),Very Low,
+54,05/04/2026,07:15,Incident,Problème 54,Description détaillée du ticket 54,In Progress (assigned),Very Low,"[""EQP-049"",""EQP-013"",""EQP-049""]"
+55,14/06/2024,11:18,Incident,Problème 55,Description détaillée du ticket 55,Closed,Low,"[""EQP-050"",""EQP-030"",""EQP-029"",""EQP-057""]"
+56,28/12/2025,01:05,Incident,Problème 56,Description détaillée du ticket 56,In Progress (assigned),Major,"[""EQP-025"",""EQP-040"",""EQP-053"",""EQP-005""]"
+57,05/11/2024,13:17,Incident,Problème 57,Description détaillée du ticket 57,In Progress (assigned),High,"[""EQP-019"",""EQP-032""]"
+58,7/6/2025,00:51,Request,Problème 58,Description détaillée du ticket 58,In Progress (assigned),Low,"[""EQP-059"",""EQP-041"",""EQP-026""]"
+59,2023-06-07,18:39,Incident,Problème 59,Description détaillée du ticket 59,In Progress (assigned),Low,"[""EQP-002"",""EQP-034""]"
+60,15/6/2025,07:53,Request,Problème 60,Description détaillée du ticket 60,Closed,Very Low,"[""EQP-058"",""EQP-048"",""EQP-059"",""EQP-058""]"
+61,27/10/2025,23:32,Request,Problème 61,Description détaillée du ticket 61,Closed,Very High,[]
+62,28/05/2023,11:05,Incident,Problème 62,Description détaillée du ticket 62,Closed,Major,"[""EQP-002"",""EQP-045""]"
+63,17/4/2026,13:11,Incident,Problème 63,Description détaillée du ticket 63,In Progress (assigned),Medium,"[""EQP-021""]"
+64,12/6/2026,10:15,Request,Problème 64,Description détaillée du ticket 64,In Progress (assigned),Low,[]
+65,2025-09-20,00:00,Request,Problème 65,Description détaillée du ticket 65,In Progress (assigned),Medium,"[""EQP-052"",""EQP-042"",""EQP-053"",""EQP-059""]"
+66,2024-07-18,09:20,Request,Problème 66,Description détaillée du ticket 66,In Progress (assigned),Major,"[""EQP-047"",""EQP-012"",""EQP-018""]"
+67,22/6/2026,22:06,Incident,Problème 67,Description détaillée du ticket 67,In Progress (assigned),High,"[""EQP-028"",""EQP-056"",""EQP-005"",""EQP-028""]"
+68,2/12/2025,05:21,Incident,Problème 68,Description détaillée du ticket 68,Closed,Very High,"[""EQP-002"",""EQP-047"",""EQP-009"",""EQP-002""]"
+69,5/8/2024,22:30,Request,Problème 69,Description détaillée du ticket 69,In Progress (assigned),Medium,"[""EQP-011"",""EQP-020"",""EQP-048""]"
+70,10/07/2023,10:54,Request,Problème 70,Description détaillée du ticket 70,In Progress (assigned),High,"[""EQP-053"",""EQP-055"",""EQP-030"",""EQP-019""]"
+71,2026-10-23,00:57,Incident,Problème 71,Description détaillée du ticket 71,In Progress (assigned),Very High,"[""EQP-027"",""EQP-015"",""EQP-002"",""EQP-020""]"
+72,24/1/2024,01:43,Incident,Problème 72,Description détaillée du ticket 72,Closed,Major,"[""EQP-059"",""EQP-050"",""EQP-041"",""EQP-040""]"
+73,2026-01-17,22:11,Incident,Problème 73,Description détaillée du ticket 73,In Progress (assigned),Very High,"[""EQP-004"",""EQP-006""]"
+74,18/9/2024,19:40,Incident,Problème 74,Description détaillée du ticket 74,In Progress (assigned),Major,"[""EQP-018"",""EQP-022"",""EQP-014"",""EQP-018""]"
+75,17/9/2024,03:12,Incident,Problème 75,Description détaillée du ticket 75,In Progress (assigned),Very High,[]
+76,1/4/2023,19:19,Incident,Problème 76,Description détaillée du ticket 76,New,Major,"[""EQP-046""]"
+77,10/10/2026,14:40,Request,Problème 77,Description détaillée du ticket 77,Closed,Major,[]
+78,1/2/2025,10:37,Incident,Problème 78,Description détaillée du ticket 78,In Progress (assigned),Very High,"[""EQP-038"",""EQP-059"",""EQP-005""]"
+79,2026-07-23,04:44,Incident,Problème 79,Description détaillée du ticket 79,In Progress (assigned),High,"[""EQP-034""]"
+80,2026-07-14,19:37,Request,Problème 80,Description détaillée du ticket 80,Closed,High,[]
+81,2023-07-23,21:19,Request,Problème 81,Description détaillée du ticket 81,New,Very Low,"[""EQP-035"",""EQP-018"",""EQP-030""]"
+82,2025-04-15,13:02,Incident,Problème 82,Description détaillée du ticket 82,New,Major,"[""EQP-044"",""EQP-004"",""EQP-060""]"
+83,23/1/2024,00:08,Incident,Problème 83,Description détaillée du ticket 83,New,Medium,"[""EQP-014"",""EQP-017"",""EQP-054"",""EQP-014""]"
+84,01/12/2025,03:09,Request,Problème 84,Description détaillée du ticket 84,In Progress (assigned),Very High,"[""EQP-021"",""EQP-032"",""EQP-011"",""EQP-050""]"
+85,20/04/2026,04:46,Request,Problème 85,Description détaillée du ticket 85,In Progress (assigned),Medium,[]
+86,18/7/2024,11:41,Request,Problème 86,Description détaillée du ticket 86,In Progress (assigned),Medium,"[""EQP-056"",""EQP-033"",""EQP-034"",""EQP-034""]"
+87,22/2/2025,21:27,Request,Problème 87,Description détaillée du ticket 87,Closed,Major,[]
+88,2026-06-13,08:21,Incident,Problème 88,Description détaillée du ticket 88,In Progress (assigned),High,"[""EQP-005"",""EQP-039"",""EQP-039"",""EQP-004""]"
+89,2023-04-21,19:09,Incident,Problème 89,Description détaillée du ticket 89,In Progress (assigned),Low,[]
+90,2024-01-04,07:45,Request,Problème 90,Description détaillée du ticket 90,In Progress (assigned),Medium,"[""EQP-016"",""EQP-011"",""EQP-057"",""EQP-005"",""EQP-016""]"
+91,28/8/2023,09:14,Incident,Problème 91,Description détaillée du ticket 91,New,Low,[]
+92,2/4/2026,06:53,Incident,Problème 92,Description détaillée du ticket 92,In Progress (assigned),Major,"[""EQP-053"",""EQP-042"",""EQP-051""]"
+93,6/11/2024,07:02,Request,Problème 93,Description détaillée du ticket 93,In Progress (assigned),High,"[""EQP-011"",""EQP-057"",""EQP-026"",""EQP-060"",""EQP-011""]"
+94,04/01/2023,14:28,Request,Problème 94,Description détaillée du ticket 94,Closed,Very High,[]
+95,2025-01-18,02:06,Request,Problème 95,Description détaillée du ticket 95,In Progress (assigned),High,"[""EQP-021"",""EQP-030"",""EQP-004"",""EQP-021""]"
+96,23/4/2026,14:45,Incident,Problème 96,Description détaillée du ticket 96,Closed,Very High,"[""EQP-046"",""EQP-020"",""EQP-037""]"
+97,22/9/2024,22:51,Incident,Problème 97,Description détaillée du ticket 97,Closed,Major,"[""EQP-041"",""EQP-041""]"
+98,9/7/2025,04:02,Incident,Problème 98,Description détaillée du ticket 98,In Progress (assigned),Major,"[""EQP-031"",""EQP-006""]"
+99,2024-06-01,00:06,Request,Problème 99,Description détaillée du ticket 99,Closed,Medium,"[""EQP-038"",""EQP-038""]"
+100,13/03/2025,08:32,Incident,Problème 100,Description détaillée du ticket 100,Closed,Medium,"[""EQP-024"",""EQP-022""]"
+101,1/1/2026,18:53,Incident,Problème 101,Description détaillée du ticket 101,In Progress (assigned),Very High,"[""EQP-019"",""EQP-055"",""EQP-009"",""EQP-019""]"
+102,8/1/2026,09:18,Request,Problème 102,Description détaillée du ticket 102,Closed,Very High,"[""EQP-040"",""EQP-007""]"
+103,28/9/2024,07:53,Request,Problème 103,Description détaillée du ticket 103,New,Very High,"[""EQP-058"",""EQP-003""]"
+104,07/02/2026,05:17,Request,Problème 104,Description détaillée du ticket 104,In Progress (assigned),Very Low,"[""EQP-039"",""EQP-021"",""EQP-039""]"
+105,18/9/2023,13:18,Request,Problème 105,Description détaillée du ticket 105,In Progress (assigned),Medium,"[""EQP-048"",""EQP-056"",""EQP-025""]"
+106,2026-11-05,05:31,Request,Problème 106,Description détaillée du ticket 106,In Progress (assigned),Very Low,"[""EQP-060"",""EQP-049"",""EQP-056"",""EQP-032""]"
+107,23/02/2025,21:40,Incident,Problème 107,Description détaillée du ticket 107,Closed,Very Low,"[""EQP-047"",""EQP-014"",""EQP-036""]"
+108,24/03/2025,08:29,Incident,Problème 108,Description détaillée du ticket 108,Closed,Major,"[""EQP-047"",""EQP-038""]"
+109,2024-03-17,09:41,Incident,Problème 109,Description détaillée du ticket 109,Closed,Very High,"[""EQP-042"",""EQP-043""]"
+110,2023-02-06,13:49,Request,Problème 110,Description détaillée du ticket 110,In Progress (assigned),Medium,"[""EQP-043"",""EQP-022"",""EQP-019""]"
+111,4/7/2024,20:22,Request,Problème 111,Description détaillée du ticket 111,Closed,Very Low,"[""EQP-033""]"
+112,03/08/2025,16:43,Request,Problème 112,Description détaillée du ticket 112,New,High,"[""EQP-053""]"
+113,13/2/2024,23:37,Incident,Problème 113,Description détaillée du ticket 113,Closed,Medium,[]
+114,24/08/2024,00:34,Incident,Problème 114,Description détaillée du ticket 114,Closed,Medium,"[""EQP-023"",""EQP-023""]"
+115,22/07/2023,04:18,Request,Problème 115,Description détaillée du ticket 115,In Progress (assigned),Major,"[""EQP-013"",""EQP-027"",""EQP-028""]"
+116,05/12/2023,07:47,Incident,Problème 116,Description détaillée du ticket 116,In Progress (assigned),Low,"[""EQP-039"",""EQP-050"",""EQP-019""]"
+117,2023-11-05,16:30,Incident,Problème 117,Description détaillée du ticket 117,In Progress (assigned),Medium,[]
+118,2026-08-19,12:17,Request,Problème 118,Description détaillée du ticket 118,New,Very High,"[""EQP-004"",""EQP-006"",""EQP-032""]"
+119,7/7/2023,19:49,Request,Problème 119,Description détaillée du ticket 119,In Progress (assigned),Low,"[""EQP-042"",""EQP-053"",""EQP-055""]"
+120,27/02/2025,00:16,Incident,Problème 120,Description détaillée du ticket 120,New,Medium,[]
