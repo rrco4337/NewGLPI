@@ -16,6 +16,12 @@ export function CreateTicket() {
   const [description, setDescription] = useState('')
   const [urgency, setUrgency] = useState<number>(3) // 3 is medium in GLPI usually
   const [type, setType] = useState<number>(3)
+  
+  // New cost and duration fields
+  const [duration, setDuration] = useState<string>('')
+  const [timeCost, setTimeCost] = useState<string>('')
+  const [fixedCost, setFixedCost] = useState<string>('')
+  
   // Asset selection
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Asset[]>([])
@@ -53,51 +59,73 @@ export function CreateTicket() {
     setSelectedAssets(selectedAssets.filter(a => !(a.id === asset.id && a.itemtype === asset.itemtype)))
   }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !description.trim()) {
-      setError("Le titre et la description sont requis.")
-      return
-    }
-
-    setIsSubmitting(true)
-    setError(null)
-    setSubmitSuccess(false)
-
-    try {
-      // 1. Create the ticket
-      const ticketRes = await glpiTicketService.createTicket({
-        name: title,
-        content: description,
-        urgency: urgency,
-        type: type
-      })
-
-      const newTicketId = ticketRes?.id
-
-      if (!newTicketId) {
-        throw new Error("Erreur lors de la création du ticket (ID manquant).")
-      }
-
-      setCreatedTicketId(newTicketId)
-
-      // 2. Associate selected elements natively in GLPI
-      for (const asset of selectedAssets) {
-        await glpiTicketService.associateItemToTicket(newTicketId, asset.itemtype, asset.id)
-      }
-
-      setSubmitSuccess(true)
-      // Reset form
-      setTitle('')
-      setDescription('')
-      setUrgency(3)
-      setSelectedAssets([])
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue lors de la création du ticket.")
-    } finally {
-      setIsSubmitting(false)
-    }
+  // Helper function to convert French decimal format (comma) to number
+  const parseFrenchNumber = (value: string): number => {
+    if (!value || value.trim() === '') return 0
+    // Remove spaces and replace comma with dot
+    const cleaned = value.trim().replace(/\s/g, '').replace(',', '.')
+    const parsed = parseFloat(cleaned)
+    return isNaN(parsed) ? 0 : parsed
   }
+
+ // Dans handleSubmit, remplacez l'appel à createTicket par :
+
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault()
+  if (!title.trim() || !description.trim()) {
+    setError("Le titre et la description sont requis.")
+    return
+  }
+
+  setIsSubmitting(true)
+  setError(null)
+  setSubmitSuccess(false)
+
+  try {
+    // Parse cost values
+    const durationSeconds = parseFrenchNumber(duration)
+    const timeCostValue = parseFrenchNumber(timeCost)
+    const fixedCostValue = parseFrenchNumber(fixedCost)
+
+    // Utiliser la nouvelle fonction createTicketWithCosts
+    const result = await glpiTicketService.createTicketWithCosts({
+      name: title,
+      content: description,
+      urgency: urgency,
+      type: type,
+      actiontime: durationSeconds > 0 ? durationSeconds : undefined,
+      time_cost: timeCostValue > 0 ? timeCostValue : undefined,
+      fixed_cost: fixedCostValue > 0 ? fixedCostValue : undefined
+    })
+
+    const newTicketId = result.id
+
+    if (!newTicketId) {
+      throw new Error("Erreur lors de la création du ticket (ID manquant).")
+    }
+
+    setCreatedTicketId(newTicketId)
+
+    // Associer les équipements
+    for (const asset of selectedAssets) {
+      await glpiTicketService.associateItemToTicket(newTicketId, asset.itemtype, asset.id)
+    }
+
+    setSubmitSuccess(true)
+    // Reset form
+    setTitle('')
+    setDescription('')
+    setUrgency(3)
+    setDuration('')
+    setTimeCost('')
+    setFixedCost('')
+    setSelectedAssets([])
+  } catch (err: any) {
+    setError(err.message || "Une erreur est survenue lors de la création du ticket.")
+  } finally {
+    setIsSubmitting(false)
+  }
+}
 
   return (
     <div className="create-ticket-container">
@@ -153,7 +181,7 @@ export function CreateTicket() {
                 required
               />
             </div>
-             <div className="form-group">
+            <div className="form-group">
               <label htmlFor="type">Type</label>
               <select id="type" value={type} onChange={e => setType(Number(e.target.value))}>
                 <option value={1}>Incident</option>
@@ -172,8 +200,71 @@ export function CreateTicket() {
             </div>
           </div>
 
+          {/* New Cost Section */}
           <div className="form-section">
-            <h2>2. Éléments Concernés</h2>
+            <h2>2. Coûts et Durée <span className="optional-badge">Optionnel</span></h2>
+            <p className="section-help">Ces informations sont facultatives et peuvent être modifiées ultérieurement.</p>
+            
+            <div className="cost-grid">
+              <div className="form-group">
+                <label htmlFor="duration">
+                  <i className="bi bi-hourglass-split" style={{ marginRight: 8 }} />
+                  Durée (secondes)
+                </label>
+                <input
+                  type="text"
+                  id="duration"
+                  placeholder="Ex: 3600 (1 heure) ou 417,59"
+                  value={duration}
+                  onChange={e => setDuration(e.target.value)}
+                />
+                <small>Durée en secondes. Utilisez la virgule pour les décimales.</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="timeCost">
+                  <i className="bi bi-clock-history" style={{ marginRight: 8 }} />
+                  Coût Temps
+                </label>
+                <input
+                  type="text"
+                  id="timeCost"
+                  placeholder="Ex: 184088,19"
+                  value={timeCost}
+                  onChange={e => setTimeCost(e.target.value)}
+                />
+                <small>Coût lié au temps passé (format français: virgule = décimale)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="fixedCost">
+                  <i className="bi bi-cash-stack" style={{ marginRight: 8 }} />
+                  Coût Fixe
+                </label>
+                <input
+                  type="text"
+                  id="fixedCost"
+                  placeholder="Ex: 911291,97"
+                  value={fixedCost}
+                  onChange={e => setFixedCost(e.target.value)}
+                />
+                <small>Coût fixe associé au ticket</small>
+              </div>
+            </div>
+
+            {/* Optional: Display calculated total */}
+            {(timeCost || fixedCost) && (
+              <div className="cost-total-preview">
+                <i className="bi bi-calculator" />
+                <span>
+                  Total estimé: {(parseFrenchNumber(timeCost) + parseFrenchNumber(fixedCost)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="form-section">
+            <h2>3. Éléments Concernés</h2>
             <p className="section-help">Recherchez et ajoutez les équipements (PC, Imprimante, etc.) concernés par ce ticket.</p>
 
             <div className="asset-search-wrapper">
