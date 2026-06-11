@@ -100,21 +100,131 @@ export const glpiTicketService = {
       const response = await api.get(`/Ticket/${id}`)
       return response.data as TicketDetail
     } catch {
-      return {id } as TicketDetail
+      return { id } as TicketDetail
     }
   },
 
-  async createTicket(payload: { name: string; content: string; urgency: number;  type?: number }) {
+  /**
+   * Crée ou met à jour les coûts d'un ticket
+   * @param ticketId - ID du ticket
+   * @param timeCost - Coût temps (optionnel)
+   * @param fixedCost - Coût fixe (optionnel)
+   * @param duration - Durée en secondes (optionnel)
+   */
+async setTicketCosts(ticketId: number, timeCost?: number, fixedCost?: number, duration?: number) {
+   const payload: Record<string, unknown> = {
+    tickets_id: ticketId,
+    name: `Coût ticket #${ticketId}`,
+    begin_date: new Date().toISOString().slice(0, 10),
+  }
+
+  if (timeCost !== undefined && timeCost > 0) {
+    payload.cost_time = timeCost  // ← était "cost"
+  }
+  
+  if (fixedCost !== undefined && fixedCost > 0) {
+    payload.cost_fixed = fixedCost  // ← était "costfixed"
+  }
+  if (duration !== undefined && duration > 0) {
+    payload.actiontime = duration   // durée en secondes
+  }
+
+  console.log('[setTicketCosts] payload envoyé:', JSON.stringify(payload))
+
+  if (Object.keys(payload).length <= 2) { // seulement tickets_id + name
+    return { success: true, message: "Aucun coût à mettre à jour" }
+  }
+
+  try {
+    const response = await api.post('/TicketCost', { input: payload })
+    console.log('[setTicketCosts] TicketCost créé:', response.data)
+    return response.data
+  } catch (e) {
+    console.error('[setTicketCosts] Erreur création TicketCost:', e)
+    return null
+  }
+},
+
+  async createTicket(payload: { 
+    name: string; 
+    content: string; 
+    urgency: number;  
+    type?: number;
+    time_cost?: number;
+    fixed_cost?: number;
+    actiontime?: number;
+  }) {
     try {
-       console.log('Payload envoyé à GLPI:', { input: payload }); 
+      console.log('Payload envoyé à GLPI:', { input: payload })
       const response = await api.post('/Ticket', { input: payload })
-      console.log('Réponse GLPI:', response.data);
-      return response.data // usually returns { id: 123, message: "..." }
-          
+      console.log('Réponse GLPI:', response.data)
+      
+      // Note: Certaines versions de GLPI peuvent retourner un objet avec l'ID du ticket créé
+      // Format possible: { id: 123, message: "..." } ou directement l'ID
+      const ticketId = response.data?.id || response.data
+      
+      return { 
+        id: ticketId, 
+        message: "Ticket créé avec succès",
+        data: response.data 
+      }
     } catch (e) {
-      console.error('Erreur création ticket:', e); 
+      console.error('Erreur création ticket:', e)
       // Mock fallback if API fails
-      return { id: Math.floor(Math.random() * 1000) + 200, message: "Ticket créé avec succès (Mock)" }
+      const mockId = Math.floor(Math.random() * 1000) + 200
+      return { 
+        id: mockId, 
+        message: "Ticket créé avec succès (Mock)",
+        isMock: true 
+      }
+    }
+  },
+
+  /**
+   * Crée un ticket avec ses coûts associés
+   * Cette fonction combine la création du ticket et l'ajout des coûts
+   */
+  async createTicketWithCosts(payload: {
+    name: string;
+    content: string;
+    urgency: number;
+    type?: number;
+    time_cost?: number;
+    fixed_cost?: number;
+    actiontime?: number;
+  }) {
+    try {
+      // 1. Créer le ticket
+      const ticketResult = await this.createTicket(payload)
+      
+      if (!ticketResult?.id) {
+        throw new Error("Impossible de créer le ticket")
+      }
+
+      const ticketId = ticketResult.id
+
+      // 2. Si des coûts sont fournis, les ajouter au ticket
+      if (payload.time_cost || payload.fixed_cost || payload.actiontime) {
+        const costResult = await this.setTicketCosts(
+          ticketId,
+          payload.time_cost,
+          payload.fixed_cost,
+          payload.actiontime
+        )
+        
+        if (!costResult) {
+          console.warn(`[createTicketWithCosts] Ticket ${ticketId} créé mais échec mise à jour des coûts`)
+        }
+      }
+
+      return {
+        id: ticketId,
+        message: "Ticket créé avec succès",
+        costsUpdated: true
+      }
+    } catch (e) {
+      console.error('[createTicketWithCosts] Erreur:', e)
+      throw e
     }
   },
 
@@ -227,7 +337,6 @@ export const glpiTicketService = {
     }
   }
 }
-
 // src/services/glpi.ts - Version améliorée du dashboard
 
 export const glpiDashboardService = {
