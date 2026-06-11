@@ -231,12 +231,21 @@ export function mapItemType(raw: string): GlpiItemType | null {
 export function parseItemsField(raw: string): string[] {
   if (!raw || raw.trim() === '') return []
   const s = raw.trim()
+  let items: string[]
   try {
     const parsed = JSON.parse(s)
-    if (Array.isArray(parsed)) return parsed.map(v => String(v).trim()).filter(Boolean)
-    return [String(parsed).trim()].filter(Boolean)
+    if (Array.isArray(parsed)) items = parsed.map(v => String(v).trim()).filter(Boolean)
+    else items = [String(parsed).trim()].filter(Boolean)
   } catch {
     // Fallback: comma-separated without JSON quotes
-    return s.split(',').map(v => v.trim().replace(/^["']|["']$/g, '').trim()).filter(Boolean)
+    items = s.split(',').map(v => v.trim().replace(/^["']|["']$/g, '').trim()).filter(Boolean)
   }
+  // Deduplicate case-insensitively — GLPI rejects duplicate Item_Ticket links
+  const seen = new Set<string>()
+  return items.filter(v => {
+    const key = v.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
