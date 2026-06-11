@@ -17,6 +17,7 @@ export type GlpiItemType =
   | 'Certificate'
   | 'Socket'
   | 'Rack'
+  | 'ConsumableItem'
 
 export type AssetRow = {
   rowIndex: number

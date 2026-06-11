@@ -206,6 +206,9 @@ const ITEM_TYPE_MAP: Record<string, GlpiItemType> = {
   certificate: 'Certificate', certificat: 'Certificate', 'certificat ssl': 'Certificate',
   socket: 'Socket', 'prise réseau': 'Socket', 'prise rj45': 'Socket', 'wall socket': 'Socket',
   rack: 'Rack', 'baie rack': 'Rack', 'armoire rack': 'Rack',
+  consumable: 'ConsumableItem', consumables: 'ConsumableItem',
+  consumableitem: 'ConsumableItem', 'consumable item': 'ConsumableItem',
+  consommable: 'ConsumableItem', consommables: 'ConsumableItem',
 }
 
 export function mapTicketType(raw: string): number {

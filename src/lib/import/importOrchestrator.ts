@@ -164,14 +164,26 @@ export async function runImport(
   const warnings: string[] = []
   const errors: string[] = []
 
+  console.group('[Import] Démarrage')
+  console.log('[Import] Assets:', assets.length, '| Tickets:', tickets.length, '| Coûts:', costs.length, '| Images:', images.length)
+  console.log('[Import] Répartition assets:', {
+    computers: assets.filter(a => a.itemType === 'Computer').length,
+    monitors: assets.filter(a => a.itemType === 'Monitor').length,
+    others: assets.filter(a => a.itemType !== 'Computer' && a.itemType !== 'Monitor').map(a => a.itemType),
+  })
+
   // ── Phase 1: Resolve dropdowns (all parallel) ─────────────────────────────
   onProgress({ phase: 'dropdowns', message: 'Chargement des listes GLPI…', current: 0, total: 1 })
+  console.log('[Import][Phase 1] Chargement des dropdowns GLPI…')
   const resolver = new DropdownResolver()
   try {
     await resolver.preloadAll(token)
+    console.log('[Import][Phase 1] Dropdowns chargés avec succès')
   } catch (e: unknown) {
     const msg = `Erreur lors du chargement des listes GLPI: ${e instanceof Error ? e.message : String(e)}`
+    console.error('[Import][Phase 1] ERREUR dropdowns:', e)
     errors.push(msg)
+    console.groupEnd()
     return { success: false, rolledBack: false, rollbackErrors: [], created: { users: 0, computers: 0, monitors: 0, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
   }
   onProgress({ phase: 'dropdowns', message: 'Listes chargées', current: 1, total: 1 })
@@ -181,9 +193,11 @@ export async function runImport(
   const uniqueUserNames = [...new Set(assets.map(a => a.user).filter(Boolean))]
 
   if (uniqueUserNames.length > 0) {
+    console.log('[Import][Phase 1.5] Vérification utilisateurs:', uniqueUserNames)
     onProgress({ phase: 'users', message: `Vérification de ${uniqueUserNames.length} utilisateur(s)…`, current: 0, total: uniqueUserNames.length })
     const { created: newUsers, errors: userErrors } = await resolver.ensureUsersExist(uniqueUserNames, token)
     usersCreated = newUsers.length
+    console.log('[Import][Phase 1.5] Utilisateurs créés:', newUsers.length, '| Erreurs:', userErrors)
 
     if (userErrors.length > 0) {
       // User creation failures are warnings, not hard errors — import continues
@@ -205,18 +219,28 @@ export async function runImport(
 
   const createAsset = async (row: AssetRow) => {
     const input = await buildAssetInput(row, resolver, warnings, token)
-    const res = V2_ONLY_TYPES.has(row.itemType)
-      ? await createItemV2(row.itemType, input)
-      : await createItem(row.itemType, input, token)
-    const id = Array.isArray(res) ? res[0]?.id : res?.id
-    if (!id) throw new Error(`Pas d'ID retourné pour l'actif "${row.name}"`)
-    return { name: row.name, id: id as number, itemType: row.itemType }
+    console.log(`[Import][createAsset] ${row.itemType} "${row.name}"`, input)
+    try {
+      const res = V2_ONLY_TYPES.has(row.itemType)
+        ? await createItemV2(row.itemType, input)
+        : await createItem(row.itemType, input, token)
+      const id = Array.isArray(res) ? res[0]?.id : res?.id
+      if (!id) throw new Error(`Pas d'ID retourné pour l'actif "${row.name}"`)
+      console.log(`[Import][createAsset] OK — ${row.itemType} "${row.name}" id=${id}`)
+      return { name: row.name, id: id as number, itemType: row.itemType }
+    } catch (e: unknown) {
+      console.error(`[Import][createAsset] ERREUR — ${row.itemType} "${row.name}":`, e)
+      throw e
+    }
   }
+
+  console.log(`[Import][Phase 2] Computers: ${computers.length} | Monitors: ${monitors.length} | Autres: ${otherAssets.length}`)
 
   const computerResults = await runBatch(computers, 5, createAsset)
   for (let i = 0; i < computerResults.length; i++) {
     const r = computerResults[i]
     if (!r.ok) {
+      console.error(`[Import][Phase 2] ROLLBACK — ordinateur "${computers[i].name}":`, r.error)
       errors.push(`Ordinateur "${computers[i].name}": ${r.error.message}`)
       const rollbackErrors = await rollback(registry, token)
       return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: 0, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
@@ -231,6 +255,7 @@ export async function runImport(
   for (let i = 0; i < monitorResults.length; i++) {
     const r = monitorResults[i]
     if (!r.ok) {
+      console.error(`[Import][Phase 2] ROLLBACK — moniteur "${monitors[i].name}":`, r.error)
       errors.push(`Moniteur "${monitors[i].name}": ${r.error.message}`)
       const rollbackErrors = await rollback(registry, token)
       return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: 0, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
@@ -245,6 +270,7 @@ export async function runImport(
   for (let i = 0; i < otherResults.length; i++) {
     const r = otherResults[i]
     if (!r.ok) {
+      console.error(`[Import][Phase 2] ROLLBACK — actif "${otherAssets[i].name}" (${otherAssets[i].itemType}):`, r.error)
       errors.push(`Actif "${otherAssets[i].name}" (${otherAssets[i].itemType}): ${r.error.message}`)
       const rollbackErrors = await rollback(registry, token)
       return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: 0, documents: 0, costs: 0, itemLinks: 0 }, imageWarnings: warnings, errors }
@@ -257,6 +283,8 @@ export async function runImport(
 
   // ── Phase 3: Upload images (best-effort, no rollback on failure) ──────────
   const validImages = images.filter(img => img.isValid && assetNameToInfo.has(img.basename.toLowerCase()))
+  const skippedImages = images.filter(img => img.isValid && !assetNameToInfo.has(img.basename.toLowerCase()))
+  console.log(`[Import][Phase 3] Images valides: ${validImages.length} | Sans asset associé: ${skippedImages.map(i => i.basename)}`)
   onProgress({ phase: 'images', message: `Upload de ${validImages.length} image(s)…`, current: 0, total: validImages.length })
 
   // Ensure GLPI has the required DocumentTypes (PNG, JPEG, etc.)
@@ -270,16 +298,21 @@ export async function runImport(
     const info = assetNameToInfo.get(img.basename.toLowerCase())!
     try {
       // Step 1: upload the file alone (no item link in the manifest)
+      console.log(`[Import][Phase 3] Upload image "${img.filename}" → asset ${info.itemtype}#${info.id}`)
       const docId = await uploadDocumentToGlpi(img.basename, img.blob, img.filename, token)
       registry.documents.push({ name: img.basename, id: docId })
+      console.log(`[Import][Phase 3] Document créé id=${docId}, liaison en cours…`)
 
       // Step 2: link the document to the asset (separate request)
       try {
         await linkDocumentToItem(docId, info.itemtype, info.id, token)
+        console.log(`[Import][Phase 3] Lien OK: doc ${docId} ↔ ${info.itemtype}#${info.id}`)
       } catch (linkErr: unknown) {
+        console.warn(`[Import][Phase 3] Lien échoué doc ${docId} ↔ ${info.itemtype}#${info.id}:`, linkErr)
         warnings.push(`Image "${img.filename}": document créé (id=${docId}) mais lien échoué — ${linkErr instanceof Error ? linkErr.message : String(linkErr)}`)
       }
     } catch (e: unknown) {
+      console.error(`[Import][Phase 3] ERREUR upload image "${img.filename}":`, e)
       warnings.push(`Image "${img.filename}": ${e instanceof Error ? e.message : String(e)}`)
     }
     imgDone++
@@ -287,6 +320,7 @@ export async function runImport(
   }
 
   // ── Phase 4: Create tickets ───────────────────────────────────────────────
+  console.log(`[Import][Phase 4] Création de ${tickets.length} ticket(s)`)
   onProgress({ phase: 'tickets', message: `Création de ${tickets.length} ticket(s)…`, current: 0, total: tickets.length })
   const refToGlpiId = new Map<number, number>()
 
@@ -303,11 +337,13 @@ export async function runImport(
       date: t.date,
     }
 
+    console.log(`[Import][Phase 4] Ticket ref=${t.refTicket} "${t.title}"`, input)
     try {
       const res = await createItem('Ticket', input, token)
       const id = Array.isArray(res) ? res[0]?.id : res?.id
       if (!id) throw new Error('Pas d\'ID retourné')
       const ticketId = id as number
+      console.log(`[Import][Phase 4] Ticket ref=${t.refTicket} créé → glpi_id=${ticketId}`)
       registry.tickets.push({ ref: t.refTicket, id: ticketId })
       refToGlpiId.set(t.refTicket, ticketId)
 
@@ -315,11 +351,13 @@ export async function runImport(
       for (const assetName of t.items) {
         const info = assetNameToInfo.get(assetName.toLowerCase())
         if (!info) {
+          console.warn(`[Import][Phase 4] Ticket ${t.refTicket}: actif "${assetName}" non trouvé dans le registre`)
           warnings.push(`Ticket ${t.refTicket}: actif "${assetName}" non trouvé — lien ignoré`)
           continue
         }
         try {
           const linkItemtype = ITEM_TICKET_ITEMTYPE[info.itemtype] ?? info.itemtype
+          console.log(`[Import][Phase 4] Lien ticket ${ticketId} ↔ ${linkItemtype}#${info.id}`)
           const linkRes = await createItem('Item_Ticket', {
             tickets_id: ticketId,
             itemtype: linkItemtype,
@@ -328,6 +366,7 @@ export async function runImport(
           const linkId = Array.isArray(linkRes) ? linkRes[0]?.id : linkRes?.id
           if (linkId) registry.itemTickets.push({ id: linkId as number })
         } catch (e: unknown) {
+          console.error(`[Import][Phase 4] ERREUR lien ticket ${t.refTicket} ↔ "${assetName}":`, e)
           warnings.push(`Lien ticket ${t.refTicket} ↔ "${assetName}": ${e instanceof Error ? e.message : String(e)}`)
         }
       }
@@ -335,14 +374,17 @@ export async function runImport(
       // Set the final status after all items are linked
       if (t.status !== 1) {
         try {
+          console.log(`[Import][Phase 4] Mise à jour statut ticket ${ticketId} → ${t.status}`)
           await updateItem('Ticket', ticketId, { status: t.status }, token)
         } catch (e: unknown) {
+          console.warn(`[Import][Phase 4] Statut final non appliqué pour ticket ${ticketId}:`, e)
           warnings.push(`Ticket ${t.refTicket}: statut final (${t.status}) non appliqué — ${e instanceof Error ? e.message : String(e)}`)
         }
       }
 
       onProgress({ phase: 'tickets', message: `Tickets : ${i + 1}/${tickets.length}`, current: i + 1, total: tickets.length })
     } catch (e: unknown) {
+      console.error(`[Import][Phase 4] ROLLBACK — ticket ref=${t.refTicket}:`, e)
       errors.push(`Ticket ${t.refTicket}: ${e instanceof Error ? e.message : String(e)}`)
       const rollbackErrors = await rollback(registry, token)
       return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: 0, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
@@ -350,12 +392,14 @@ export async function runImport(
   }
 
   // ── Phase 5: Create costs ─────────────────────────────────────────────────
+  console.log(`[Import][Phase 5] Création de ${costs.length} coût(s)`)
   onProgress({ phase: 'costs', message: `Création des coûts…`, current: 0, total: costs.length })
 
   for (let i = 0; i < costs.length; i++) {
     const c = costs[i]
     const ticketGlpiId = refToGlpiId.get(c.numTicket)
     if (!ticketGlpiId) {
+      console.warn(`[Import][Phase 5] Coût ligne ${c.rowIndex}: ticket ref ${c.numTicket} absent du registre`)
       warnings.push(`Coût ligne ${c.rowIndex}: ticket ref ${c.numTicket} non trouvé — ignoré`)
       continue
     }
@@ -365,6 +409,7 @@ export async function runImport(
       //   actiontime  = duration in seconds
       //   cost_time   = financial value of time spent
       //   cost_fixed  = flat/fixed cost
+      console.log(`[Import][Phase 5] TicketCost ticket_glpi=${ticketGlpiId}`, { actiontime: c.durationSecond, cost_time: c.timeCost, cost_fixed: c.fixedCost })
       const res = await createItem('TicketCost', {
         tickets_id: ticketGlpiId,
         name: 'Coût d\'intervention',
@@ -374,8 +419,10 @@ export async function runImport(
       }, token)
       const id = Array.isArray(res) ? res[0]?.id : res?.id
       if (!id) throw new Error('Pas d\'ID retourné')
+      console.log(`[Import][Phase 5] TicketCost créé id=${id}`)
       registry.ticketCosts.push({ id: id as number })
     } catch (e: unknown) {
+      console.error(`[Import][Phase 5] ROLLBACK — coût ticket ref=${c.numTicket}:`, e)
       errors.push(`Coût ticket ${c.numTicket}: ${e instanceof Error ? e.message : String(e)}`)
       const rollbackErrors = await rollback(registry, token)
       return { success: false, rolledBack: true, rollbackErrors, created: { users: usersCreated, computers: registry.computers.length, monitors: registry.monitors.length, otherAssets: registry.otherAssets.length, tickets: registry.tickets.length, documents: registry.documents.length, costs: registry.ticketCosts.length, itemLinks: registry.itemTickets.length }, imageWarnings: warnings, errors }
@@ -384,6 +431,8 @@ export async function runImport(
     onProgress({ phase: 'costs', message: `Coûts : ${i + 1}/${costs.length}`, current: i + 1, total: costs.length })
   }
 
+  console.log('[Import] Terminé avec succès', { warnings: warnings.length })
+  console.groupEnd()
   onProgress({ phase: 'done', message: 'Import terminé', current: 1, total: 1 })
 
   return {

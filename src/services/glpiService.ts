@@ -88,7 +88,7 @@ export const glpiAuthService = {
 export const glpiTicketService = {
   async listTickets() {
     try {
-      const response = await api.get('/Ticket?range=0-49&order=DESC&sort=id')
+      const response = await api.get('/Ticket?range=0-999&order=DESC&sort=id')
       return Array.isArray(response.data) ? response.data as GlpiTicket[] : false
     } catch {
       return false
