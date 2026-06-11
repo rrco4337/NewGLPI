@@ -315,7 +315,7 @@ export const TicketDetail = () => {
       {/* Costs section */}
       {(ticket.costs ?? []).length > 0 && (() => {
         const costs = ticket.costs!
-        const totalTime = costs.reduce((s, c) => s + c.cost_time, 0)
+        const totalTime = costs.reduce((s, c) => s + c.cost_time * (c.actiontime / 3600), 0)
         const totalFixed = costs.reduce((s, c) => s + c.cost_fixed, 0)
         const totalDuration = costs.reduce((s, c) => s + c.actiontime, 0)
         const total = totalTime + totalFixed
@@ -367,9 +367,9 @@ export const TicketDetail = () => {
                       <td style={{ padding: '10px 14px', color: '#1e293b', fontWeight: 500 }}>{c.name}</td>
                       <td style={{ padding: '10px 14px', color: '#64748b' }}>{c.begin_date ?? '—'}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>{fmtDuration(c.actiontime)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1d4ed8', fontWeight: 500 }}>{fmt(c.cost_time)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1d4ed8', fontWeight: 500 }}>{fmt(c.cost_time * (c.actiontime / 3600))}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#15803d', fontWeight: 500 }}>{fmt(c.cost_fixed)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#4338ca', fontWeight: 700 }}>{fmt(c.cost_time + c.cost_fixed)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#4338ca', fontWeight: 700 }}>{fmt(c.cost_time * (c.actiontime / 3600) + c.cost_fixed)}</td>
                     </tr>
                   ))}
                 </tbody>
