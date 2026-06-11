@@ -97,8 +97,59 @@ export const glpiTicketService = {
 
   async getTicket(id: number) {
     try {
-      const response = await api.get(`/Ticket/${id}`)
-      return response.data as TicketDetail
+      const [ticketRes, costsRes, itemsRes] = await Promise.allSettled([
+        api.get(`/Ticket/${id}`),
+        api.get('/TicketCost?range=0-9999'),
+        api.get('/Item_Ticket?range=0-9999'),
+      ])
+
+      const ticket: TicketDetail = ticketRes.status === 'fulfilled'
+        ? (ticketRes.value.data as TicketDetail)
+        : ({ id } as TicketDetail)
+
+      if (costsRes.status === 'fulfilled' && Array.isArray(costsRes.value.data)) {
+        ticket.costs = (costsRes.value.data as any[])
+          .filter(c => Number(c.tickets_id) === id)
+          .map(c => ({
+            id: c.id,
+            name: c.name ?? `Coût #${c.id}`,
+            actiontime: Number(c.actiontime) || 0,
+            cost_time: Number(c.cost_time) || 0,
+            cost_fixed: Number(c.cost_fixed) || 0,
+            begin_date: c.begin_date ?? undefined,
+          }))
+      }
+
+      if (itemsRes.status === 'fulfilled' && Array.isArray(itemsRes.value.data)) {
+        const raw = (itemsRes.value.data as any[]).filter(i => Number(i.tickets_id) === id)
+
+        // Resolve item names per type in parallel
+        const byType = new Map<string, number[]>()
+        for (const i of raw) {
+          if (!byType.has(i.itemtype)) byType.set(i.itemtype, [])
+          byType.get(i.itemtype)!.push(i.items_id)
+        }
+        const nameMap = new Map<string, string>() // key = "Itemtype:id"
+        await Promise.allSettled(
+          [...byType.entries()].map(async ([itemtype, ids]) => {
+            await Promise.allSettled(ids.map(async (iid) => {
+              try {
+                const r = await api.get(`/${itemtype}/${iid}`)
+                if (r.data?.name) nameMap.set(`${itemtype}:${iid}`, r.data.name as string)
+              } catch { /* name stays undefined */ }
+            }))
+          })
+        )
+
+        ticket.linkedItems = raw.map(i => ({
+          id: i.id,
+          itemtype: i.itemtype,
+          items_id: i.items_id,
+          itemName: nameMap.get(`${i.itemtype}:${i.items_id}`),
+        }))
+      }
+
+      return ticket
     } catch {
       return { id } as TicketDetail
     }
