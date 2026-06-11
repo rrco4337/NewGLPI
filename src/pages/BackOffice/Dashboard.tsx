@@ -9,8 +9,8 @@ export const Dashboard = () => {
     <section className="space-y-6 p-6 text-slate-800">
       <header className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <p className="text-sm uppercase tracking-[0.25em] text-indigo-500">Dashboard principal</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Vue d’ensemble du parc informatique</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">Suivez l’état des équipements, des incidents et des demandes avec un tableau de bord moderne et responsive.</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Vue d'ensemble du parc informatique</h1>
+        <p className="mt-2 max-w-2xl text-slate-600">Suivez l'état des équipements, des incidents et des demandes avec un tableau de bord moderne et responsive.</p>
       </header>
 
       {loading && <div className="rounded-3xl bg-white p-6 text-slate-500 shadow-sm ring-1 ring-slate-200">Chargement des métriques…</div>}
@@ -23,23 +23,33 @@ export const Dashboard = () => {
             <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Équipements</p>
               <p className="mt-3 text-4xl font-semibold text-slate-900">{data.totalAssets}</p>
-             
             </article>
             <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Tickets Total</p>
               <p className="mt-3 text-4xl font-semibold text-slate-900">{data.totalTickets}</p>
               <p className="mt-1 text-sm text-sky-600">{data.ticketsByStatus.open} ouverts</p>
             </article>
-            {/* <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <p className="text-sm text-slate-500">Tickets en attente</p>
-              <p className="mt-3 text-4xl font-semibold text-slate-900">{data.ticketsByStatus.pending}</p>
-              <p className="mt-1 text-sm text-amber-600">Traitement en cours</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <p className="text-sm text-slate-500">Coût total fixe</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">
+                {data.costs.totalFixedCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })}
+              </p>
             </article>
             <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <p className="text-sm text-slate-500">Tickets fermés</p>
-              <p className="mt-3 text-4xl font-semibold text-slate-900">{data.ticketsByStatus.closed}</p>
-              <p className="mt-1 text-sm text-violet-600">Taux de résolution stable</p>
-            </article> */}
+              <p className="text-sm text-slate-500">Coût total temps</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">
+                {data.costs.totalTimeCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })}
+              </p>
+            </article>
+            <article className="rounded-3xl bg-indigo-600 p-6 shadow-sm">
+              <p className="text-sm text-indigo-200">Coût total</p>
+              <p className="mt-3 text-3xl font-semibold text-white">
+                {data.costs.totalCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })}
+              </p>
+            </article>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">

@@ -251,6 +251,7 @@ export const glpiDashboardService = {
         applianceResponse,
         licenseResponse,
         certificateResponse,
+        ticketCostsResponse,
       ] = await Promise.allSettled([
         api.get('/Ticket?range=0-999'),
         api.get('/Computer?range=0-999'),
@@ -268,6 +269,7 @@ export const glpiDashboardService = {
         api.get('/Appliance?range=0-999'),
         api.get('/SoftwareLicense?range=0-999'),
         api.get('/Certificate?range=0-999'),
+        api.get('/TicketCost?range=0-9999'),
       ]);
 
       // Fonction helper pour extraire les données
@@ -304,6 +306,16 @@ export const glpiDashboardService = {
         const reason = String((computersResponse as PromiseRejectedResult).reason)
         if (reason.includes('401') || /session|token/i.test(reason)) {
           throw new Error('Session GLPI expirée — reconnectez-vous')
+        }
+      }
+
+      // Calcul des coûts totaux depuis TicketCost
+      let totalFixedCost = 0
+      let totalTimeCost = 0
+      if (ticketCostsResponse.status === 'fulfilled' && Array.isArray(ticketCostsResponse.value.data)) {
+        for (const c of ticketCostsResponse.value.data) {
+          totalFixedCost += Number(c.cost_fixed) || 0
+          totalTimeCost += Number(c.cost_time) || 0
         }
       }
 
@@ -475,6 +487,11 @@ export const glpiDashboardService = {
         assetBreakdown: assetBreakdown.filter(a => a.value > 0),
         totalTickets: ticketsData.length,
         recentTickets,
+        costs: {
+          totalFixedCost,
+          totalTimeCost,
+          totalCost: totalFixedCost + totalTimeCost,
+        },
         ticketsByStatus: {
           open: ticketsByStatus.new + ticketsByStatus.processing,
           closed: ticketsByStatus.closed,
@@ -506,6 +523,7 @@ export const glpiDashboardService = {
         totalAssets: 0,
         assetBreakdown: [],
         totalTickets: 0,
+        costs: { totalFixedCost: 0, totalTimeCost: 0, totalCost: 0 },
         ticketsByStatus: {
           open: 0,
           closed: 0,

@@ -7,6 +7,7 @@ export const useDashboardMetrics = () => {
     totalTickets: number
     assetBreakdown: Array<{ label: string; value: number; accent: string; detail: string }>
     ticketsByStatus: { open: number; closed: number; pending: number; incidents: number; requests: number }
+    costs: { totalFixedCost: number; totalTimeCost: number; totalCost: number }
     recentTickets: Array<{
       id: number
       name: string
