@@ -41,24 +41,24 @@ export const GlpiImport = () => {
   const [report, setReport] = useState<ImportReport | null>(null)
   const [globalError, setGlobalError] = useState<string | null>(null)
 
-  const allFilesSelected = !!(files.csv1 && files.csv2 && files.csv3 && files.zip)
+  const anyFileSelected = !!(files.csv1 || files.csv2 || files.csv3 || files.zip)
 
   // ── Validate ──────────────────────────────────────────────────────────────
   const handleValidate = useCallback(async () => {
-    if (!files.csv1 || !files.csv2 || !files.csv3 || !files.zip) return
+    if (!anyFileSelected) return
     setPhase('validating')
     setGlobalError(null)
 
     try {
       const [text1, text2, text3] = await Promise.all([
-        readFileAsText(files.csv1),
-        readFileAsText(files.csv2),
-        readFileAsText(files.csv3),
+        files.csv1 ? readFileAsText(files.csv1) : Promise.resolve(''),
+        files.csv2 ? readFileAsText(files.csv2) : Promise.resolve(''),
+        files.csv3 ? readFileAsText(files.csv3) : Promise.resolve(''),
       ])
 
-      const { rows: raw1 } = parseCsvText(text1)
-      const { rows: raw2 } = parseCsvText(text2)
-      const { rows: raw3 } = parseCsvText(text3)
+      const { rows: raw1 } = text1 ? parseCsvText(text1) : { rows: [] }
+      const { rows: raw2 } = text2 ? parseCsvText(text2) : { rows: [] }
+      const { rows: raw3 } = text3 ? parseCsvText(text3) : { rows: [] }
 
       const csv1Result = validateCsv1(raw1)
       const csv2Result = validateCsv2(raw2)
@@ -66,7 +66,7 @@ export const GlpiImport = () => {
       const validRefs = new Set(csv2Result.parsed.map(t => t.refTicket))
       const csv3Result = validateCsv3(raw3, validRefs)
 
-      const parsedImages = await extractImagesFromZip(files.zip)
+      const parsedImages = files.zip ? await extractImagesFromZip(files.zip) : []
       const assetNames = new Set(csv1Result.parsed.map(a => a.name.toLowerCase()))
       const imageResult = await validateImages(parsedImages, assetNames)
 
@@ -185,7 +185,7 @@ export const GlpiImport = () => {
             <button
               className="btn-verify"
               onClick={handleValidate}
-              disabled={!allFilesSelected || phase === 'validating'}
+              disabled={!anyFileSelected || phase === 'validating'}
             >
               {phase === 'validating'
                 ? <><i className="bi bi-hourglass-split" style={{ marginRight: 6 }} />Validation…</>
