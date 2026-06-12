@@ -475,7 +475,7 @@ export const glpiDashboardService = {
       if (ticketCostsResponse.status === 'fulfilled' && Array.isArray(ticketCostsResponse.value.data)) {
         for (const c of ticketCostsResponse.value.data) {
           totalFixedCost += Number(c.cost_fixed) || 0
-          totalTimeCost += Number(c.cost_time) || 0
+          totalTimeCost += (Number(c.cost_time) || 0) * ((Number(c.actiontime) || 0) / 3600)
         }
       }
 
