@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { glpiTicketService } from '@/services/glpiService'
 import type { GlpiTicket, TicketDetail as TicketDetailType } from '@/types/glpi'
 import { useSettings } from '@/hooks/useKanbanSetting'
+import { KanbanSettingApi } from '@/api/kanbanSetting'
 import './KanbanTickets.css'
 
 // ─── Status mapping ────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export const KanbanTickets = () => {
   // Close dialog
   const [closeDialog, setCloseDialog] = useState<{ ticketId: number } | null>(null)
   const [closeNote,   setCloseNote]   = useState('')
+  const [superCost,   setSuperCost]   = useState('')
   const [closeSaving, setCloseSaving] = useState(false)
 
   const { settings, loading: settingsLoading } = useSettings()
@@ -216,8 +218,20 @@ export const KanbanTickets = () => {
       } else {
         await glpiTicketService.updateTicket(ticketId, { status: 5 })
       }
+
+      // Sauvegarder le super cost si renseigné (indépendant — échec non bloquant)
+      const superCostValue = parseFloat(superCost)
+      if (!isNaN(superCostValue) && superCostValue >= 0) {
+        try {
+          await KanbanSettingApi.saveSuperCost(ticketId, superCostValue)
+        } catch (costErr) {
+          console.error('Failed to save super cost:', costErr)
+        }
+      }
+
       setCloseDialog(null)
       setCloseNote('')
+      setSuperCost('')
     } catch (err) {
       console.error('Failed to close ticket:', err)
       if (originalTicket) {
@@ -227,6 +241,12 @@ export const KanbanTickets = () => {
     } finally {
       setCloseSaving(false)
     }
+  }
+
+  const cancelCloseDialog = () => {
+    setCloseDialog(null)
+    setCloseNote('')
+    setSuperCost('')
   }
 
   // ── Create ticket ─────────────────────────────────────────────────────────────
@@ -487,12 +507,7 @@ const getColumnConfig = () => {
 
       {/* ── Close Dialog ─────────────────────────────────────────────────────── */}
       {closeDialog && (
-        <div className="kb-overlay" onClick={() => { 
-          if (!closeSaving) { 
-            setCloseDialog(null)
-            setCloseNote('')
-          } 
-        }}>
+        <div className="kb-overlay" onClick={() => { if (!closeSaving) cancelCloseDialog() }}>
           <div className="kb-dialog" onClick={e => e.stopPropagation()}>
             <div className="kb-dialog-header">
               <i className="bi bi-check-circle" />
@@ -500,7 +515,7 @@ const getColumnConfig = () => {
             </div>
             <p className="kb-dialog-desc">
               Ce ticket sera marqué comme <strong>Résolu</strong> dans GLPI.
-              Vous pouvez saisir une note de résolution (facultatif).
+              Vous pouvez saisir une note de résolution et le coût associé (facultatifs).
             </p>
             <div className="kb-field">
               <label>Note de résolution</label>
@@ -512,20 +527,29 @@ const getColumnConfig = () => {
                 disabled={closeSaving}
               />
             </div>
+            <div className="kb-field">
+              <label>Super Cost (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={superCost}
+                onChange={e => setSuperCost(e.target.value)}
+                placeholder="Ex : 150.00"
+                disabled={closeSaving}
+              />
+            </div>
             <div className="kb-dialog-actions">
               <button
                 className="kb-btn-secondary"
-                onClick={() => { 
-                  setCloseDialog(null)
-                  setCloseNote('')
-                }}
+                onClick={cancelCloseDialog}
                 disabled={closeSaving}
               >
                 Annuler
               </button>
-              <button 
-                className="kb-btn-primary" 
-                onClick={() => void handleConfirmClose()} 
+              <button
+                className="kb-btn-primary"
+                onClick={() => void handleConfirmClose()}
                 disabled={closeSaving}
               >
                 {closeSaving ? (

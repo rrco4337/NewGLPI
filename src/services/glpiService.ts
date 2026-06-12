@@ -329,6 +329,42 @@ async setTicketCosts(ticketId: number, timeCost?: number, fixedCost?: number, du
     }
   },
 
+  async listItemsCosts(): Promise<{
+    tickets: GlpiTicket[]
+    costs: { id: number; tickets_id: number; cost_fixed: number; cost_time: number }[]
+    items: { id: number; tickets_id: number; itemtype: string; items_id: number }[]
+  }> {
+    const [ticketsRes, costsRes, itemsRes] = await Promise.allSettled([
+      api.get('/Ticket?range=0-999&order=DESC&sort=id'),
+      api.get('/TicketCost?range=0-9999'),
+      api.get('/Item_Ticket?range=0-9999'),
+    ])
+
+    const tickets: GlpiTicket[] = ticketsRes.status === 'fulfilled' && Array.isArray(ticketsRes.value.data)
+      ? ticketsRes.value.data as GlpiTicket[]
+      : []
+
+    const costs = costsRes.status === 'fulfilled' && Array.isArray(costsRes.value.data)
+      ? (costsRes.value.data as any[]).map(c => ({
+          id: Number(c.id),
+          tickets_id: Number(c.tickets_id),
+          cost_fixed: Number(c.cost_fixed) || 0,
+          cost_time: Number(c.cost_time) || 0,
+        }))
+      : []
+
+    const items = itemsRes.status === 'fulfilled' && Array.isArray(itemsRes.value.data)
+      ? (itemsRes.value.data as any[]).map(i => ({
+          id: Number(i.id),
+          tickets_id: Number(i.tickets_id),
+          itemtype: String(i.itemtype),
+          items_id: Number(i.items_id),
+        }))
+      : []
+
+    return { tickets, costs, items }
+  },
+
   async searchAssets(query: string) {
     try {
       // Pour une recherche plus avancée, on utiliserait le endpoint /search/

@@ -11,6 +11,7 @@ import { Reset } from '@/pages/BackOffice/Reset'
 import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from '@/pages/BackOffice/TicketDetail'
 import KanbanSetting from '@/pages/BackOffice/KanbanSetting'
+import { ItemsCostList } from '@/pages/BackOffice/ItemsCostList'
 
 export const appRoutes = (
   <>
@@ -30,6 +31,7 @@ export const appRoutes = (
       <Route path="settings" element={<Settings />} />
       <Route path="reset" element={<Reset />} />
       <Route path="kanban-settings" element={<KanbanSetting />} />
+      <Route path="items-cost" element={<ItemsCostList />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </>

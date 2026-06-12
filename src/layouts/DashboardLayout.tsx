@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/reset',            icon: 'bi-arrow-counterclockwise', label: 'Réinitialisation' },
   { to: '/admin/settings',         icon: 'bi-gear-fill',              label: 'Paramètres' },
   { to: '/admin/kanban-settings',  icon: 'bi-sliders',                label: 'Kanban Settings' },
+  { to: '/admin/items-cost',       icon: 'bi-calculator',             label: 'Coûts Items' },
 ]
 
 export const DashboardLayout = () => {

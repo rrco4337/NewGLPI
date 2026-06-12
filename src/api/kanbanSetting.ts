@@ -32,5 +32,10 @@ export const KanbanSettingApi = {
     });
     if (!response.ok) throw new Error(`Erreur mise à jour ${key}`);
     return response.json();
+  },
+
+  // Sauvegarder le super cost d'un ticket clôturé
+  async saveSuperCost(ticketId: number, amount: number): Promise<void> {
+    await this.updateSetting(`ticket_super_cost_${ticketId}`, String(amount));
   }
 };
