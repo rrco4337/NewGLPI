@@ -6,8 +6,7 @@ import type { GlpiTicket } from '@/types/glpi'
 interface ItemRow {
   ticketId: number
   ticketName: string
-  itemtype: string
-  items_id: number
+  items: { itemtype: string; items_id: number }[]
   nbItems: number
   coutFixed: number
   coutHoraire: number
@@ -36,12 +35,12 @@ export const ItemsCostList = () => {
 
         const { tickets, costs, items } = bulk
 
-        // Lookup: ticketId → total cost_fixed + cost_time (somme de toutes les entrées TicketCost)
+        // Lookup: ticketId → coût fixe total + coût horaire total (taux × heures par entrée)
         const costByTicket = new Map<number, { cost_fixed: number; cost_time: number }>()
         for (const c of costs) {
           const existing = costByTicket.get(c.tickets_id) ?? { cost_fixed: 0, cost_time: 0 }
           existing.cost_fixed += c.cost_fixed
-          existing.cost_time += c.cost_time
+          existing.cost_time += c.cost_time * (c.actiontime / 3600)
           costByTicket.set(c.tickets_id, existing)
         }
 
@@ -65,34 +64,26 @@ export const ItemsCostList = () => {
         const ticketById = new Map<number, GlpiTicket>()
         for (const t of tickets) ticketById.set(t.id, t)
 
-        // Construire les lignes : une ligne par item lié à un ticket
+        // Construire les lignes : une ligne par ticket
         const result: ItemRow[] = []
         for (const [ticketId, ticketItems] of itemsByTicket.entries()) {
           const ticket = ticketById.get(ticketId)
           const glpiCost = costByTicket.get(ticketId) ?? { cost_fixed: 0, cost_time: 0 }
-          const nouveauPrixTotal = sqlitePriceByTicket.get(ticketId) ?? 0
-          const nbItems = ticketItems.length
+          const nouveauPrix = sqlitePriceByTicket.get(ticketId) ?? 0
+          const total = glpiCost.cost_fixed + glpiCost.cost_time + nouveauPrix
+          const totalSansHoraire = glpiCost.cost_fixed + nouveauPrix
 
-          for (const item of ticketItems) {
-            const coutFixed = nbItems > 0 ? glpiCost.cost_fixed / nbItems : 0
-            const coutHoraire = nbItems > 0 ? glpiCost.cost_time / nbItems : 0
-            const nouveauPrix = nbItems > 0 ? nouveauPrixTotal / nbItems : 0
-            const total = coutFixed + coutHoraire + nouveauPrix
-            const totalSansHoraire = coutFixed + nouveauPrix
-
-            result.push({
-              ticketId,
-              ticketName: ticket?.name || `Ticket #${ticketId}`,
-              itemtype: item.itemtype,
-              items_id: item.items_id,
-              nbItems,
-              coutFixed,
-              coutHoraire,
-              nouveauPrix,
-              total,
-              totalSansHoraire,
-            })
-          }
+          result.push({
+            ticketId,
+            ticketName: ticket?.name || `Ticket #${ticketId}`,
+            items: ticketItems.map(i => ({ itemtype: i.itemtype, items_id: i.items_id })),
+            nbItems: ticketItems.length,
+            coutFixed: glpiCost.cost_fixed,
+            coutHoraire: glpiCost.cost_time,
+            nouveauPrix,
+            total,
+            totalSansHoraire,
+          })
         }
 
         result.sort((a, b) => b.ticketId - a.ticketId)
@@ -120,7 +111,7 @@ export const ItemsCostList = () => {
         <p>Aucun item avec coût trouvé.</p>
       ) : (
         <>
-          <p>Total général : <strong>{fmt(grandTotal)}</strong> — {rows.length} item(s)</p>
+          <p>Total général : <strong>{fmt(grandTotal)}</strong> — {rows.length} ticket(s)</p>
           <table
             border={1}
             cellPadding={6}
@@ -130,22 +121,22 @@ export const ItemsCostList = () => {
             <thead>
               <tr style={{ background: '#f0f0f0' }}>
                 <th>Ticket</th>
-                <th>Type item</th>
-                <th>ID item</th>
-                <th>Nb items liés</th>
-                <th>Coût fixe / item</th>
-                <th>Coût horaire / item</th>
-                <th>Nouveau prix / item</th>
-                <th>Total / item</th>
-                <th>Total sans horaire / item</th>
+                <th>Items liés</th>
+                <th>Nb items</th>
+                <th>Coût fixe</th>
+                <th>Coût horaire</th>
+                <th>Nouveau prix</th>
+                <th>Total</th>
+                <th>Total sans horaire</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
                   <td>#{row.ticketId} — {row.ticketName}</td>
-                  <td>{row.itemtype}</td>
-                  <td>#{row.items_id}</td>
+                  <td style={{ fontSize: 11 }}>
+                    {row.items.map(it => `${it.itemtype} #${it.items_id}`).join(', ')}
+                  </td>
                   <td style={{ textAlign: 'center' }}>{row.nbItems}</td>
                   <td style={{ textAlign: 'right' }}>{fmt(row.coutFixed)}</td>
                   <td style={{ textAlign: 'right' }}>{fmt(row.coutHoraire)}</td>
@@ -157,7 +148,7 @@ export const ItemsCostList = () => {
             </tbody>
             <tfoot>
               <tr style={{ background: '#f0f0f0', fontWeight: 'bold' }}>
-                <td colSpan={7} style={{ textAlign: 'right' }}>Total général</td>
+                <td colSpan={6} style={{ textAlign: 'right' }}>Total général</td>
                 <td style={{ textAlign: 'right' }}>{fmt(grandTotal)}</td>
                 <td style={{ textAlign: 'right' }}>{fmt(grandTotalSansHoraire)}</td>
               </tr>

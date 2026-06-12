@@ -331,7 +331,7 @@ async setTicketCosts(ticketId: number, timeCost?: number, fixedCost?: number, du
 
   async listItemsCosts(): Promise<{
     tickets: GlpiTicket[]
-    costs: { id: number; tickets_id: number; cost_fixed: number; cost_time: number }[]
+    costs: { id: number; tickets_id: number; cost_fixed: number; cost_time: number; actiontime: number }[]
     items: { id: number; tickets_id: number; itemtype: string; items_id: number }[]
   }> {
     const [ticketsRes, costsRes, itemsRes] = await Promise.allSettled([
@@ -350,6 +350,7 @@ async setTicketCosts(ticketId: number, timeCost?: number, fixedCost?: number, du
           tickets_id: Number(c.tickets_id),
           cost_fixed: Number(c.cost_fixed) || 0,
           cost_time: Number(c.cost_time) || 0,
+          actiontime: Number(c.actiontime) || 0,
         }))
       : []
 
