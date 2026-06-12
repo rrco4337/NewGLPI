@@ -312,81 +312,8 @@ export const TicketDetail = () => {
         )}
       </div>
 
-      {/* Costs section */}
-      {(ticket.costs ?? []).length > 0 && (() => {
-        const costs = ticket.costs!
-        const totalTime = costs.reduce((s, c) => s + c.cost_time, 0)
-        const totalFixed = costs.reduce((s, c) => s + c.cost_fixed, 0)
-        const totalDuration = costs.reduce((s, c) => s + c.actiontime, 0)
-        const total = totalTime + totalFixed
-        return (
-          <div style={{
-            background: '#fff', borderRadius: 16, border: '1px solid #d0d7e1',
-            padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-          }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 20 }}>
-              <i className="bi bi-cash-stack" style={{ marginRight: 8, color: '#4f46e5' }} />
-              Coûts d'intervention
-            </h2>
-
-            {/* Summary cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-              {[
-                { label: 'Coût temps total', value: fmt(totalTime), icon: 'bi-clock', bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' },
-                { label: 'Coût fixe total', value: fmt(totalFixed), icon: 'bi-receipt', bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
-                { label: 'Coût total', value: fmt(total), icon: 'bi-wallet2', bg: '#eef2ff', border: '#c7d2fe', color: '#4338ca' },
-              ].map(card => (
-                <div key={card.label} style={{ background: card.bg, border: `1px solid ${card.border}`, borderRadius: 12, padding: '14px 16px' }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: card.color, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <i className={`bi ${card.icon}`} />{card.label}
-                  </p>
-                  <p style={{ fontSize: 20, fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Duration summary */}
-            <div style={{ background: '#fafafa', border: '1px solid #f1f5f9', borderRadius: 10, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="bi bi-hourglass-split" style={{ color: '#6366f1' }} />
-              Durée totale d'intervention : <strong style={{ color: '#1e293b', marginLeft: 4 }}>{fmtDuration(totalDuration)}</strong>
-            </div>
-
-            {/* Detail table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    {['Libellé', 'Date début', 'Durée', 'Coût temps', 'Coût fixe', 'Sous-total'].map(h => (
-                      <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Libellé' || h === 'Date début' ? 'left' : 'right', fontWeight: 600, color: '#64748b', fontSize: 11, letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {costs.map((c, i) => (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                      <td style={{ padding: '10px 14px', color: '#1e293b', fontWeight: 500 }}>{c.name}</td>
-                      <td style={{ padding: '10px 14px', color: '#64748b' }}>{c.begin_date ?? '—'}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>{fmtDuration(c.actiontime)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1d4ed8', fontWeight: 500 }}>{fmt(c.cost_time)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#15803d', fontWeight: 500 }}>{fmt(c.cost_fixed)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#4338ca', fontWeight: 700 }}>{fmt(c.cost_time + c.cost_fixed)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: '#eef2ff', borderTop: '2px solid #c7d2fe' }}>
-                    <td colSpan={2} style={{ padding: '10px 14px', fontWeight: 700, color: '#4338ca', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.05em' }}>Total</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#4338ca' }}>{fmtDuration(totalDuration)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#4338ca' }}>{fmt(totalTime)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#4338ca' }}>{fmt(totalFixed)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#4338ca', fontSize: 15 }}>{fmt(total)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )
-      })()}
+      
+    
 
     </div>
   )
