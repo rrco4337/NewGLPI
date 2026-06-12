@@ -13,6 +13,7 @@ interface ItemRow {
   coutHoraire: number
   nouveauPrix: number
   total: number
+  totalSansHoraire: number
 }
 
 const fmt = (n: number) =>
@@ -77,6 +78,7 @@ export const ItemsCostList = () => {
             const coutHoraire = nbItems > 0 ? glpiCost.cost_time / nbItems : 0
             const nouveauPrix = nbItems > 0 ? nouveauPrixTotal / nbItems : 0
             const total = coutFixed + coutHoraire + nouveauPrix
+            const totalSansHoraire = coutFixed + nouveauPrix
 
             result.push({
               ticketId,
@@ -88,6 +90,7 @@ export const ItemsCostList = () => {
               coutHoraire,
               nouveauPrix,
               total,
+              totalSansHoraire,
             })
           }
         }
@@ -107,6 +110,7 @@ export const ItemsCostList = () => {
   if (error) return <div style={{ padding: 24, color: 'red' }}>Erreur : {error}</div>
 
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0)
+  const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
 
   return (
     <div style={{ padding: 24 }}>
@@ -133,6 +137,7 @@ export const ItemsCostList = () => {
                 <th>Coût horaire / item</th>
                 <th>Nouveau prix / item</th>
                 <th>Total / item</th>
+                <th>Total sans horaire / item</th>
               </tr>
             </thead>
             <tbody>
@@ -146,6 +151,7 @@ export const ItemsCostList = () => {
                   <td style={{ textAlign: 'right' }}>{fmt(row.coutHoraire)}</td>
                   <td style={{ textAlign: 'right' }}>{fmt(row.nouveauPrix)}</td>
                   <td style={{ textAlign: 'right' }}><strong>{fmt(row.total)}</strong></td>
+                  <td style={{ textAlign: 'right' }}><strong>{fmt(row.totalSansHoraire)}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -153,6 +159,7 @@ export const ItemsCostList = () => {
               <tr style={{ background: '#f0f0f0', fontWeight: 'bold' }}>
                 <td colSpan={7} style={{ textAlign: 'right' }}>Total général</td>
                 <td style={{ textAlign: 'right' }}>{fmt(grandTotal)}</td>
+                <td style={{ textAlign: 'right' }}>{fmt(grandTotalSansHoraire)}</td>
               </tr>
             </tfoot>
           </table>
