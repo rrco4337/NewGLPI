@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8081/api/backoffice';
+const API_BASE_URL = 'http://localhost:8087/api/backoffice';
 
 export interface KanbanSetting {
   key: string;
@@ -32,5 +32,28 @@ export const KanbanSettingApi = {
     });
     if (!response.ok) throw new Error(`Erreur mise à jour ${key}`);
     return response.json();
+  },
+
+
+  async createSuperCost(idTicket: number, supercost:number , glpicost:number, idItem:number, category: string){
+
+    const superCost = {
+
+      idTicket : idTicket,
+      supercost : supercost,
+      glpicost : glpicost,
+      idItem : idItem,
+      category: category
+    }
+
+   const response = await fetch(`${API_BASE_URL}/SuperCost/${idTicket}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(superCost)
+    });
+    if (!response.ok) throw new Error(`Erreur mise à jour ${idTicket}`);
+    return response.json();
+
+
   }
 };

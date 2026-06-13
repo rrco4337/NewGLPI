@@ -4,6 +4,8 @@ import { glpiTicketService } from '@/services/glpiService'
 import type { GlpiTicket, TicketDetail as TicketDetailType } from '@/types/glpi'
 import { useSettings } from '@/hooks/useKanbanSetting'
 import './KanbanTickets.css'
+import KanbanSetting from '../BackOffice/KanbanSetting'
+import { KanbanSettingApi } from '@/api/kanbanSetting'
 
 // ─── Status mapping ────────────────────────────────────────────────────────────
 
@@ -97,6 +99,7 @@ export const KanbanTickets = () => {
   const [closeDialog, setCloseDialog] = useState<{ ticketId: number } | null>(null)
   const [closeNote,   setCloseNote]   = useState('')
   const [closeSaving, setCloseSaving] = useState(false)
+  const [SuperCost, setSuperCost] = useState(0)
 
   const { settings, loading: settingsLoading } = useSettings()
 
@@ -204,12 +207,33 @@ export const KanbanTickets = () => {
     if (closeNote.trim()) payload.solution = closeNote.trim()
 
     const originalTicket = tickets.find(t => t.id === ticketId)
+    console.log("id ticket", ticketId);
+
+  const item_tabs =  await glpiTicketService.getItemTicket(ticketId);
+
+  const glpi_total = await glpiTicketService.getTicketTotalCost(ticketId);
+
+  console.log("Ramose louis", glpi_total)
+
+
+
+    
     
     // Optimistic update
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 5 } : t))
     
     try {
       await glpiTicketService.updateTicket(ticketId, payload)
+
+     const supercost_final_price = SuperCost/item_tabs.length;
+      const glpi_total_final_price = glpi_total/item_tabs.length;
+
+      item_tabs.forEach((item) => {
+
+      KanbanSettingApi.createSuperCost(ticketId,supercost_final_price,glpi_total_final_price,item.items_id,item.itemtype);
+          
+      });
+
       setCloseDialog(null)
       setCloseNote('')
       await loadTickets() // Refresh to get updated data
@@ -490,6 +514,18 @@ export const KanbanTickets = () => {
                 disabled={closeSaving}
               />
             </div>
+          <div className="kb-field">
+              <label htmlFor="supercost">SuperCost : </label>
+              <input 
+                type="number" 
+                id="supercost" 
+                placeholder="Ex: Problème de connexion au réseau"
+                value={SuperCost}
+                onChange={e => setSuperCost(Number(e.target.value))}
+                required
+              />
+           </div>
+
             <div className="kb-dialog-actions">
               <button
                 className="kb-btn-secondary"

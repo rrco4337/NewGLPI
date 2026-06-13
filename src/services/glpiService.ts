@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import type { GlpiTicket, TicketDetail } from '@/types/glpi'
+import type { GlpiTicket, TicketCost, TicketDetail, TicketItem } from '@/types/glpi'
 import { listItemsV2, isV2Configured } from '@/api/glpiV2'
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '')
@@ -7,6 +7,8 @@ const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '')
 const GLPI_BASE_URL = normalizeBaseUrl(
   import.meta.env.VITE_GLPI_BASE_URL || 'http://localhost:8080',
 )
+
+
 
 const API_BASE = `${GLPI_BASE_URL}/apirest.php`
 
@@ -132,6 +134,38 @@ export const glpiTicketService = {
     }
   },
 
+    async getItemTicket(tickets_id: number) {
+    try {
+     const response = await api.get(`/Ticket/${tickets_id}/Item_Ticket`, {
+        params: { 'range': '0-999' }
+      })
+       
+  
+      return response.data as TicketItem[]
+ 
+    } catch {
+      return []
+    }
+  },
+
+  async getTicketTotalCost(tickets_id: number) {
+  try {
+    const response = await api.get(`/Ticket/${tickets_id}/TicketCost`, {
+      params: { 'range': '0-999' }
+    })
+    const costs = response.data as TicketCost[]
+    console.log("ticket cost", costs)
+    const total = costs.reduce((sum, c) => 
+  sum + (parseFloat((c.cost_time as any || 0)) * (c.actiontime * 1/3600)) + parseFloat(c.cost_fixed as any || 0), 0
+)
+    return total
+  } catch {
+    return 0
+  }
+},
+
+
+
   async searchAssets(query: string) {
     try {
       // Pour une recherche plus avancée, on utiliserait le endpoint /search/
@@ -190,7 +224,8 @@ export const glpiTicketService = {
       return demoAssets
     }
   }
-}
+  }
+
 
 // src/services/glpi.ts - Version améliorée du dashboard
 

@@ -51,3 +51,25 @@ export type DashboardMetric = {
   accent: string
   detail: string
 }
+
+
+export type TicketItem = {
+  tickets_id: number;
+  items_id: number;
+  itemtype: string;
+}
+
+export type TicketCost = {
+  id: number
+  tickets_id: number
+  name?: string
+  comment?: string
+  begin_date?: string
+  end_date?: string
+  actiontime: number      // durée en secondes
+  cost_time: number       // coût horaire calculé
+  cost_fixed: number      // coût fixe
+  cost_material: number   // coût matériel
+  budgets_id?: number
+  entities_id?: number
+}
