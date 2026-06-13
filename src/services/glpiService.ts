@@ -317,6 +317,18 @@ async setTicketCosts(ticketId: number, timeCost?: number, fixedCost?: number, du
     }
   },
 
+  async getTicketLinkedItems(ticketId: number): Promise<{ itemtype: string; itemsId: number }[]> {
+    try {
+      const res = await api.get('/Item_Ticket?range=0-9999')
+      if (!Array.isArray(res.data)) return []
+      return (res.data as any[])
+        .filter(i => Number(i.tickets_id) === ticketId)
+        .map(i => ({ itemtype: String(i.itemtype), itemsId: Number(i.items_id) }))
+    } catch {
+      return []
+    }
+  },
+
   async associateItemToTicket(tickets_id: number, itemtype: string, items_id: number) {
     try {
       const response = await api.post('/Item_Ticket', {

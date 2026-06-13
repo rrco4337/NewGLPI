@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { glpiTicketService } from '@/services/glpiService'
 import type { GlpiTicket, TicketDetail as TicketDetailType } from '@/types/glpi'
 import { useSettings } from '@/hooks/useKanbanSetting'
-import { KanbanSettingApi } from '@/api/kanbanSetting'
+import { ItemSuperCostApi } from '@/api/itemSuperCost'
 import './KanbanTickets.css'
 
 // ─── Status mapping ────────────────────────────────────────────────────────────
@@ -100,6 +100,11 @@ export const KanbanTickets = () => {
   const [superCost,   setSuperCost]   = useState('')
   const [closeSaving, setCloseSaving] = useState(false)
 
+  // Reopen dialog (closed → in progress)
+  const [reopenDialog,  setReopenDialog]  = useState<{ ticketId: number; prevStatus: string | number; previousSuperCost: number } | null>(null)
+  const [reopenPct,     setReopenPct]     = useState('')
+  const [reopenSaving,  setReopenSaving]  = useState(false)
+
   const { settings, loading: settingsLoading } = useSettings()
   const [useMalagasy, setUseMalagasy] = useState(false)
   // ── Load tickets ──────────────────────────────────────────────────────────────
@@ -184,6 +189,12 @@ export const KanbanTickets = () => {
       return
     }
 
+    if (fromCol === 'closed' && toCol === 'progress') {
+      const prevSuperCost = await ItemSuperCostApi.getLastBatchTotal(id).catch(() => 0)
+      setReopenDialog({ ticketId: id, prevStatus: ticket.status, previousSuperCost: prevSuperCost })
+      return
+    }
+
     const newStatus = getTargetStatus(toCol, ticket.status)
     
     // Optimistic update
@@ -219,11 +230,15 @@ export const KanbanTickets = () => {
         await glpiTicketService.updateTicket(ticketId, { status: 5 })
       }
 
-      // Sauvegarder le super cost si renseigné (indépendant — échec non bloquant)
+      // Sauvegarder le supercost dans les tables dédiées (réparti par item tracké)
       const superCostValue = parseFloat(superCost)
-      if (!isNaN(superCostValue) && superCostValue >= 0) {
+      if (!isNaN(superCostValue) && superCostValue > 0) {
         try {
-          await KanbanSettingApi.saveSuperCost(ticketId, superCostValue)
+          const linkedItems = await glpiTicketService.getTicketLinkedItems(ticketId)
+          const { saved } = await ItemSuperCostApi.addSuperCost(ticketId, superCostValue, linkedItems)
+          if (saved === 0) {
+            setError('Attention : aucun équipement suivi (Computer, Monitor, Phone) lié — coût non enregistré.')
+          }
         } catch (costErr) {
           console.error('Failed to save super cost:', costErr)
         }
@@ -247,6 +262,53 @@ export const KanbanTickets = () => {
     setCloseDialog(null)
     setCloseNote('')
     setSuperCost('')
+  }
+
+  const cancelReopenDialog = () => {
+    setReopenDialog(null)
+    setReopenPct('')
+  }
+
+  const handleReopenAnnulation = async () => {
+    if (!reopenDialog) return
+    setReopenSaving(true)
+    const { ticketId, prevStatus } = reopenDialog
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 2 } : t))
+    try {
+      await glpiTicketService.updateTicket(ticketId, { status: 2 })
+      // Supprime le dernier batch de supercost (ne touche pas les reopen costs)
+      await ItemSuperCostApi.cancelLastBatch(ticketId)
+      setReopenDialog(null)
+      setReopenPct('')
+    } catch (err) {
+      console.error('Failed to reopen ticket:', err)
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: prevStatus } : t))
+      setError('Erreur lors de la réouverture du ticket.')
+    } finally {
+      setReopenSaving(false)
+    }
+  }
+
+  const handleReopenWithPct = async () => {
+    if (!reopenDialog) return
+    const pct = parseFloat(reopenPct)
+    if (isNaN(pct) || pct < 0) return
+    setReopenSaving(true)
+    const { ticketId, prevStatus } = reopenDialog
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 2 } : t))
+    try {
+      await glpiTicketService.updateTicket(ticketId, { status: 2 })
+      // Le backend calcule pct% du dernier batch et stocke dans ticket_reopen_costs
+      await ItemSuperCostApi.addReopenCost(ticketId, pct)
+      setReopenDialog(null)
+      setReopenPct('')
+    } catch (err) {
+      console.error('Failed to reopen ticket with cost:', err)
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: prevStatus } : t))
+      setError('Erreur lors de la réouverture du ticket.')
+    } finally {
+      setReopenSaving(false)
+    }
   }
 
   // ── Create ticket ─────────────────────────────────────────────────────────────
@@ -557,6 +619,79 @@ const getColumnConfig = () => {
                 ) : (
                   'Confirmer la clôture'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reopen Dialog (closed → in progress) ────────────────────────────── */}
+      {reopenDialog && (
+        <div className="kb-overlay" onClick={() => { if (!reopenSaving) cancelReopenDialog() }}>
+          <div className="kb-dialog" onClick={e => e.stopPropagation()}>
+            <div className="kb-dialog-header">
+              <i className="bi bi-arrow-counterclockwise" style={{ color: '#f59e0b' }} />
+              <h3>Réouverture du ticket #{reopenDialog.ticketId}</h3>
+            </div>
+            <p className="kb-dialog-desc">
+              Ce ticket était <strong>Clôturé</strong>. Il va revenir en <strong>In Progress</strong>.
+              Choisissez comment gérer le Super Cost associé.
+            </p>
+            {reopenDialog.previousSuperCost > 0 && (
+              <p className="kb-dialog-desc">
+                Super Cost précédent :{' '}
+                <strong style={{ color: '#1e293b' }}>
+                  {reopenDialog.previousSuperCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                </strong>
+              </p>
+            )}
+            <div className="kb-field">
+              <label>% Réouverture (calcul sur le Super Cost précédent)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={reopenPct}
+                onChange={e => setReopenPct(e.target.value)}
+                placeholder="Ex : 50 → 50% du coût précédent"
+                disabled={reopenSaving}
+              />
+              {reopenPct !== '' && !isNaN(parseFloat(reopenPct)) && (
+                <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
+                  Frais de réouverture :{' '}
+                  <strong>
+                    {(reopenDialog.previousSuperCost * parseFloat(reopenPct) / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </strong>
+                  {' '}(le Super Cost de base reste inchangé)
+                </small>
+              )}
+            </div>
+            <div className="kb-dialog-actions">
+              <button
+                className="kb-btn-secondary"
+                onClick={cancelReopenDialog}
+                disabled={reopenSaving}
+              >
+                Fermer
+              </button>
+              <button
+                className="kb-btn-warning"
+                onClick={() => void handleReopenAnnulation()}
+                disabled={reopenSaving}
+                title="Remet le ticket en cours et efface le Super Cost"
+              >
+                {reopenSaving
+                  ? <><i className="bi bi-arrow-repeat kb-spin" /> Traitement…</>
+                  : 'Annulation (effacer le coût)'}
+              </button>
+              <button
+                className="kb-btn-primary"
+                onClick={() => void handleReopenWithPct()}
+                disabled={reopenSaving || reopenPct.trim() === '' || isNaN(parseFloat(reopenPct))}
+              >
+                {reopenSaving
+                  ? <><i className="bi bi-arrow-repeat kb-spin" /> Traitement…</>
+                  : 'Réouvrir avec ce %'}
               </button>
             </div>
           </div>

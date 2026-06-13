@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { glpiTicketService } from '@/services/glpiService'
-import { KanbanSettingApi } from '@/api/kanbanSetting'
+import { ItemSuperCostApi } from '@/api/itemSuperCost'
 import type { GlpiTicket } from '@/types/glpi'
+import './ItemsCostList.css'
 
-interface ItemRow {
-  ticketId: number
-  ticketName: string
-  items: { itemtype: string; items_id: number }[]
-  nbItems: number
+interface ItemTypeRow {
+  itemtype: string
+  tickets: { ticketId: number; ticketName: string; items_id: number }[]
   coutFixed: number
   coutHoraire: number
   nouveauPrix: number
+  fraisReouverture: number
   total: number
   totalSansHoraire: number
 }
@@ -19,7 +19,7 @@ const fmt = (n: number) =>
   n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
 
 export const ItemsCostList = () => {
-  const [rows, setRows] = useState<ItemRow[]>([])
+  const [rows, setRows] = useState<ItemTypeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,14 +28,15 @@ export const ItemsCostList = () => {
       setLoading(true)
       setError(null)
       try {
-        const [bulk, settingsMap] = await Promise.all([
+        // Données GLPI (coûts horaires/fixes) + données SQLite (supercost/reopen) en parallèle
+        const [bulk, summaries] = await Promise.all([
           glpiTicketService.listItemsCosts(),
-          KanbanSettingApi.getSettingsMap(),
+          ItemSuperCostApi.getItemCostSummaries(),
         ])
 
         const { tickets, costs, items } = bulk
 
-        // Lookup: ticketId → coût fixe total + coût horaire total (taux × heures par entrée)
+        // Coûts GLPI par ticket
         const costByTicket = new Map<number, { cost_fixed: number; cost_time: number }>()
         for (const c of costs) {
           const existing = costByTicket.get(c.tickets_id) ?? { cost_fixed: 0, cost_time: 0 }
@@ -44,49 +45,78 @@ export const ItemsCostList = () => {
           costByTicket.set(c.tickets_id, existing)
         }
 
-        // Lookup: ticketId → nouveau prix (SQLite)
-        const sqlitePriceByTicket = new Map<number, number>()
-        for (const [key, value] of Object.entries(settingsMap)) {
-          const match = key.match(/^ticket_super_cost_(\d+)$/)
-          if (match) {
-            sqlitePriceByTicket.set(Number(match[1]), parseFloat(value) || 0)
-          }
-        }
-
-        // Lookup: ticketId → liste des items liés
+        // Items GLPI par ticket
         const itemsByTicket = new Map<number, typeof items>()
         for (const item of items) {
           if (!itemsByTicket.has(item.tickets_id)) itemsByTicket.set(item.tickets_id, [])
           itemsByTicket.get(item.tickets_id)!.push(item)
         }
 
-        // Lookup: ticketId → ticket
         const ticketById = new Map<number, GlpiTicket>()
         for (const t of tickets) ticketById.set(t.id, t)
 
-        // Construire les lignes : une ligne par ticket
-        const result: ItemRow[] = []
+        // Construire les lignes groupées par itemtype (coûts GLPI uniquement ici)
+        const byItemtype = new Map<string, ItemTypeRow>()
         for (const [ticketId, ticketItems] of itemsByTicket.entries()) {
           const ticket = ticketById.get(ticketId)
           const glpiCost = costByTicket.get(ticketId) ?? { cost_fixed: 0, cost_time: 0 }
-          const nouveauPrix = sqlitePriceByTicket.get(ticketId) ?? 0
-          const total = glpiCost.cost_fixed + glpiCost.cost_time + nouveauPrix
-          const totalSansHoraire = glpiCost.cost_fixed + nouveauPrix
+          const nbItems = ticketItems.length
 
-          result.push({
-            ticketId,
-            ticketName: ticket?.name || `Ticket #${ticketId}`,
-            items: ticketItems.map(i => ({ itemtype: i.itemtype, items_id: i.items_id })),
-            nbItems: ticketItems.length,
-            coutFixed: glpiCost.cost_fixed,
-            coutHoraire: glpiCost.cost_time,
-            nouveauPrix,
-            total,
-            totalSansHoraire,
-          })
+          for (const item of ticketItems) {
+            const coutFixed = nbItems > 0 ? glpiCost.cost_fixed / nbItems : 0
+            const coutHoraire = nbItems > 0 ? glpiCost.cost_time / nbItems : 0
+
+            if (!byItemtype.has(item.itemtype)) {
+              byItemtype.set(item.itemtype, {
+                itemtype: item.itemtype,
+                tickets: [],
+                coutFixed: 0,
+                coutHoraire: 0,
+                nouveauPrix: 0,
+                fraisReouverture: 0,
+                total: 0,
+                totalSansHoraire: 0,
+              })
+            }
+            const row = byItemtype.get(item.itemtype)!
+            row.tickets.push({
+              ticketId,
+              ticketName: ticket?.name || `Ticket #${ticketId}`,
+              items_id: item.items_id,
+            })
+            row.coutFixed += coutFixed
+            row.coutHoraire += coutHoraire
+          }
         }
 
-        result.sort((a, b) => b.ticketId - a.ticketId)
+        // Fusionner avec les supercosts/reopen de la base SQLite
+        for (const s of summaries) {
+          if (!byItemtype.has(s.itemtype)) {
+            byItemtype.set(s.itemtype, {
+              itemtype: s.itemtype,
+              tickets: [],
+              coutFixed: 0,
+              coutHoraire: 0,
+              nouveauPrix: 0,
+              fraisReouverture: 0,
+              total: 0,
+              totalSansHoraire: 0,
+            })
+          }
+          const row = byItemtype.get(s.itemtype)!
+          row.nouveauPrix = s.superCost
+          row.fraisReouverture = s.reopenCost
+        }
+
+        // Calculer les totaux après fusion
+        for (const row of byItemtype.values()) {
+          row.total = row.coutFixed + row.coutHoraire + row.nouveauPrix + row.fraisReouverture
+          row.totalSansHoraire = row.coutFixed + row.nouveauPrix + row.fraisReouverture
+        }
+
+        const result = Array.from(byItemtype.values()).sort((a, b) =>
+          a.itemtype.localeCompare(b.itemtype)
+        )
         setRows(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur lors du chargement')
@@ -97,64 +127,67 @@ export const ItemsCostList = () => {
     void load()
   }, [])
 
-  if (loading) return <div style={{ padding: 24 }}>Chargement...</div>
-  if (error) return <div style={{ padding: 24, color: 'red' }}>Erreur : {error}</div>
+  if (loading) return <div className="items-cost-loading">Chargement...</div>
+  if (error) return <div className="items-cost-error">Erreur : {error}</div>
 
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0)
   const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2>Coûts par items</h2>
+    <div className="items-cost-page">
+      <div className="items-cost-header">
+        <h2>Coûts par type d'item</h2>
+        {rows.length > 0 && (
+          <p>Total général : <strong>{fmt(grandTotal)}</strong> — {rows.length} type(s) d'item</p>
+        )}
+      </div>
 
       {rows.length === 0 ? (
-        <p>Aucun item avec coût trouvé.</p>
+        <p className="items-cost-empty">Aucun item avec coût trouvé.</p>
       ) : (
-        <>
-          <p>Total général : <strong>{fmt(grandTotal)}</strong> — {rows.length} ticket(s)</p>
-          <table
-            border={1}
-            cellPadding={6}
-            cellSpacing={0}
-            style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}
-          >
+        <div className="items-cost-table-container">
+          <table className="items-cost-table">
             <thead>
-              <tr style={{ background: '#f0f0f0' }}>
-                <th>Ticket</th>
-                <th>Items liés</th>
-                <th>Nb items</th>
-                <th>Coût fixe</th>
-                <th>Coût horaire</th>
-                <th>Nouveau prix</th>
-                <th>Total</th>
-                <th>Total sans horaire</th>
+              <tr>
+                <th>Type item</th>
+                <th>Tickets concernés</th>
+                <th style={{ textAlign: 'right' }}>Coût fixe</th>
+                <th style={{ textAlign: 'right' }}>Coût horaire</th>
+                <th style={{ textAlign: 'right' }}>Nouveau prix</th>
+                <th style={{ textAlign: 'right' }}>Frais de réouverture</th>
+                <th style={{ textAlign: 'right' }}>Total</th>
+                <th style={{ textAlign: 'right' }}>Total sans horaire</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
-                  <td>#{row.ticketId} — {row.ticketName}</td>
-                  <td style={{ fontSize: 11 }}>
-                    {row.items.map(it => `${it.itemtype} #${it.items_id}`).join(', ')}
+                  <td className="items-cost-itemtype">{row.itemtype}</td>
+                  <td>
+                    {row.tickets.map((t, j) => (
+                      <div key={j} className="items-cost-ticket-line">
+                        #{t.ticketId} — {t.ticketName} (item #{t.items_id})
+                      </div>
+                    ))}
                   </td>
-                  <td style={{ textAlign: 'center' }}>{row.nbItems}</td>
-                  <td style={{ textAlign: 'right' }}>{fmt(row.coutFixed)}</td>
-                  <td style={{ textAlign: 'right' }}>{fmt(row.coutHoraire)}</td>
-                  <td style={{ textAlign: 'right' }}>{fmt(row.nouveauPrix)}</td>
-                  <td style={{ textAlign: 'right' }}><strong>{fmt(row.total)}</strong></td>
-                  <td style={{ textAlign: 'right' }}><strong>{fmt(row.totalSansHoraire)}</strong></td>
+                  <td className="items-cost-amount">{fmt(row.coutFixed)}</td>
+                  <td className="items-cost-amount">{fmt(row.coutHoraire)}</td>
+                  <td className="items-cost-amount">{fmt(row.nouveauPrix)}</td>
+                  <td className="items-cost-amount">{fmt(row.fraisReouverture)}</td>
+                  <td className="items-cost-amount total">{fmt(row.total)}</td>
+                  <td className="items-cost-amount total">{fmt(row.totalSansHoraire)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ background: '#f0f0f0', fontWeight: 'bold' }}>
+              <tr>
                 <td colSpan={6} style={{ textAlign: 'right' }}>Total général</td>
-                <td style={{ textAlign: 'right' }}>{fmt(grandTotal)}</td>
-                <td style={{ textAlign: 'right' }}>{fmt(grandTotalSansHoraire)}</td>
+                <td className="items-cost-amount total">{fmt(grandTotal)}</td>
+                <td className="items-cost-amount total">{fmt(grandTotalSansHoraire)}</td>
               </tr>
             </tfoot>
           </table>
-        </>
+        </div>
       )}
     </div>
   )

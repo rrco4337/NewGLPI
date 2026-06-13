@@ -1,0 +1,425 @@
+================================================================================
+DOCUMENTATION D'IMPLÉMENTATION
+Fonctionnalité : Réouverture d'un ticket Clôturé → In Progress (avec gestion SuperCost)
+Date           : 2026-06-12
+Branche        : ATO-Tsika-no-miasa
+================================================================================
+
+OBJECTIF
+--------
+Lorsqu'un ticket à l'état "Closed" est drag-and-droppé vers la colonne "In Progress"
+dans le Kanban Front Office, afficher un dialog proposant 2 choix :
+
+  1. Bouton "Annulation (effacer le coût)" :
+     → Remet le ticket en In Progress (status 2)
+     → Efface (remet à 0) le Super Cost précédemment enregistré pour ce ticket
+
+  2. Champ "% Réouverture" + bouton "Réouvrir avec ce %" :
+     → L'utilisateur saisit un pourcentage (ex: 50)
+     → Le nouveau Super Cost = SuperCost précédent × (pourcentage / 100)
+     → Remet le ticket en In Progress (status 2)
+     → Sauvegarde le nouveau Super Cost calculé
+
+Le bouton "Fermer" (gris) ferme le dialog sans effectuer aucun changement.
+
+
+FICHIERS MODIFIÉS
+-----------------
+1. src/api/kanbanSetting.ts
+2. src/pages/FrontOffice/KanbanTickets.tsx
+3. src/pages/FrontOffice/KanbanTickets.css
+
+
+================================================================================
+FICHIER 1 : src/api/kanbanSetting.ts
+================================================================================
+
+LIGNES IMPACTÉES : 38-56 (ajout après la méthode saveSuperCost existante)
+
+AVANT (ligne 38-41) :
+─────────────────────
+  // Sauvegarder le super cost d'un ticket clôturé
+  async saveSuperCost(ticketId: number, amount: number): Promise<void> {
+    await this.updateSetting(`ticket_super_cost_${ticketId}`, String(amount));
+  }
+};
+
+APRÈS :
+───────
+  // Sauvegarder le super cost d'un ticket clôturé
+  async saveSuperCost(ticketId: number, amount: number): Promise<void> {
+    await this.updateSetting(`ticket_super_cost_${ticketId}`, String(amount));
+  },
+
+  // Récupérer le super cost d'un ticket
+  async getSuperCost(ticketId: number): Promise<number> {
+    const map = await this.getSettingsMap();
+    return parseFloat(map[`ticket_super_cost_${ticketId}`] ?? '0') || 0;
+  },
+
+  // Effacer le super cost d'un ticket (remise à 0)
+  async clearSuperCost(ticketId: number): Promise<void> {
+    await this.updateSetting(`ticket_super_cost_${ticketId}`, '0');
+  },
+};
+
+EXPLICATION :
+  - getSuperCost() : appelle getSettingsMap() (existant) et extrait la clé
+    ticket_super_cost_<ticketId>. Retourne 0 si absent ou invalide.
+  - clearSuperCost() : réutilise updateSetting() (existant) pour remettre la
+    valeur à '0'. L'API backend fait un upsert (crée si absent, met à jour sinon).
+  - La virgule a été ajoutée après saveSuperCost pour fermer l'objet correctement.
+
+DÉPENDANCES : aucune nouvelle dépendance.
+
+
+================================================================================
+FICHIER 2 : src/pages/FrontOffice/KanbanTickets.tsx
+================================================================================
+
+────────────────────────────────────────────────────
+MODIFICATION A : Ajout des états pour le dialog de réouverture
+LIGNES CONCERNÉES : ~98-107 (après les états du close dialog)
+────────────────────────────────────────────────────
+
+AVANT :
+  // Close dialog
+  const [closeDialog, setCloseDialog] = useState<{ ticketId: number } | null>(null)
+  const [closeNote,   setCloseNote]   = useState('')
+  const [superCost,   setSuperCost]   = useState('')
+  const [closeSaving, setCloseSaving] = useState(false)
+
+APRÈS :
+  // Close dialog
+  const [closeDialog, setCloseDialog] = useState<{ ticketId: number } | null>(null)
+  const [closeNote,   setCloseNote]   = useState('')
+  const [superCost,   setSuperCost]   = useState('')
+  const [closeSaving, setCloseSaving] = useState(false)
+
+  // Reopen dialog (closed → in progress)
+  const [reopenDialog,  setReopenDialog]  = useState<{ ticketId: number; prevStatus: string | number; previousSuperCost: number } | null>(null)
+  const [reopenPct,     setReopenPct]     = useState('')
+  const [reopenSaving,  setReopenSaving]  = useState(false)
+
+EXPLICATION :
+  - reopenDialog stocke l'id du ticket, son status précédent (pour rollback),
+    et le Super Cost précédent récupéré depuis l'API.
+  - reopenPct : valeur du champ pourcentage (string pour compatibilité input).
+  - reopenSaving : indicateur de chargement pendant les appels API.
+
+
+────────────────────────────────────────────────────
+MODIFICATION B : Interception dans handleDrop
+LIGNES CONCERNÉES : ~182-205 (dans la fonction handleDrop)
+────────────────────────────────────────────────────
+
+AVANT (après le bloc "if (toCol === 'closed')") :
+    if (toCol === 'closed') {
+      setCloseDialog({ ticketId: id })
+      return
+    }
+
+    const newStatus = getTargetStatus(toCol, ticket.status)
+
+APRÈS :
+    if (toCol === 'closed') {
+      setCloseDialog({ ticketId: id })
+      return
+    }
+
+    if (fromCol === 'closed' && toCol === 'progress') {
+      try {
+        const prevSuperCost = await KanbanSettingApi.getSuperCost(id)
+        setReopenDialog({ ticketId: id, prevStatus: ticket.status, previousSuperCost: prevSuperCost })
+      } catch {
+        setReopenDialog({ ticketId: id, prevStatus: ticket.status, previousSuperCost: 0 })
+      }
+      return
+    }
+
+    const newStatus = getTargetStatus(toCol, ticket.status)
+
+EXPLICATION :
+  - Quand on drag un ticket de "closed" vers "progress", on intercepte avant
+    de mettre à jour le status.
+  - On charge le Super Cost précédent via getSuperCost().
+  - En cas d'erreur réseau, on affiche quand même le dialog avec 0.
+  - Le bloc "return" empêche le changement de status immédiat.
+  - La migration closed → new reste inchangée (pas d'interception).
+
+
+────────────────────────────────────────────────────
+MODIFICATION C : Handlers de réouverture
+LIGNES CONCERNÉES : après cancelCloseDialog()
+────────────────────────────────────────────────────
+
+CODE AJOUTÉ :
+
+  const cancelReopenDialog = () => {
+    setReopenDialog(null)
+    setReopenPct('')
+  }
+
+  const handleReopenAnnulation = async () => {
+    if (!reopenDialog) return
+    setReopenSaving(true)
+    const { ticketId, prevStatus } = reopenDialog
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 2 } : t))
+    try {
+      await glpiTicketService.updateTicket(ticketId, { status: 2 })
+      await KanbanSettingApi.clearSuperCost(ticketId)
+      setReopenDialog(null)
+      setReopenPct('')
+    } catch (err) {
+      console.error('Failed to reopen ticket:', err)
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: prevStatus } : t))
+      setError('Erreur lors de la réouverture du ticket.')
+    } finally {
+      setReopenSaving(false)
+    }
+  }
+
+  const handleReopenWithPct = async () => {
+    if (!reopenDialog) return
+    const pct = parseFloat(reopenPct)
+    if (isNaN(pct) || pct < 0) return
+    setReopenSaving(true)
+    const { ticketId, prevStatus, previousSuperCost } = reopenDialog
+    const newCost = previousSuperCost * (pct / 100)
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 2 } : t))
+    try {
+      await glpiTicketService.updateTicket(ticketId, { status: 2 })
+      await KanbanSettingApi.saveSuperCost(ticketId, newCost)
+      setReopenDialog(null)
+      setReopenPct('')
+    } catch (err) {
+      console.error('Failed to reopen ticket with cost:', err)
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: prevStatus } : t))
+      setError('Erreur lors de la réouverture du ticket.')
+    } finally {
+      setReopenSaving(false)
+    }
+  }
+
+EXPLICATION :
+  - cancelReopenDialog() : ferme le dialog sans rien faire (Fermer).
+  - handleReopenAnnulation() :
+      * Mise à jour optimiste → status 2
+      * updateTicket(status: 2) → GLPI
+      * clearSuperCost() → remet le Super Cost à 0 dans SQLite
+      * Rollback si erreur API
+  - handleReopenWithPct() :
+      * Calcule newCost = previousSuperCost × (pct / 100)
+      * Mise à jour optimiste → status 2
+      * updateTicket(status: 2) → GLPI
+      * saveSuperCost(newCost) → SQLite
+      * Rollback si erreur API
+
+
+────────────────────────────────────────────────────
+MODIFICATION D : JSX du dialog de réouverture
+POSITION : Dans le return(), juste avant le bloc "Create Ticket Modal"
+────────────────────────────────────────────────────
+
+CODE AJOUTÉ :
+
+      {/* ── Reopen Dialog (closed → in progress) ────────────────────────────── */}
+      {reopenDialog && (
+        <div className="kb-overlay" onClick={() => { if (!reopenSaving) cancelReopenDialog() }}>
+          <div className="kb-dialog" onClick={e => e.stopPropagation()}>
+            <div className="kb-dialog-header">
+              <i className="bi bi-arrow-counterclockwise" style={{ color: '#f59e0b' }} />
+              <h3>Réouverture du ticket #{reopenDialog.ticketId}</h3>
+            </div>
+            <p className="kb-dialog-desc">
+              Ce ticket était <strong>Clôturé</strong>. Il va revenir en <strong>In Progress</strong>.
+              Choisissez comment gérer le Super Cost associé.
+            </p>
+            {reopenDialog.previousSuperCost > 0 && (
+              <p className="kb-dialog-desc">
+                Super Cost précédent :{' '}
+                <strong style={{ color: '#1e293b' }}>
+                  {reopenDialog.previousSuperCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                </strong>
+              </p>
+            )}
+            <div className="kb-field">
+              <label>% Réouverture (calcul sur le Super Cost précédent)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={reopenPct}
+                onChange={e => setReopenPct(e.target.value)}
+                placeholder="Ex : 50 → 50% du coût précédent"
+                disabled={reopenSaving}
+              />
+              {reopenPct !== '' && !isNaN(parseFloat(reopenPct)) && (
+                <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
+                  Nouveau Super Cost :{' '}
+                  <strong>
+                    {(reopenDialog.previousSuperCost * parseFloat(reopenPct) / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </strong>
+                </small>
+              )}
+            </div>
+            <div className="kb-dialog-actions">
+              <button
+                className="kb-btn-secondary"
+                onClick={cancelReopenDialog}
+                disabled={reopenSaving}
+              >
+                Fermer
+              </button>
+              <button
+                className="kb-btn-warning"
+                onClick={() => void handleReopenAnnulation()}
+                disabled={reopenSaving}
+                title="Remet le ticket en cours et efface le Super Cost"
+              >
+                {reopenSaving
+                  ? <><i className="bi bi-arrow-repeat kb-spin" /> Traitement…</>
+                  : 'Annulation (effacer le coût)'}
+              </button>
+              <button
+                className="kb-btn-primary"
+                onClick={() => void handleReopenWithPct()}
+                disabled={reopenSaving || reopenPct.trim() === '' || isNaN(parseFloat(reopenPct))}
+              >
+                {reopenSaving
+                  ? <><i className="bi bi-arrow-repeat kb-spin" /> Traitement…</>
+                  : 'Réouvrir avec ce %'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+EXPLICATION :
+  - Clic sur l'overlay → ferme le dialog (si pas en cours de sauvegarde)
+  - Clic sur la div interne → stopPropagation() pour ne pas fermer
+  - Le Super Cost précédent n'est affiché que s'il est > 0
+  - Le champ % affiche en temps réel le nouveau coût calculé
+  - Bouton "Réouvrir avec ce %" est désactivé tant que le champ est vide ou invalide
+
+
+================================================================================
+FICHIER 3 : src/pages/FrontOffice/KanbanTickets.css
+================================================================================
+
+LIGNES CONCERNÉES : après .kb-btn-secondary:disabled (ligne ~567)
+
+CODE AJOUTÉ :
+
+.kb-btn-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1.5px solid #fcd34d;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.kb-btn-warning:hover:not(:disabled) { background: #fde68a; color: #78350f; }
+.kb-btn-warning:disabled { opacity: 0.5; cursor: not-allowed; }
+
+EXPLICATION :
+  - Bouton ambre/orange pour distinguer visuellement l'action destructive
+    (effacement du coût) du bouton de confirmation (indigo) et d'annulation (gris).
+  - Suit exactement le pattern de .kb-btn-secondary existant.
+
+
+================================================================================
+ORDRE D'EXÉCUTION DES MODIFICATIONS
+================================================================================
+
+1. Modifier src/api/kanbanSetting.ts (ajouter getSuperCost + clearSuperCost)
+2. Modifier src/pages/FrontOffice/KanbanTickets.tsx :
+   a. Ajouter les 3 états (reopenDialog, reopenPct, reopenSaving)
+   b. Ajouter l'interception dans handleDrop (fromCol === 'closed' && toCol === 'progress')
+   c. Ajouter les 3 handlers (cancelReopenDialog, handleReopenAnnulation, handleReopenWithPct)
+   d. Ajouter le JSX du dialog dans le return()
+3. Modifier src/pages/FrontOffice/KanbanTickets.css (ajouter .kb-btn-warning)
+
+
+================================================================================
+ÉTAPES DE TEST BOUT EN BOUT
+================================================================================
+
+PRÉ-REQUIS
+----------
+- Backend en cours d'exécution sur http://localhost:8087
+- Au moins un ticket existant à l'état "Closed" (status 5 ou 6)
+- Ce ticket doit avoir eu un Super Cost enregistré lors de sa clôture
+
+ÉTAPE 1 — Vérifier qu'un ticket fermé avec Super Cost existe
+  → Ouvrir le Kanban (/kanban)
+  → Identifier un ticket dans la colonne "Closed"
+  → Si aucun : glisser un ticket de "New" ou "In Progress" vers "Closed",
+    saisir un Super Cost (ex: 200€), confirmer
+
+ÉTAPE 2 — Tester le chemin "Annulation (effacer le coût)"
+  → Glisser le ticket Closed vers la colonne "In Progress"
+  → Le dialog "Réouverture du ticket #X" doit s'ouvrir
+  → Vérifier l'affichage du Super Cost précédent (ex: 200,00 €)
+  → Cliquer sur "Annulation (effacer le coût)"
+  → Le ticket doit disparaître de "Closed" et apparaître dans "In Progress"
+  → Vérifier en base : GET /api/backoffice/settings
+    → ticket_super_cost_<id> doit valoir "0"
+
+ÉTAPE 3 — Tester le chemin "% Réouverture"
+  → Glisser le même ticket (maintenant In Progress) vers "Closed"
+  → Saisir Super Cost = 300€, confirmer
+  → Glisser à nouveau vers "In Progress"
+  → Le dialog apparaît avec "Super Cost précédent : 300,00 €"
+  → Saisir 50 dans le champ %
+  → Vérifier l'affichage en temps réel : "Nouveau Super Cost : 150,00 €"
+  → Cliquer "Réouvrir avec ce %"
+  → Le ticket passe en "In Progress"
+  → Vérifier en base : ticket_super_cost_<id> doit valoir "150"
+
+ÉTAPE 4 — Tester le bouton "Fermer"
+  → Glisser un ticket Closed vers In Progress
+  → Le dialog s'ouvre
+  → Cliquer "Fermer" (ou cliquer sur l'overlay)
+  → Le dialog se ferme, le ticket reste dans "Closed"
+  → Aucun changement en base
+
+ÉTAPE 5 — Tester le cas sans Super Cost précédent
+  → Glisser un ticket Closed qui n'a jamais eu de Super Cost vers In Progress
+  → Le dialog s'ouvre sans afficher de "Super Cost précédent"
+  → Bouton "Annulation" → ticket passe en In Progress, rien en base à effacer
+  → Ou saisir 50% → nouveau coût = 0 × 50/100 = 0€
+
+ÉTAPE 6 — Vérifier que la migration Closed → New reste inchangée
+  → Glisser un ticket Closed vers la colonne "New"
+  → Aucun dialog ne doit apparaître
+  → Le ticket doit directement passer en "New" (status 1)
+
+
+================================================================================
+POINTS D'ATTENTION
+================================================================================
+
+1. L'API backend /settings/{key} doit supporter un PUT sur une clé inexistante
+   (upsert). C'est le cas selon le comportement constaté pour saveSuperCost.
+
+2. Le calcul est : nouveau_coût = super_cost_précédent × (pourcentage / 100)
+   → 100% = même coût, 50% = demi-coût, 0% = 0€
+
+3. Le dialog de réouverture n'apparaît QUE pour Closed → In Progress.
+   Closed → New reste un changement direct sans dialog.
+
+4. En cas d'erreur API lors de la réouverture, un rollback optimiste est effectué
+   (le ticket reprend son status "closed" dans l'UI).
+
+5. Le champ % accepte des valeurs décimales (step="1" mais parseFloat accepte 50.5).
+
+================================================================================
