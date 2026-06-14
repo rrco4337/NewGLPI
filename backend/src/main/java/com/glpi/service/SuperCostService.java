@@ -1,5 +1,6 @@
 package com.glpi.service;
 
+import com.glpi.dto.SuperCostDto;
 import com.glpi.model.SuperCost;
 import com.glpi.repository.SuperCostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,10 @@ public class SuperCostService {
     public  SuperCost saveSuperCost(int idTicket, double supercostPrice, double glpicost, int idItem, String category ) {
        SuperCost supercost = new SuperCost(idTicket, supercostPrice, glpicost, idItem,category);
         return superCostRepository.save(supercost);
+    }
+
+    public List<SuperCostDto> getCostCloseResult(){
+        return superCostRepository.getCostCloseResult();
     }
     
    

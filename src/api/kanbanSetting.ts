@@ -5,6 +5,14 @@ export interface KanbanSetting {
   value: string;
 }
 
+export interface SuperCostList{
+  idTicket: number;
+  supercost: number;
+  glpicost: number;
+  category: string;
+
+}
+
 export const KanbanSettingApi = {
   // Récupérer tous les paramètres
   async getAllSettings(): Promise<KanbanSetting[]> {
@@ -55,5 +63,12 @@ export const KanbanSettingApi = {
     return response.json();
 
 
-  }
+  },
+
+  async getCostList(): Promise<SuperCostList[]> {
+    const response = await fetch(`${API_BASE_URL}/SuperCost`);
+    if (!response.ok) throw new Error('Erreur chargement paramètres');
+    return response.json();
+  },
+
 };

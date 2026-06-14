@@ -15,6 +15,7 @@ import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from './pages/BackOffice/TicketDetail'
 import ProtectedRoute from './components/Security/ProtectedRoute';
 import KanbanSetting from './pages/BackOffice/KanbanSetting'
+import ItemsCostList from './pages/BackOffice/ItemsCostList'
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="import" element={<GlpiImport />} />
         <Route path="verify-import" element={<ImportVerify />} />
         <Route path="kanban-settings" element={<KanbanSetting />} />
+        <Route path="cost-list" element={<ItemsCostList />} />
       </Route>
 </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
