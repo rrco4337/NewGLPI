@@ -156,7 +156,7 @@ export const ItemsCostList = () => {
                 <th style={{ textAlign: 'right' }}>Nouveau prix</th>
                 <th style={{ textAlign: 'right' }}>Frais de réouverture</th>
                 <th style={{ textAlign: 'right' }}>Total</th>
-                <th style={{ textAlign: 'right' }}>Total sans horaire</th>
+
               </tr>
             </thead>
             <tbody>
@@ -175,7 +175,7 @@ export const ItemsCostList = () => {
                   <td className="items-cost-amount">{fmt(row.nouveauPrix)}</td>
                   <td className="items-cost-amount">{fmt(row.fraisReouverture)}</td>
                   <td className="items-cost-amount total">{fmt(row.total)}</td>
-                  <td className="items-cost-amount total">{fmt(row.totalSansHoraire)}</td>
+
                 </tr>
               ))}
             </tbody>
@@ -183,7 +183,7 @@ export const ItemsCostList = () => {
               <tr>
                 <td colSpan={6} style={{ textAlign: 'right' }}>Total général</td>
                 <td className="items-cost-amount total">{fmt(grandTotal)}</td>
-                <td className="items-cost-amount total">{fmt(grandTotalSansHoraire)}</td>
+
               </tr>
             </tfoot>
           </table>
