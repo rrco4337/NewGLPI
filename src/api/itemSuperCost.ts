@@ -1,3 +1,5 @@
+import { hasUncaughtExceptionCaptureCallback } from "process"
+
 const API_BASE = '/api/item-supercosts'
 
 export interface ItemCostSummary {
@@ -75,4 +77,13 @@ export const ItemSuperCostApi = {
     const res = await fetch(`${API_BASE}/reset`, { method: 'POST' })
     if (!res.ok) throw new Error('Erreur reset')
   },
+  async getDetilsByItemType(itemtype: string): Promise<{supercosts:{ticket_id: number; batch:number; items_id:number;amount: number}[]
+  reopencost:{ticket_id: number; batch:number; items_id:number;amount: number} []> {
+    const res = await fetch(`${API_BASE}/details/${encodeURIComponent}`)
+      if(!res.ok) throw new Error('Erreur de chargement details')
+    return res.json()
+
+    
+  }
+    ,
 }

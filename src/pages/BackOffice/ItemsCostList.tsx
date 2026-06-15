@@ -17,11 +17,21 @@ interface ItemTypeRow {
 
 const fmt = (n: number) =>
   n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
+type DetailData ={
+  supercosts : { ticket_id: number; batch: number; items_id: number; amount: number}[]
+  reopencosts : { ticket_id: number; batch: number; items_id: number; amount: number}[]
 
+}
 export const ItemsCostList = () => {
   const [rows, setRows] = useState<ItemTypeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [itemtypeOuvert, setItemtypeOuvert] = useState<string | null>(null)
+  const [DetailData, setDetailData] = useState<string | null>(null)
+
+  const [chargementDetail, setChargementDetail] = useState(false)
+
+
 
   useEffect(() => {
     const load = async () => {
@@ -131,7 +141,23 @@ export const ItemsCostList = () => {
   if (error) return <div className="items-cost-error">Erreur : {error}</div>
 
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0)
-  const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
+  async function ouvrirDetails(itemtype: string){
+    if(itemtypeOuvert===itemtype){
+      setItemtypeOuvert(null)
+      setDetailData(null)
+      return
+    }
+    setItemtypeOuvert (itemtype)
+    setDetailData(null)
+    setChargementDetail(true)
+    try{
+      const data = await ItemSuperCostApi.getDetilsByItemType(itemtype)
+      setDetailData(data)
+    }catch{
+ setDetailData(null)
+    }
+    setChargementDetail(false)
+  }
 
   return (
     <div className="items-cost-page">
@@ -162,7 +188,9 @@ export const ItemsCostList = () => {
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
-                  <td className="items-cost-itemtype">{row.itemtype}</td>
+                  <td className="items-cost-itemtype" style={{cursor: 'pointer'}} onClick={() =>ouvrirDetails(row.itemtype)}>{
+                  row.itemtype}{itemtypeOuvert === row.itemtype ? ' ito' : 'itoko'}
+                  </td>
                   <td>
                     {row.tickets.map((t, j) => (
                       <div key={j} className="items-cost-ticket-line">
@@ -187,6 +215,24 @@ export const ItemsCostList = () => {
               </tr>
             </tfoot>
           </table>
+        {
+          itemtypeOuvert && (
+            <div style={{marginTop:24}}>
+              <h3> Details : {itemtypeOuvert}</h3>
+              {chargementDetail && <p>
+                chargement...</p>}
+                {!chargementDetail && DetailData &&(
+                  <div>
+                    {/* <h4> supercosts({
+                      DetailData.supercosts.length})</h4>
+                    </div> */}
+                     <table>
+                      <h4> Frais reouverture({DetailData.reopenCost.lenght})</h4>
+                     </table>
+                )}
+            </div>
+          )
+        }
         </div>
       )}
     </div>

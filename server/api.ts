@@ -129,6 +129,15 @@ app.get('/api/item-supercosts/:ticketId/last-batch-total', (req, res) => {
   res.json(totalRow.total ?? 0)
 })
 
+app.get('/api/item-supercostdetails/:itemtype', (req, res) => {
+  const { itemType }= req.params
+
+  type ScRow  = {ticket_id : number; batch : number; item_id: number }
+
+  const supercosts = db.prepare('SELECT ticket_id, batch, items_id FROM tickets_supercosts WHERE item =?').all(itemType) as ScRow[]
+  const reopensupercosts=db.prepare('SELECT ticket_id, batch, items_id FROM tickets_reopen_costs WHERE item =?').all(itemType) as ScRow[]
+  res.json({supercosts,reopensupercosts})
+})
 app.post('/api/item-supercosts/reset', (_req, res) => {
   db.transaction(() => {
     db.prepare('DELETE FROM ticket_supercosts').run()
