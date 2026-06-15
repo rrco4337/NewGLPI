@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { ItemSuperCostApi } from '@/api/itemSuperCost'
 import { glpiTicketService } from '@/services/glpiService'
+import './CsvMvtImport.css'
 
 type LigneCSV = {
   ticket: number
@@ -102,69 +103,72 @@ export const CsvMvtImport = () => {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="mvt-page">
       <h2>Import CSV Mouvements</h2>
       <p>Format attendu : <strong>ticket,mvt,valeur</strong></p>
       <p>mvt possible : <strong>open</strong> (réouverture en %), <strong>cancel</strong> (annuler), <strong>close</strong> (supercost montant)</p>
 
-      <div>
+      <div className="mvt-file-row">
         <input ref={inputFichier} type="file" accept=".csv" onChange={onChoixFichier} />
-        {fichierChoisi && <span> {fichierChoisi.name}</span>}
+        {fichierChoisi && <span className="mvt-file-name">{fichierChoisi.name}</span>}
       </div>
 
       {lignesCSV.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+        <div className="mvt-section">
           <h3>Aperçu — {lignesCSV.length} ligne(s)</h3>
-          <table border={1} cellPadding={4}>
-            <thead>
-              <tr>
-                <th>ticket</th>
-                <th>mvt</th>
-                <th>valeur</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lignesCSV.map((l, i) => (
-                <tr key={i}>
-                  <td>{l.ticket}</td>
-                  <td>{l.mvt}</td>
-                  <td>{l.valeur ?? 'null'}</td>
+          <div className="mvt-table-wrapper">
+            <table className="mvt-table">
+              <thead>
+                <tr>
+                  <th>ticket</th>
+                  <th>mvt</th>
+                  <th>valeur</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <br />
-          <button onClick={onImporter} disabled={miasa}>
+              </thead>
+              <tbody>
+                {lignesCSV.map((l, i) => (
+                  <tr key={i}>
+                    <td>{l.ticket}</td>
+                    <td>{l.mvt}</td>
+                    <td>{l.valeur ?? 'null'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button className="mvt-btn" onClick={onImporter} disabled={miasa}>
             {miasa ? 'Import en cours...' : 'Importer'}
           </button>
         </div>
       )}
 
       {vokatra.length > 0 && (
-        <div style={{ marginTop: 24 }}>
+        <div className="mvt-section">
           <h3>Résultats</h3>
-          <table border={1} cellPadding={4}>
-            <thead>
-              <tr>
-                <th>ticket</th>
-                <th>mvt</th>
-                <th>valeur</th>
-                <th>statut</th>
-                <th>message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vokatra.map((v, i) => (
-                <tr key={i}>
-                  <td>{v.ticket}</td>
-                  <td>{v.mvt}</td>
-                  <td>{v.valeur ?? 'null'}</td>
-                  <td>{v.status}</td>
-                  <td>{v.message}</td>
+          <div className="mvt-table-wrapper">
+            <table className="mvt-table">
+              <thead>
+                <tr>
+                  <th>ticket</th>
+                  <th>mvt</th>
+                  <th>valeur</th>
+                  <th>statut</th>
+                  <th>message</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {vokatra.map((v, i) => (
+                  <tr key={i}>
+                    <td>{v.ticket}</td>
+                    <td>{v.mvt}</td>
+                    <td>{v.valeur ?? 'null'}</td>
+                    <td className={`mvt-status-${v.status}`}>{v.status}</td>
+                    <td>{v.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
