@@ -1,0 +1,313 @@
+TRACKING IMPLEMENTATION — Import CSV Mouvements + Détail par ItemType
+======================================================================
+
+ÉTAPE A — L'affichage à blanc / sans rien
+------------------------------------------
+Le développeur crée d'abord la page CsvMvtImport vide pour voir si elle apparaît
+dans l'application. Il ajoute juste un <h2> et vérifie que la route fonctionne.
+Ensuite il ajoute aussi l'entrée dans la sidebar (DashboardLayout) pour pouvoir
+y accéder facilement. Il teste en cliquant sur le lien dans le menu.
+
+Pour ItemsCostList, il voit que le type d'item est déjà dans le tableau, mais
+il veut pouvoir cliquer dessus. Il commence par ajouter un simple onClick sur
+la cellule pour voir si ça réagit, avec un console.log("cliqué !").
+
+ÉTAPE B — La modification de la table / structure de données
+-------------------------------------------------------------
+Aucune nouvelle table n'est nécessaire dans SQLite — les tables ticket_supercosts
+et ticket_reopen_costs existent déjà dans server/api.ts et contiennent déjà les
+champs ticket_id, batch, itemtype, items_id, amount.
+
+Le développeur ajoute simplement un nouveau endpoint GET dans server/api.ts
+pour récupérer les lignes filtrées par itemtype depuis les deux tables.
+
+ÉTAPE C — La création des fonctions
+------------------------------------
+C1. server/api.ts — Nouveau endpoint GET /api/item-supercosts/details/:itemtype
+    Requête SQLite sur ticket_supercosts WHERE itemtype = ? et pareil sur
+    ticket_reopen_costs. Retourne { supercosts: [...], reopencosts: [...] }.
+
+C2. src/api/itemSuperCost.ts — Nouvelle méthode getDetailsByItemtype(itemtype)
+    Fait un fetch vers /api/item-supercosts/details/{itemtype}.
+    Retourne { supercosts, reopencosts }.
+
+C3. src/pages/BackOffice/CsvMvtImport.tsx — Création de la page
+    - parseCSV(texte) : découpe les lignes par \n, les colonnes par virgule,
+      skipke la première ligne si elle commence par "ticket".
+    - onChoixFichier() : lit le fichier avec FileReader et appelle parseCSV.
+    - onImporter() : boucle sur chaque ligne du CSV :
+        * mvt === 'open'   → ItemSuperCostApi.addReopenCost(ticket, valeur)
+        * mvt === 'cancel' → ItemSuperCostApi.cancelLastBatch(ticket)
+        * mvt === 'close'  → glpiTicketService.getTicketLinkedItems(ticket)
+                             puis ItemSuperCostApi.addSuperCost(ticket, valeur, items)
+
+C4. src/pages/BackOffice/ItemsCostList.tsx — Ajout de la fonction ouvrirDetail()
+    - Toggle : si le même itemtype est cliqué, ferme le détail.
+    - Sinon : charge les données via ItemSuperCostApi.getDetailsByItemtype(itemtype).
+    - Gère un état chargementDetail pour afficher "Chargement..." pendant la requête.
+
+ÉTAPE D — L'utilisation des fonctions à la fin (connexion UI ↔ logique)
+------------------------------------------------------------------------
+D1. ItemsCostList.tsx — La cellule itemtype devient cliquable :
+    onClick={() => ouvrirDetail(row.itemtype)} avec cursor:pointer et une flèche
+    ▲/▼ selon l'état ouvert/fermé.
+    Un bloc <div> sous le tableau principal affiche les deux sous-tableaux
+    (supercosts et reopencosts) quand un itemtype est sélectionné.
+
+D2. CsvMvtImport.tsx — Le bouton "Importer" appelle onImporter() et affiche
+    un tableau des résultats (ticket, mvt, valeur, statut, message) une fois
+    l'import terminé.
+
+D3. appRoutes.tsx — Route /admin/csv-mvt ajoutée dans le DashboardLayout.
+D4. DashboardLayout.tsx — Lien "Import CSV Mvt" ajouté dans la sidebar.
+
+
+======================================================================
+LISTE DES FICHIERS MODIFIÉS / CRÉÉS
+======================================================================
+
+FICHIERS MODIFIÉS
+-----------------
+
+1. server/api.ts
+   Ligne 132-138 (ajout après le endpoint last-batch-total, avant reset) :
+   132 : app.get('/api/item-supercosts/details/:itemtype', (req, res) => {
+   133 :   const { itemtype } = req.params
+   134 :   type ScRow = { ticket_id: number; batch: number; items_id: number; amount: number }
+   135 :   const supercosts = db.prepare('SELECT ticket_id, batch, items_id, amount FROM ticket_supercosts WHERE itemtype = ?').all(itemtype) as ScRow[]
+   136 :   const reopencosts = db.prepare('SELECT ticket_id, batch, items_id, amount FROM ticket_reopen_costs WHERE itemtype = ?').all(itemtype) as ScRow[]
+   137 :   res.json({ supercosts, reopencosts })
+   138 : })
+
+2. src/api/itemSuperCost.ts
+   Lignes 74-81 (ajout avant resetAll) :
+   74 :   async getDetailsByItemtype(itemtype: string): Promise<{
+   75 :     supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+   76 :     reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+   77 :   }> {
+   78 :     const res = await fetch(`${API_BASE}/details/${encodeURIComponent(itemtype)}`)
+   79 :     if (!res.ok) throw new Error('Erreur chargement details')
+   80 :     return res.json()
+   81 :   },
+
+3. src/pages/BackOffice/ItemsCostList.tsx
+   Ligne 21-24 (ajout type DetailData) :
+   21 : type DetailData = {
+   22 :   supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+   23 :   reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+   24 : }
+
+   Lignes 30-32 (ajout états) :
+   30 :   const [itemtypeOuvert, setItemtypeOuvert] = useState<string | null>(null)
+   31 :   const [detailData, setDetailData] = useState<DetailData | null>(null)
+   32 :   const [chargementDetail, setChargementDetail] = useState(false)
+
+   Lignes 141-157 (ajout fonction ouvrirDetail) :
+   141 :   async function ouvrirDetail(itemtype: string) {
+   142 :     if (itemtypeOuvert === itemtype) {
+   143 :       setItemtypeOuvert(null)
+   144 :       setDetailData(null)
+   145 :       return
+   146 :     }
+   147 :     setItemtypeOuvert(itemtype)
+   148 :     setDetailData(null)
+   149 :     setChargementDetail(true)
+   150 :     try {
+   151 :       const data = await ItemSuperCostApi.getDetailsByItemtype(itemtype)
+   152 :       setDetailData(data)
+   153 :     } catch {
+   154 :       setDetailData(null)
+   155 :     }
+   156 :     setChargementDetail(false)
+   157 :   }
+
+   Ligne 192 (cellule itemtype cliquable) :
+   192 :   <td className="items-cost-itemtype" style={{ cursor: 'pointer' }} onClick={() => ouvrirDetail(row.itemtype)}>
+   193 :     {row.itemtype} {itemtypeOuvert === row.itemtype ? '▲' : '▼'}
+   194 :   </td>
+
+   Lignes 217-258 (section détail après le tableau) :
+   217 :   {itemtypeOuvert && (
+   ...      <div style={{ marginTop: 24 }}>
+   ...        <h3>Détails : {itemtypeOuvert}</h3>
+   ...        {chargementDetail && <p>Chargement...</p>}
+   ...        {!chargementDetail && detailData && (
+   ...          <div>
+   ...            <h4>Supercosts ({detailData.supercosts.length})</h4>
+   ...            <table border={1} cellPadding={4}> ... </table>
+   ...            <h4>Frais réouverture ({detailData.reopencosts.length})</h4>
+   ...            <table border={1} cellPadding={4}> ... </table>
+   ...          </div>
+   ...        )}
+   ...      </div>
+   258 :   )}
+
+4. src/routes/appRoutes.tsx
+   Ligne 15 (ajout import) :
+   15 : import { CsvMvtImport } from '@/pages/BackOffice/CsvMvtImport'
+
+   Ligne 36 (ajout route) :
+   36 :       <Route path="csv-mvt" element={<CsvMvtImport />} />
+
+5. src/layouts/DashboardLayout.tsx
+   Ligne 16 (ajout nav item) :
+   16 :   { to: '/admin/csv-mvt', icon: 'bi-file-earmark-arrow-up', label: 'Import CSV Mvt' },
+
+
+FICHIER CRÉÉ
+------------
+
+6. src/pages/BackOffice/CsvMvtImport.tsx  (112 lignes)
+    1 : import { useState, useRef } from 'react'
+    2 : import { ItemSuperCostApi } from '@/api/itemSuperCost'
+    3 : import { glpiTicketService } from '@/services/glpiService'
+    4 :
+    5 : type LigneCSV = {
+    6 :   ticket: number
+    7 :   mvt: string
+    8 :   valeur: number | null
+    9 : }
+   10 :
+   11 : type VokatraLigne = LigneCSV & {
+   12 :   status: 'ok' | 'erreur' | 'skip'
+   13 :   message: string
+   14 : }
+   15 :
+   16 : function parseCSV(texte: string): LigneCSV[] {
+   17 :   const lignes = texte.trim().split('\n')
+   18 :   const lisitra: LigneCSV[] = []
+   19 :   const debut = lignes[0]?.toLowerCase().startsWith('ticket') ? 1 : 0
+   20 :   for (let i = debut; i < lignes.length; i++) {
+   21 :     const kolona = lignes[i].split(',')
+   22 :     if (kolona.length < 2) continue
+   23 :     const ticketId = parseInt(kolona[0]?.trim())
+   24 :     const mvt = kolona[1]?.trim().toLowerCase()
+   25 :     const valeurBrut = kolona[2]?.trim()
+   26 :     const valeur = valeurBrut && valeurBrut !== 'null' && valeurBrut !== '' ? parseFloat(valeurBrut) : null
+   27 :     if (!isNaN(ticketId) && mvt) {
+   28 :       lisitra.push({ ticket: ticketId, mvt, valeur })
+   29 :     }
+   30 :   }
+   31 :   return lisitra
+   32 : }
+   33 :
+   34 : export const CsvMvtImport = () => {
+   35 :   const [fichierChoisi, setFichierChoisi] = useState<File | null>(null)
+   36 :   const [lignesCSV, setLignesCSV] = useState<LigneCSV[]>([])
+   37 :   const [vokatra, setVokatra] = useState<VokatraLigne[]>([])
+   38 :   const [miasa, setMiasa] = useState(false)
+   39 :   const inputFichier = useRef<HTMLInputElement>(null)
+   40 :
+   41 :   function onChoixFichier(e: React.ChangeEvent<HTMLInputElement>) {
+   42 :     const f = e.target.files?.[0]
+   43 :     if (!f) return
+   44 :     setFichierChoisi(f)
+   45 :     setVokatra([])
+   46 :     const lecteur = new FileReader()
+   47 :     lecteur.onload = (ev) => {
+   48 :       const texte = ev.target?.result as string
+   49 :       const lignes = parseCSV(texte)
+   50 :       setLignesCSV(lignes)
+   51 :     }
+   52 :     lecteur.readAsText(f)
+   53 :   }
+   54 :
+   55 :   async function onImporter() {
+   56 :     if (lignesCSV.length === 0) return
+   57 :     setMiasa(true)
+   58 :     const resultats: VokatraLigne[] = []
+   59 :
+   60 :     for (const ligne of lignesCSV) {
+   61 :       try {
+   62 :         if (ligne.mvt === 'open') {
+   63 :           if (ligne.valeur === null) {
+   64 :             resultats.push({ ...ligne, status: 'skip', message: 'valeur manquante' })
+   65 :             continue
+   66 :           }
+   67 :           await ItemSuperCostApi.addReopenCost(ligne.ticket, ligne.valeur)
+   68 :           resultats.push({ ...ligne, status: 'ok', message: `réouverture ${ligne.valeur}% enregistrée` })
+   69 :
+   70 :         } else if (ligne.mvt === 'cancel') {
+   71 :           const r = await ItemSuperCostApi.cancelLastBatch(ligne.ticket)
+   72 :           resultats.push({ ...ligne, status: 'ok', message: `${r.removed} batch(s) annulé(s)` })
+   73 :
+   74 :         } else if (ligne.mvt === 'close') {
+   75 :           if (ligne.valeur === null) {
+   76 :             resultats.push({ ...ligne, status: 'skip', message: 'valeur manquante' })
+   77 :             continue
+   78 :           }
+   79 :           const items = await glpiTicketService.getTicketLinkedItems(ligne.ticket)
+   80 :           if (items.length === 0) {
+   81 :             resultats.push({ ...ligne, status: 'skip', message: 'aucun item GLPI trouvé' })
+   82 :             continue
+   83 :           }
+   84 :           const r = await ItemSuperCostApi.addSuperCost(ligne.ticket, ligne.valeur, items)
+   85 :           resultats.push({ ...ligne, status: 'ok', message: `${r.saved} item(s) enregistré(s)` })
+   86 :
+   87 :         } else {
+   88 :           resultats.push({ ...ligne, status: 'skip', message: `mvt inconnu: ${ligne.mvt}` })
+   89 :         }
+   90 :       } catch (err) {
+   91 :         resultats.push({ ...ligne, status: 'erreur', message: err instanceof Error ? err.message : 'erreur inconnue' })
+   92 :       }
+   93 :     }
+   94 :
+   95 :     setVokatra(resultats)
+   96 :     setMiasa(false)
+   97 :     setFichierChoisi(null)
+   98 :     setLignesCSV([])
+   99 :     if (inputFichier.current) inputFichier.current.value = ''
+   100 :   }
+   101 :
+   102 :   return (
+   103 :     <div style={{ padding: 24 }}>
+   104 :       <h2>Import CSV Mouvements</h2>
+   105 :       <p>Format attendu : <strong>ticket,mvt,valeur</strong></p>
+   106 :       <p>mvt possible : <strong>open</strong> (réouverture en %), <strong>cancel</strong> (annuler), <strong>close</strong> (supercost montant)</p>
+   107 :
+   108 :       <div>
+   109 :         <input ref={inputFichier} type="file" accept=".csv" onChange={onChoixFichier} />
+   108 :         {fichierChoisi && <span> {fichierChoisi.name}</span>}
+   109 :       </div>
+   110 :
+   111 :       {lignesCSV.length > 0 && (
+   112 :         <div style={{ marginTop: 16 }}>
+   113 :           <h3>Aperçu — {lignesCSV.length} ligne(s)</h3>
+   114 :           <table border={1} cellPadding={4}>
+   115 :             <thead>
+   116 :               <tr><th>ticket</th><th>mvt</th><th>valeur</th></tr>
+   117 :             </thead>
+   118 :             <tbody>
+   119 :               {lignesCSV.map((l, i) => (
+   120 :                 <tr key={i}><td>{l.ticket}</td><td>{l.mvt}</td><td>{l.valeur ?? 'null'}</td></tr>
+   121 :               ))}
+   122 :             </tbody>
+   123 :           </table>
+   124 :           <br />
+   125 :           <button onClick={onImporter} disabled={miasa}>
+   126 :             {miasa ? 'Import en cours...' : 'Importer'}
+   127 :           </button>
+   128 :         </div>
+   129 :       )}
+   130 :
+   131 :       {vokatra.length > 0 && (
+   132 :         <div style={{ marginTop: 24 }}>
+   133 :           <h3>Résultats</h3>
+   134 :           <table border={1} cellPadding={4}>
+   135 :             <thead>
+   136 :               <tr><th>ticket</th><th>mvt</th><th>valeur</th><th>statut</th><th>message</th></tr>
+   137 :             </thead>
+   138 :             <tbody>
+   139 :               {vokatra.map((v, i) => (
+   140 :                 <tr key={i}>
+   141 :                   <td>{v.ticket}</td><td>{v.mvt}</td><td>{v.valeur ?? 'null'}</td>
+   142 :                   <td>{v.status}</td><td>{v.message}</td>
+   143 :                 </tr>
+   144 :               ))}
+   145 :             </tbody>
+   146 :           </table>
+   147 :         </div>
+   148 :       )}
+   149 :     </div>
+   150 :   )
+   151 : }

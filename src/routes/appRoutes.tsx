@@ -12,6 +12,7 @@ import { Tickets } from '@/pages/BackOffice/Tickets'
 import { TicketDetail } from '@/pages/BackOffice/TicketDetail'
 import KanbanSetting from '@/pages/BackOffice/KanbanSetting'
 import { ItemsCostList } from '@/pages/BackOffice/ItemsCostList'
+import { CsvMvtImport } from '@/pages/BackOffice/CsvMvtImport'
 
 export const appRoutes = (
   <>
@@ -32,6 +33,7 @@ export const appRoutes = (
       <Route path="reset" element={<Reset />} />
       <Route path="kanban-settings" element={<KanbanSetting />} />
       <Route path="items-cost" element={<ItemsCostList />} />
+      <Route path="csv-mvt" element={<CsvMvtImport />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </>

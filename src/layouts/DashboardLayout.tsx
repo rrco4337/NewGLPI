@@ -13,6 +13,7 @@ const NAV = [
   { to: '/admin/settings',         icon: 'bi-gear-fill',              label: 'Paramètres' },
   { to: '/admin/kanban-settings',  icon: 'bi-sliders',                label: 'Kanban Settings' },
   { to: '/admin/items-cost',       icon: 'bi-calculator',             label: 'Coûts Items' },
+  { to: '/admin/csv-mvt',          icon: 'bi-file-earmark-arrow-up',  label: 'Import CSV Mvt' },
 ]
 
 export const DashboardLayout = () => {

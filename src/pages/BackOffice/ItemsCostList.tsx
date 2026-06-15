@@ -18,10 +18,18 @@ interface ItemTypeRow {
 const fmt = (n: number) =>
   n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
 
+type DetailData = {
+  supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+  reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+}
+
 export const ItemsCostList = () => {
   const [rows, setRows] = useState<ItemTypeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [itemtypeOuvert, setItemtypeOuvert] = useState<string | null>(null)
+  const [detailData, setDetailData] = useState<DetailData | null>(null)
+  const [chargementDetail, setChargementDetail] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -130,6 +138,24 @@ export const ItemsCostList = () => {
   if (loading) return <div className="items-cost-loading">Chargement...</div>
   if (error) return <div className="items-cost-error">Erreur : {error}</div>
 
+  async function ouvrirDetail(itemtype: string) {
+    if (itemtypeOuvert === itemtype) {
+      setItemtypeOuvert(null)
+      setDetailData(null)
+      return
+    }
+    setItemtypeOuvert(itemtype)
+    setDetailData(null)
+    setChargementDetail(true)
+    try {
+      const data = await ItemSuperCostApi.getDetailsByItemtype(itemtype)
+      setDetailData(data)
+    } catch {
+      setDetailData(null)
+    }
+    setChargementDetail(false)
+  }
+
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0)
   const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
 
@@ -162,7 +188,9 @@ export const ItemsCostList = () => {
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
-                  <td className="items-cost-itemtype">{row.itemtype}</td>
+                  <td className="items-cost-itemtype" style={{ cursor: 'pointer' }} onClick={() => ouvrirDetail(row.itemtype)}>
+                    {row.itemtype} {itemtypeOuvert === row.itemtype ? '▲' : '▼'}
+                  </td>
                   <td>
                     {row.tickets.map((t, j) => (
                       <div key={j} className="items-cost-ticket-line">
@@ -187,6 +215,53 @@ export const ItemsCostList = () => {
               </tr>
             </tfoot>
           </table>
+        </div>
+      )}
+
+      {itemtypeOuvert && (
+        <div style={{ marginTop: 24 }}>
+          <h3>Détails : {itemtypeOuvert}</h3>
+          {chargementDetail && <p>Chargement...</p>}
+          {!chargementDetail && detailData && (
+            <div>
+              <h4>Supercosts ({detailData.supercosts.length})</h4>
+              {detailData.supercosts.length === 0 ? <p>Aucun</p> : (
+                <table border={1} cellPadding={4}>
+                  <thead>
+                    <tr><th>ticket</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                  </thead>
+                  <tbody>
+                    {detailData.supercosts.map((sc, i) => (
+                      <tr key={i}>
+                        <td>#{sc.ticket_id}</td>
+                        <td>{sc.items_id}</td>
+                        <td>{sc.batch}</td>
+                        <td>{fmt(sc.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <h4>Frais réouverture ({detailData.reopencosts.length})</h4>
+              {detailData.reopencosts.length === 0 ? <p>Aucun</p> : (
+                <table border={1} cellPadding={4}>
+                  <thead>
+                    <tr><th>ticket</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                  </thead>
+                  <tbody>
+                    {detailData.reopencosts.map((rc, i) => (
+                      <tr key={i}>
+                        <td>#{rc.ticket_id}</td>
+                        <td>{rc.items_id}</td>
+                        <td>{rc.batch}</td>
+                        <td>{fmt(rc.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

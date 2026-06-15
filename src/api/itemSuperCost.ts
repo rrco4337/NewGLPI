@@ -70,6 +70,15 @@ export const ItemSuperCostApi = {
     return res.json()
   },
 
+  async getDetailsByItemtype(itemtype: string): Promise<{
+    supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+    reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+  }> {
+    const res = await fetch(`${API_BASE}/details/${encodeURIComponent(itemtype)}`)
+    if (!res.ok) throw new Error('Erreur chargement details')
+    return res.json()
+  },
+
   /** Vide les deux tables. */
   async resetAll(): Promise<void> {
     const res = await fetch(`${API_BASE}/reset`, { method: 'POST' })
