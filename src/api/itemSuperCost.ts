@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8087/api/item-supercosts'
+const API_BASE = '/api/item-supercosts'
 
 export interface ItemCostSummary {
   itemtype: string

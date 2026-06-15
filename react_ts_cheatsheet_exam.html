@@ -1,0 +1,496 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{display:flex;gap:0;font-family:var(--font-sans)}
+.nav{width:190px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);padding:0.75rem 0;position:sticky;top:0;align-self:flex-start;max-height:98vh;overflow-y:auto}
+.nav button{display:block;width:100%;text-align:left;padding:7px 14px;font-size:12.5px;background:none;border:none;cursor:pointer;color:var(--color-text-secondary);border-left:2px solid transparent;border-radius:0}
+.nav button.active{color:var(--color-text-primary);border-left:2px solid var(--color-text-primary);font-weight:500;background:var(--color-background-secondary)}
+.nav button:hover:not(.active){background:var(--color-background-secondary)}
+.nav .nav-group{font-size:10px;font-weight:500;color:var(--color-text-tertiary);padding:10px 14px 3px;letter-spacing:.05em;text-transform:uppercase}
+.content{flex:1;padding:1.25rem;min-width:0}
+.sec{display:none}.sec.active{display:block}
+h2{font-size:17px;font-weight:500;margin-bottom:1rem;color:var(--color-text-primary)}
+h3{font-size:13px;font-weight:500;margin:1rem 0 0.4rem;color:var(--color-text-primary)}
+p,li{font-size:12.5px;color:var(--color-text-secondary);line-height:1.6}
+ul{padding-left:1rem}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.9rem 1rem;margin-bottom:.85rem}
+pre{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:.65rem .85rem;font-family:var(--font-mono);font-size:11.5px;color:var(--color-text-primary);overflow-x:auto;white-space:pre;margin:.4rem 0;line-height:1.5}
+.err{border-left:3px solid #e24b4a;border-radius:0;background:#fcebeb}
+.ok{border-left:3px solid #639922;border-radius:0;background:#eaf3de}
+.warn{border-left:3px solid #ba7517;border-radius:0;background:#faeeda}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;margin-right:3px}
+.terr{background:#fcebeb;color:#a32d2d}
+.tok{background:#eaf3de;color:#3b6d11}
+.twarn{background:#faeeda;color:#854f0b}
+.tinfo{background:#e6f1fb;color:#185fa5}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:.75rem}
+code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-primary)}
+.label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
+</style>
+<div class="wrap">
+<nav class="nav">
+  <div class="nav-group">JSX & State</div>
+  <button class="active" onclick="show('jsx',this)">JSX de base</button>
+  <button onclick="show('hooks',this)">useState / useEffect</button>
+  <div class="nav-group">Données</div>
+  <button onclick="show('arrays',this)">Tableaux (map/filter/reduce)</button>
+  <button onclick="show('manip',this)">Manipulation données</button>
+  <button onclick="show('fetch',this)">Fetch & API</button>
+  <div class="nav-group">TypeScript</div>
+  <button onclick="show('ts',this)">TypeScript essentiel</button>
+  <div class="nav-group">Erreurs</div>
+  <button onclick="show('errors',this)">Erreurs fréquentes</button>
+</nav>
+<div class="content">
+
+<div class="sec active" id="sec-jsx">
+<h2>JSX de base</h2>
+<div class="card">
+  <h3>Affichage de variable</h3>
+  <pre>const name = "Stanley"
+const count = 42
+return &lt;p&gt;Bonjour {name}, tu as {count} tickets&lt;/p&gt;</pre>
+  <div class="label" style="margin-top:8px">Conditionnel ternaire</div>
+  <pre>return &lt;p&gt;{isOpen ? "Ouvert" : "Fermé"}&lt;/p&gt;</pre>
+  <div class="label" style="margin-top:8px">Conditionnel && (affiche ou rien)</div>
+  <pre>return &lt;div&gt;{error &amp;&amp; &lt;p&gt;Erreur : {error}&lt;/p&gt;}&lt;/div&gt;</pre>
+</div>
+<div class="card">
+  <h3>Fragment — éviter une div inutile</h3>
+  <pre>return (
+  &lt;&gt;
+    &lt;h1&gt;Titre&lt;/h1&gt;
+    &lt;p&gt;Contenu&lt;/p&gt;
+  &lt;/&gt;
+)</pre>
+</div>
+<div class="card">
+  <h3>className, style inline</h3>
+  <pre>return (
+  &lt;div className="container" style={{ color: 'red', fontSize: 14 }}&gt;
+    Contenu
+  &lt;/div&gt;
+)</pre>
+  <span class="tag twarn">style={{ }} double accolades obligatoires</span>
+  <span class="tag twarn">class → className en JSX</span>
+</div>
+<div class="card">
+  <h3>Erreurs JSX fréquentes</h3>
+  <div class="label">Retour multiple sans wrapper</div>
+  <pre class="err">return &lt;h1&gt;A&lt;/h1&gt; &lt;p&gt;B&lt;/p&gt;   // ERREUR</pre>
+  <pre class="ok">return &lt;&gt;&lt;h1&gt;A&lt;/h1&gt;&lt;p&gt;B&lt;/p&gt;&lt;/&gt;   // OK</pre>
+  <div class="label" style="margin-top:8px">Oubli du return dans arrow function</div>
+  <pre class="err">items.map(i =&gt; { &lt;li&gt;{i.name}&lt;/li&gt; })  // ERREUR : pas de return</pre>
+  <pre class="ok">items.map(i =&gt; &lt;li&gt;{i.name}&lt;/li&gt;)     // OK : implicite sans {}
+items.map(i =&gt; { return &lt;li&gt;{i.name}&lt;/li&gt; })  // OK : return explicite</pre>
+  <div class="label" style="margin-top:8px">Nombre affiché directement (0 s'affiche)</div>
+  <pre class="err">{items.length &amp;&amp; &lt;List /&gt;}  // affiche "0" si vide</pre>
+  <pre class="ok">{items.length &gt; 0 &amp;&amp; &lt;List /&gt;}  // OK</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-hooks">
+<h2>useState / useEffect</h2>
+<div class="card">
+  <h3>useState — syntaxe</h3>
+  <pre>const [count, setCount] = useState(0)
+const [tickets, setTickets] = useState&lt;Ticket[]&gt;([])
+const [name, setName] = useState&lt;string&gt;("")
+const [loading, setLoading] = useState(false)
+const [error, setError] = useState&lt;string | null&gt;(null)</pre>
+</div>
+<div class="card">
+  <h3>useState — mise à jour</h3>
+  <pre>setCount(count + 1)
+setCount(prev =&gt; prev + 1)       // forme fonctionnelle (plus sûre)
+setTickets(prev =&gt; [...prev, newTicket])  // ajouter à un tableau
+setTickets(prev =&gt; prev.filter(t =&gt; t.id !== id))  // supprimer</pre>
+</div>
+<div class="card">
+  <h3>useEffect — fetch au montage</h3>
+  <pre>useEffect(() =&gt; {
+  const fetchData = async () =&gt; {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/tickets')
+      const data = await res.json()
+      setTickets(data)
+    } catch (e) {
+      setError("Erreur de chargement")
+    } finally {
+      setLoading(false)
+    }
+  }
+  fetchData()
+}, [])   // [] = exécuté 1 seule fois au montage</pre>
+  <span class="tag twarn">useEffect ne peut pas être async directement</span>
+</div>
+<div class="card">
+  <h3>useEffect — dépendances</h3>
+  <pre>useEffect(() =&gt; { ... }, [])          // 1 fois au montage
+useEffect(() =&gt; { ... }, [id])        // à chaque changement de id
+useEffect(() =&gt; { ... })              // à chaque render (éviter)</pre>
+</div>
+<div class="card">
+  <h3>Pattern complet composant avec fetch</h3>
+  <pre>const TicketList = () =&gt; {
+  const [tickets, setTickets] = useState&lt;Ticket[]&gt;([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState&lt;string | null&gt;(null)
+
+  useEffect(() =&gt; {
+    fetch('/api/tickets')
+      .then(r =&gt; r.json())
+      .then(setTickets)
+      .catch(() =&gt; setError("Erreur"))
+      .finally(() =&gt; setLoading(false))
+  }, [])
+
+  if (loading) return &lt;p&gt;Chargement...&lt;/p&gt;
+  if (error) return &lt;p&gt;{error}&lt;/p&gt;
+  return &lt;ul&gt;{tickets.map(t =&gt; &lt;li key={t.id}&gt;{t.name}&lt;/li&gt;)}&lt;/ul&gt;
+}</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-arrays">
+<h2>Tableaux — map / filter / reduce</h2>
+<div class="card">
+  <h3>map — transformer chaque élément</h3>
+  <pre>const tickets = [{id:1,name:"Bug login",status:1},{id:2,name:"CPU",status:2}]
+
+tickets.map(t =&gt; t.name)
+// ["Bug login", "CPU"]
+
+return (
+  &lt;ul&gt;
+    {tickets.map(t =&gt; (
+      &lt;li key={t.id}&gt;{t.name}&lt;/li&gt;
+    ))}
+  &lt;/ul&gt;
+)</pre>
+  <span class="tag terr">key obligatoire sur chaque élément du map</span>
+</div>
+<div class="card">
+  <h3>filter — garder certains éléments</h3>
+  <pre>const ouverts = tickets.filter(t =&gt; t.status === 1)
+const contient = tickets.filter(t =&gt; t.name.includes("CPU"))
+
+return (
+  &lt;ul&gt;
+    {tickets
+      .filter(t =&gt; t.status === 1)
+      .map(t =&gt; &lt;li key={t.id}&gt;{t.name}&lt;/li&gt;)}
+  &lt;/ul&gt;
+)</pre>
+</div>
+<div class="card">
+  <h3>reduce — agréger</h3>
+  <pre>const couts = [{cost: "100.00"}, {cost: "50.00"}, {cost: "25.00"}]
+
+const total = couts.reduce((sum, c) =&gt; sum + Number(c.cost), 0)
+// 175
+
+const count = tickets.reduce((acc, t) =&gt; {
+  acc[t.status] = (acc[t.status] || 0) + 1
+  return acc
+}, {} as Record&lt;number, number&gt;)
+// {1: 2, 2: 1}</pre>
+</div>
+<div class="card">
+  <h3>Affichage dans un tableau HTML</h3>
+  <pre>return (
+  &lt;table&gt;
+    &lt;thead&gt;
+      &lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;Nom&lt;/th&gt;&lt;th&gt;Statut&lt;/th&gt;&lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+      {tickets.map(t =&gt; (
+        &lt;tr key={t.id}&gt;
+          &lt;td&gt;{t.id}&lt;/td&gt;
+          &lt;td&gt;{t.name}&lt;/td&gt;
+          &lt;td&gt;{t.status}&lt;/td&gt;
+        &lt;/tr&gt;
+      ))}
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+)</pre>
+</div>
+<div class="card">
+  <h3>Erreurs fréquentes sur les tableaux</h3>
+  <pre class="err">data.map(...)           // TypeError si data est undefined</pre>
+  <pre class="ok">const [data, setData] = useState&lt;Ticket[]&gt;([])  // init avec []
+(data ?? []).map(...)   // fallback si data peut être null</pre>
+  <pre class="err" style="margin-top:8px">items.map(i =&gt; { &lt;li key={i.id}&gt;...&lt;/li&gt; })  // return oublié</pre>
+  <pre class="ok">items.map(i =&gt; ( &lt;li key={i.id}&gt;...&lt;/li&gt; ))  // parenthèses OK</pre>
+  <pre class="err" style="margin-top:8px">&lt;li&gt;{t.name}&lt;/li&gt;   // manque key</pre>
+  <pre class="ok">&lt;li key={t.id}&gt;{t.name}&lt;/li&gt;  // key unique obligatoire</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-manip">
+<h2>Manipulation de données</h2>
+<div class="card">
+  <h3>Conversion string → number</h3>
+  <pre>Number("100.0000")    // 100
+parseFloat("42.5")    // 42.5
+parseInt("7px")       // 7
++"99"                 // 99 (unary plus, court mais moins lisible)
+
+Number(undefined)     // NaN — toujours protéger
+Number(null)          // 0 — attention
+Number("")            // 0 — attention</pre>
+  <span class="tag twarn">Toujours vérifier NaN : isNaN(val)</span>
+</div>
+<div class="card">
+  <h3>Somme d'un tableau</h3>
+  <pre>const prices = ["10.00", "20.50", "5.00"]
+const total = prices.reduce((sum, p) =&gt; sum + Number(p), 0)
+// 35.5
+
+const tickets = [{cost: "100"}, {cost: "50"}]
+const totalCost = tickets.reduce((sum, t) =&gt; sum + Number(t.cost), 0)
+// 150</pre>
+</div>
+<div class="card">
+  <h3>Group by (compter par catégorie)</h3>
+  <pre>const items = [
+  {name:"PC",type:"Computer"},
+  {name:"Écran",type:"Monitor"},
+  {name:"PC2",type:"Computer"}
+]
+
+const grouped = items.reduce((acc, i) =&gt; {
+  acc[i.type] = (acc[i.type] || 0) + 1
+  return acc
+}, {} as Record&lt;string, number&gt;)
+// { Computer: 2, Monitor: 1 }
+
+Object.entries(grouped).map(([type, count]) =&gt; (
+  &lt;p key={type}&gt;{type}: {count}&lt;/p&gt;
+))</pre>
+</div>
+<div class="card">
+  <h3>JSON parse / stringify</h3>
+  <pre>const obj = { id: 1, name: "ticket" }
+const str = JSON.stringify(obj)       // '{"id":1,"name":"ticket"}'
+const parsed = JSON.parse(str)        // { id: 1, name: "ticket" }
+
+try {
+  const data = JSON.parse(rawString)
+} catch (e) {
+  console.error("JSON invalide", e)
+}</pre>
+</div>
+<div class="card">
+  <h3>Manipulation d'objets</h3>
+  <pre>const ticket = { id: 1, name: "Bug", status: 1 }
+
+const updated = { ...ticket, status: 2 }   // spread : modifier 1 champ
+const { id, ...rest } = ticket              // destructuring
+
+setTickets(prev =&gt;
+  prev.map(t =&gt; t.id === 1 ? { ...t, status: 2 } : t)
+)</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-fetch">
+<h2>Fetch & API</h2>
+<div class="card">
+  <h3>GET simple</h3>
+  <pre>const res = await fetch('http://localhost/api/tickets')
+if (!res.ok) throw new Error(`HTTP ${res.status}`)
+const data: Ticket[] = await res.json()</pre>
+</div>
+<div class="card">
+  <h3>GET avec headers (ex: GLPI)</h3>
+  <pre>const res = await fetch('/apirest.php/Ticket', {
+  method: 'GET',
+  headers: {
+    'Session-Token': sessionToken,
+    'App-Token': APP_TOKEN,
+    'Content-Type': 'application/json'
+  }
+})
+const data = await res.json()</pre>
+</div>
+<div class="card">
+  <h3>POST avec body</h3>
+  <pre>const res = await fetch('/api/tickets', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: "Nouveau ticket", status: 1 })
+})
+const created = await res.json()</pre>
+</div>
+<div class="card">
+  <h3>Gestion erreurs try/catch complète</h3>
+  <pre>const loadTickets = async () =&gt; {
+  setLoading(true)
+  setError(null)
+  try {
+    const res = await fetch('/api/tickets')
+    if (!res.ok) throw new Error(`Erreur ${res.status}`)
+    const data = await res.json()
+    setTickets(Array.isArray(data) ? data : [])
+  } catch (e) {
+    setError(e instanceof Error ? e.message : "Erreur inconnue")
+  } finally {
+    setLoading(false)
+  }
+}</pre>
+</div>
+<div class="card">
+  <h3>Transformer la réponse API → format frontend</h3>
+  <pre>interface ApiTicket { id: number; name: string; status: number }
+interface TicketVM { id: number; title: string; statusLabel: string }
+
+const STATUS_LABELS: Record&lt;number,string&gt; = {
+  1: "Nouveau", 2: "En cours", 6: "Clos"
+}
+
+const toViewModel = (t: ApiTicket): TicketVM =&gt; ({
+  id: t.id,
+  title: t.name,
+  statusLabel: STATUS_LABELS[t.status] ?? "Inconnu"
+})
+
+const tickets = (await res.json() as ApiTicket[]).map(toViewModel)</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-ts">
+<h2>TypeScript essentiel</h2>
+<div class="card">
+  <h3>interface vs type</h3>
+  <pre>interface Ticket {           // préféré pour les objets
+  id: number
+  name: string
+  status: number
+  content?: string          // optionnel
+}
+
+type Status = 1 | 2 | 6    // union type (valeurs précises)
+type ID = number | string   // union type</pre>
+</div>
+<div class="card">
+  <h3>Typage useState</h3>
+  <pre>const [tickets, setTickets] = useState&lt;Ticket[]&gt;([])
+const [selected, setSelected] = useState&lt;Ticket | null&gt;(null)
+const [id, setId] = useState&lt;number | null&gt;(null)
+const [count, setCount] = useState(0)      // inféré automatiquement</pre>
+</div>
+<div class="card">
+  <h3>Typage réponse API</h3>
+  <pre>interface ApiResponse&lt;T&gt; {
+  data: T[]
+  total: number
+}
+
+const res = await fetch('/api/tickets')
+const json: ApiResponse&lt;Ticket&gt; = await res.json()
+const tickets: Ticket[] = json.data</pre>
+</div>
+<div class="card">
+  <h3>Props d'un composant</h3>
+  <pre>interface TicketCardProps {
+  ticket: Ticket
+  onClose: (id: number) =&gt; void
+  highlight?: boolean
+}
+
+const TicketCard = ({ ticket, onClose, highlight = false }: TicketCardProps) =&gt; {
+  return (
+    &lt;div style={{ background: highlight ? 'yellow' : 'white' }}&gt;
+      &lt;h3&gt;{ticket.name}&lt;/h3&gt;
+      &lt;button onClick={() =&gt; onClose(ticket.id)}&gt;Fermer&lt;/button&gt;
+    &lt;/div&gt;
+  )
+}</pre>
+</div>
+<div class="card">
+  <h3>Types utilitaires courants</h3>
+  <pre>Record&lt;string, number&gt;       // { [key: string]: number }
+Partial&lt;Ticket&gt;              // tous les champs optionnels
+Pick&lt;Ticket, 'id' | 'name'&gt; // seulement id et name
+Array&lt;Ticket&gt; === Ticket[]   // équivalents</pre>
+</div>
+</div>
+
+<div class="sec" id="sec-errors">
+<h2>Erreurs fréquentes React + TS</h2>
+<div class="card">
+  <h3>Cannot read properties of undefined (map)</h3>
+  <pre class="err">const [data, setData] = useState()    // undefined par défaut
+data.map(...)                          // CRASH</pre>
+  <pre class="ok">const [data, setData] = useState&lt;Ticket[]&gt;([])  // init tableau vide
+(data || []).map(...)                  // défense supplémentaire</pre>
+</div>
+<div class="card">
+  <h3>Each child should have a unique "key" prop</h3>
+  <pre class="err">items.map(i =&gt; &lt;li&gt;{i.name}&lt;/li&gt;)</pre>
+  <pre class="ok">items.map(i =&gt; &lt;li key={i.id}&gt;{i.name}&lt;/li&gt;)
+items.map((i, idx) =&gt; &lt;li key={idx}&gt;{i.name}&lt;/li&gt;)  // idx si pas d'id</pre>
+  <span class="tag twarn">key={idx} déconseillé si la liste est réordonnée/modifiée</span>
+</div>
+<div class="card">
+  <h3>JSX return oublié dans map</h3>
+  <pre class="err">items.map(i =&gt; {
+  &lt;li key={i.id}&gt;{i.name}&lt;/li&gt;    // {} sans return = undefined
+})</pre>
+  <pre class="ok">items.map(i =&gt; (                   // () implicite : OK
+  &lt;li key={i.id}&gt;{i.name}&lt;/li&gt;
+))
+items.map(i =&gt; &lt;li key={i.id}&gt;{i.name}&lt;/li&gt;)  // 1 ligne : OK</pre>
+</div>
+<div class="card">
+  <h3>String + number = concaténation</h3>
+  <pre class="err">const total = "100" + "50"    // "10050" pas 150</pre>
+  <pre class="ok">const total = Number("100") + Number("50")   // 150
+const total = +"100" + +"50"                 // 150</pre>
+</div>
+<div class="card">
+  <h3>useEffect async directement</h3>
+  <pre class="err">useEffect(async () =&gt; {       // INTERDIT — warning React
+  const data = await fetch(...)
+}, [])</pre>
+  <pre class="ok">useEffect(() =&gt; {
+  const load = async () =&gt; { const data = await fetch(...) }
+  load()
+}, [])</pre>
+</div>
+<div class="card">
+  <h3>State mis à jour mais composant pas re-render</h3>
+  <pre class="err">tickets.push(newTicket)       // mutation directe = pas de re-render
+setTickets(tickets)           // même référence = React ignore</pre>
+  <pre class="ok">setTickets([...tickets, newTicket])      // nouvelle référence
+setTickets(prev =&gt; [...prev, newTicket]) // forme fonctionnelle</pre>
+</div>
+<div class="card">
+  <h3>Type mismatch TypeScript courant</h3>
+  <pre class="err">const [id, setId] = useState(0)
+setId("abc")    // TS erreur : string pas assignable à number</pre>
+  <pre class="ok">const [id, setId] = useState&lt;number | string&gt;(0)
+setId("abc")    // OK</pre>
+  <pre class="err" style="margin-top:6px">const ticket: Ticket = {}   // manque des champs obligatoires</pre>
+  <pre class="ok">const ticket: Partial&lt;Ticket&gt; = {}  // tous optionnels</pre>
+</div>
+<div class="card">
+  <h3>Accès sur null/undefined (optional chaining)</h3>
+  <pre class="err">ticket.category.name    // CRASH si category est null</pre>
+  <pre class="ok">ticket?.category?.name          // undefined si null/undefined
+ticket?.category?.name ?? "N/A" // valeur par défaut</pre>
+</div>
+</div>
+
+</div>
+</div>
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'))
+  document.getElementById('sec-' + id).classList.add('active')
+  btn.classList.add('active')
+}
+</script>

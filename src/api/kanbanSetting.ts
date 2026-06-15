@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8087/api/backoffice';
+const API_BASE_URL = '/api/backoffice';
 
 export interface KanbanSetting {
   key: string;

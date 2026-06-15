@@ -1,0 +1,556 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.wrap{display:flex;min-height:600px;gap:0}
+.nav{width:200px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);padding:1rem 0;position:sticky;top:0;align-self:flex-start}
+.nav button{display:block;width:100%;text-align:left;padding:8px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--color-text-secondary);border-radius:0;border-left:2px solid transparent}
+.nav button.active{color:var(--color-text-primary);border-left:2px solid var(--color-text-primary);font-weight:500;background:var(--color-background-secondary)}
+.nav button:hover:not(.active){background:var(--color-background-secondary)}
+.content{flex:1;padding:1.5rem;overflow:auto}
+.section{display:none}.section.active{display:block}
+h2{font-size:18px;font-weight:500;margin-bottom:1rem;color:var(--color-text-primary)}
+h3{font-size:14px;font-weight:500;margin:1.25rem 0 0.5rem;color:var(--color-text-primary)}
+p,li{font-size:13px;color:var(--color-text-secondary);line-height:1.6}
+ul{padding-left:1rem;margin:0.25rem 0}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1rem}
+.endpoint{display:flex;align-items:center;gap:8px;margin-bottom:0.75rem;flex-wrap:wrap}
+.method{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;flex-shrink:0}
+.get{background:#e1f5ee;color:#0f6e56}.post{background:#e6f1fb;color:#185fa5}.delete{background:#fcebeb;color:#a32d2d}
+.url{font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:2px 8px;border-radius:4px;word-break:break-all}
+pre{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:0.75rem;font-family:var(--font-mono);font-size:11.5px;color:var(--color-text-primary);overflow-x:auto;white-space:pre;margin:0.5rem 0}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;margin-right:4px;margin-bottom:4px}
+.tag-warn{background:#faeeda;color:#854f0b}
+.tag-info{background:#e6f1fb;color:#185fa5}
+.tag-ok{background:#eaf3de;color:#3b6d11}
+.tag-err{background:#fcebeb;color:#a32d2d}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:0.5rem}
+th{text-align:left;padding:6px 8px;background:var(--color-background-secondary);color:var(--color-text-secondary);font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)}
+td{padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);vertical-align:top}
+td code,p code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px}
+.badge-diff{font-size:11px;padding:1px 7px;border-radius:10px}
+.easy{background:#eaf3de;color:#3b6d11}.medium{background:#faeeda;color:#854f0b}.hard{background:#fcebeb;color:#a32d2d}
+.step{display:flex;gap:12px;align-items:flex-start;margin-bottom:0.75rem}
+.step-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.piege{border-left:3px solid #e24b4a;padding-left:0.75rem;margin-bottom:0.75rem}
+.piege p{color:var(--color-text-primary)}
+.piege .titre{font-size:13px;font-weight:500;color:#a32d2d;margin-bottom:2px}
+</style>
+<div class="wrap">
+<nav class="nav" aria-label="Sections">
+  <button class="active" onclick="show('session',this)">Session & Auth</button>
+  <button onclick="show('tickets',this)">Tickets</button>
+  <button onclick="show('items',this)">Items & Ticket</button>
+  <button onclick="show('couts',this)">Coûts</button>
+  <button onclick="show('search',this)">Search API</button>
+  <button onclick="show('workflow',this)">Workflow complet</button>
+  <button onclick="show('pieges',this)">Pièges fréquents</button>
+  <button onclick="show('recap',this)">Tableau récap</button>
+</nav>
+<div class="content">
+
+<div class="section active" id="section-session">
+<h2>Session & Auth</h2>
+<div class="card">
+  <h3>Initialiser une session</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/apirest.php/initSession</span></div>
+  <p>Headers obligatoires :</p>
+  <pre>Authorization: user_token VOTRE_TOKEN
+App-Token: VOTRE_APP_TOKEN
+Content-Type: application/json</pre>
+  <p>Réponse :</p>
+  <pre>{ "session_token": "abc123xyz..." }</pre>
+  <p style="margin-top:8px">Stocker le <code>session_token</code> — à envoyer dans TOUS les appels suivants.</p>
+</div>
+<div class="card">
+  <h3>Header à inclure dans chaque requête</h3>
+  <pre>Session-Token: abc123xyz...
+App-Token: VOTRE_APP_TOKEN
+Content-Type: application/json</pre>
+</div>
+<div class="card">
+  <h3>Fermer la session</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/apirest.php/killSession</span></div>
+  <p>À appeler proprement à la fin pour libérer la session côté GLPI.</p>
+</div>
+<div class="card">
+  <h3>Exemple axios (TypeScript)</h3>
+  <pre>const api = axios.create({
+  baseURL: 'http://localhost/glpi/apirest.php',
+  headers: {
+    'App-Token': APP_TOKEN,
+    'Content-Type': 'application/json'
+  }
+})
+
+const { data } = await api.get('/initSession', {
+  headers: { Authorization: `user_token ${USER_TOKEN}` }
+})
+api.defaults.headers['Session-Token'] = data.session_token</pre>
+</div>
+</div>
+
+<div class="section" id="section-tickets">
+<h2>Tickets</h2>
+<div class="card">
+  <h3>Récupérer un ticket</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/Ticket/{id}</span></div>
+  <pre>GET /Ticket/42</pre>
+  <p>Champs clés retournés :</p>
+  <table>
+    <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>id</code></td><td>number</td><td>Identifiant unique</td></tr>
+    <tr><td><code>name</code></td><td>string</td><td>Titre du ticket</td></tr>
+    <tr><td><code>status</code></td><td>number</td><td>1=Nouveau 2=En cours(assigné) 3=En cours(planifié) 4=En attente 5=Résolu 6=Clos</td></tr>
+    <tr><td><code>date</code></td><td>string</td><td>Date de création</td></tr>
+    <tr><td><code>content</code></td><td>string</td><td>Description</td></tr>
+    <tr><td><code>priority</code></td><td>number</td><td>1=Très basse → 6=Majeure</td></tr>
+    <tr><td><code>itilcategories_id</code></td><td>number</td><td>ID catégorie</td></tr>
+  </table>
+</div>
+<div class="card">
+  <h3>Statuts Kanban — mapping</h3>
+  <p>Pour ton projet avec 3 colonnes uniquement :</p>
+  <table>
+    <tr><th>Colonne Kanban</th><th>Valeur status GLPI</th></tr>
+    <tr><td>Nouveau</td><td><code>1</code></td></tr>
+    <tr><td>In Progress</td><td><code>2</code></td></tr>
+    <tr><td>Terminé / Clos</td><td><code>6</code></td></tr>
+  </table>
+</div>
+<div class="card">
+  <h3>Récupérer plusieurs tickets</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/Ticket</span></div>
+  <pre>GET /Ticket?range=0-999&expand_dropdowns=true</pre>
+  <p><code>expand_dropdowns=true</code> remplace les IDs par les labels lisibles (catégorie, assigné, etc.)</p>
+</div>
+<div class="card">
+  <h3>Créer un ticket</h3>
+  <div class="endpoint"><span class="method post">POST</span><span class="url">/Ticket</span></div>
+  <pre>POST /Ticket
+{
+  "input": {
+    "name": "Titre du ticket",
+    "content": "Description",
+    "status": 1,
+    "itilcategories_id": 0,
+    "priority": 3
+  }
+}</pre>
+  <p>Réponse : <code>{ "id": 42, "message": "Item successfully added" }</code></p>
+</div>
+<div class="card">
+  <h3>Modifier le statut d'un ticket</h3>
+  <div class="endpoint"><span class="method" style="background:#faeeda;color:#854f0b">PUT</span><span class="url">/Ticket/{id}</span></div>
+  <pre>PUT /Ticket/42
+{ "input": { "status": 6 } }</pre>
+</div>
+</div>
+
+<div class="section" id="section-items">
+<h2>Items liés à un ticket</h2>
+<div class="card">
+  <h3>Comment GLPI stocke les liens item ↔ ticket</h3>
+  <p>GLPI utilise une table pivot <code>glpi_items_tickets</code> avec les colonnes <code>tickets_id</code>, <code>items_id</code>, <code>itemtype</code>.</p>
+  <p style="margin-top:6px">L'objet API correspondant est <code>Item_Ticket</code>. Chaque ligne représente un lien entre un ticket et un item d'un type donné.</p>
+</div>
+<div class="card">
+  <h3>Récupérer tous les items d'un ticket</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/Ticket/{id}/Item_Ticket</span></div>
+  <pre>GET /Ticket/42/Item_Ticket?range=0-999</pre>
+  <p>Réponse (exemple) :</p>
+  <pre>[
+  { "id": 1, "tickets_id": 42, "items_id": 7, "itemtype": "Computer" },
+  { "id": 2, "tickets_id": 42, "items_id": 3, "itemtype": "Monitor" }
+]</pre>
+  <span class="tag tag-warn">itemtype est un string</span>
+  <span class="tag tag-warn">items_id dépend du type</span>
+</div>
+<div class="card">
+  <h3>Itemtypes courants</h3>
+  <table>
+    <tr><th>itemtype</th><th>Table GLPI</th><th>Endpoint détail</th></tr>
+    <tr><td><code>Computer</code></td><td>glpi_computers</td><td>/Computer/{id}</td></tr>
+    <tr><td><code>Monitor</code></td><td>glpi_monitors</td><td>/Monitor/{id}</td></tr>
+    <tr><td><code>NetworkEquipment</code></td><td>glpi_networkequipments</td><td>/NetworkEquipment/{id}</td></tr>
+    <tr><td><code>Printer</code></td><td>glpi_printers</td><td>/Printer/{id}</td></tr>
+    <tr><td><code>Phone</code></td><td>glpi_phones</td><td>/Phone/{id}</td></tr>
+    <tr><td><code>Software</code></td><td>glpi_softwares</td><td>/Software/{id}</td></tr>
+  </table>
+</div>
+<div class="card">
+  <h3>Récupérer les détails d'un item par type</h3>
+  <pre>const getItemDetail = async (itemtype: string, itemId: number) => {
+  const res = await api.get(`/${itemtype}/${itemId}`, {
+    params: { expand_dropdowns: true }
+  })
+  return res.data
+}
+
+const items = await api.get(`/Ticket/${ticketId}/Item_Ticket`)
+const details = await Promise.all(
+  items.data.map(i => getItemDetail(i.itemtype, i.items_id))
+)</pre>
+</div>
+<div class="card">
+  <h3>Associer un item à un ticket (création)</h3>
+  <div class="endpoint"><span class="method post">POST</span><span class="url">/Item_Ticket</span></div>
+  <pre>POST /Item_Ticket
+{
+  "input": {
+    "tickets_id": 42,
+    "items_id": 7,
+    "itemtype": "Computer"
+  }
+}</pre>
+</div>
+<div class="card">
+  <h3>Champs utiles sur un item (Computer par ex.)</h3>
+  <table>
+    <tr><th>Champ</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>id</code></td><td>number</td><td>ID de l'item</td></tr>
+    <tr><td><code>name</code></td><td>string</td><td>Nom</td></tr>
+    <tr><td><code>serial</code></td><td>string</td><td>Numéro de série</td></tr>
+    <tr><td><code>computertypes_id</code></td><td>string*</td><td>Type (avec expand_dropdowns)</td></tr>
+    <tr><td><code>locations_id</code></td><td>string*</td><td>Localisation (avec expand_dropdowns)</td></tr>
+    <tr><td><code>states_id</code></td><td>string*</td><td>État (avec expand_dropdowns)</td></tr>
+  </table>
+  <p style="margin-top:6px"><span class="tag tag-info">* string si expand_dropdowns=true, sinon number</span></p>
+</div>
+</div>
+
+<div class="section" id="section-couts">
+<h2>Coûts</h2>
+<div class="card">
+  <h3>Où GLPI stocke les coûts</h3>
+  <p>Les coûts sont dans la table <code>glpi_ticketcosts</code>, jamais directement sur le ticket. L'objet API est <code>TicketCost</code>. Il peut y avoir plusieurs enregistrements par ticket.</p>
+  <p style="margin-top:6px">Le "coût total" affiché dans l'interface GLPI est calculé dynamiquement : <code>(cost_time × actiontime/3600) + cost_fixed + cost_material</code>.</p>
+</div>
+<div class="card">
+  <h3>Récupérer les coûts d'un ticket</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/Ticket/{id}/TicketCost</span></div>
+  <pre>GET /Ticket/42/TicketCost?range=0-999</pre>
+  <p>Réponse :</p>
+  <pre>[
+  {
+    "id": 1,
+    "tickets_id": 42,
+    "name": "Coût intervention",
+    "actiontime": 3600,
+    "cost_time": "100.0000",
+    "cost_fixed": "50.0000",
+    "cost_material": "25.0000",
+    "begin_date": "2026-06-01",
+    "end_date": "2026-06-05"
+  }
+]</pre>
+  <span class="tag tag-err">PIÈGE : cost_time, cost_fixed, cost_material sont des strings</span>
+</div>
+<div class="card">
+  <h3>Interface TypeScript</h3>
+  <pre>interface TicketCost {
+  id: number
+  tickets_id: number
+  name?: string
+  actiontime: number          // durée en secondes
+  cost_time: string | number  // taux horaire — ATTENTION: string retourné
+  cost_fixed: string | number
+  cost_material: string | number
+  begin_date?: string
+  end_date?: string
+  budgets_id?: number
+}</pre>
+</div>
+<div class="card">
+  <h3>Calcul du coût total (glpiCost)</h3>
+  <pre>const getGlpiCost = async (ticketId: number): Promise&lt;number&gt; => {
+  const res = await api.get(`/Ticket/${ticketId}/TicketCost`, {
+    params: { range: '0-999' }
+  })
+  const costs: TicketCost[] = res.data
+
+  return costs.reduce((sum, c) =>
+    sum
+    + Number(c.cost_time || 0) * ((c.actiontime || 0) / 3600)
+    + Number(c.cost_fixed || 0)
+    + Number(c.cost_material || 0),
+  0)
+}</pre>
+  <span class="tag tag-ok">Number() convertit "100.0000" → 100</span>
+</div>
+</div>
+
+<div class="section" id="section-search">
+<h2>Search API</h2>
+<div class="card">
+  <h3>Format de base</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/search/{itemtype}</span></div>
+  <pre>GET /search/Ticket?
+  criteria[0][field]=12&
+  criteria[0][searchtype]=equals&
+  criteria[0][value]=6&
+  range=0-49&
+  forcedisplay[0]=1&
+  forcedisplay[1]=12&
+  forcedisplay[2]=15</pre>
+</div>
+<div class="card">
+  <h3>Paramètres principaux</h3>
+  <table>
+    <tr><th>Paramètre</th><th>Description</th><th>Exemple</th></tr>
+    <tr><td><code>criteria[n][field]</code></td><td>ID du champ GLPI</td><td><code>12</code> = status</td></tr>
+    <tr><td><code>criteria[n][searchtype]</code></td><td>Type de comparaison</td><td>equals, contains, notequals, lessthan, morethan</td></tr>
+    <tr><td><code>criteria[n][value]</code></td><td>Valeur recherchée</td><td><code>6</code></td></tr>
+    <tr><td><code>criteria[n][link]</code></td><td>Lien entre critères</td><td>AND, OR</td></tr>
+    <tr><td><code>forcedisplay[n]</code></td><td>IDs champs à retourner</td><td><code>1</code>=id, <code>2</code>=name</td></tr>
+    <tr><td><code>range</code></td><td>Pagination</td><td><code>0-49</code></td></tr>
+    <tr><td><code>sort</code></td><td>ID champ de tri</td><td><code>19</code>=date modif</td></tr>
+    <tr><td><code>order</code></td><td>Sens du tri</td><td>ASC, DESC</td></tr>
+  </table>
+</div>
+<div class="card">
+  <h3>IDs de champs Ticket courants</h3>
+  <table>
+    <tr><th>ID</th><th>Champ</th></tr>
+    <tr><td><code>1</code></td><td>id</td></tr>
+    <tr><td><code>2</code></td><td>name (titre)</td></tr>
+    <tr><td><code>12</code></td><td>status</td></tr>
+    <tr><td><code>15</code></td><td>date de création</td></tr>
+    <tr><td><code>19</code></td><td>date de modification</td></tr>
+    <tr><td><code>21</code></td><td>content (description)</td></tr>
+    <tr><td><code>3</code></td><td>priority</td></tr>
+  </table>
+  <p style="margin-top:6px"><span class="tag tag-info">Trouver les IDs : GET /listSearchOptions/Ticket</span></p>
+</div>
+<div class="card">
+  <h3>Exemple multi-critères TypeScript</h3>
+  <pre>const res = await api.get('/search/Ticket', {
+  params: {
+    'criteria[0][field]': 12,
+    'criteria[0][searchtype]': 'equals',
+    'criteria[0][value]': 1,
+    'criteria[1][link]': 'AND',
+    'criteria[1][field]': 2,
+    'criteria[1][searchtype]': 'contains',
+    'criteria[1][value]': 'réseau',
+    'forcedisplay[0]': 1,
+    'forcedisplay[1]': 2,
+    'forcedisplay[2]': 12,
+    'range': '0-99'
+  }
+})</pre>
+  <p>Réponse : <code>res.data.data</code> contient le tableau de résultats.</p>
+</div>
+<div class="card">
+  <h3>Connaître tous les champs disponibles</h3>
+  <div class="endpoint"><span class="method get">GET</span><span class="url">/listSearchOptions/{itemtype}</span></div>
+  <pre>GET /listSearchOptions/Ticket
+GET /listSearchOptions/Computer
+GET /listSearchOptions/Item_Ticket</pre>
+  <p>Retourne tous les IDs de champs utilisables dans les critères.</p>
+</div>
+</div>
+
+<div class="section" id="section-workflow">
+<h2>Workflow complet</h2>
+<div class="card">
+  <h3>Chaîne d'appels : ticket → items → coûts → costParItem</h3>
+  <div class="step"><div class="step-num">1</div><div><p><strong>Récupérer les items liés</strong></p><pre>GET /Ticket/{id}/Item_Ticket?range=0-999</pre><p>→ liste de <code>{ items_id, itemtype }</code></p></div></div>
+  <div class="step"><div class="step-num">2</div><div><p><strong>Compter les items</strong></p><pre>const nombreItems = items.length</pre></div></div>
+  <div class="step"><div class="step-num">3</div><div><p><strong>Récupérer la catégorie de chaque item</strong></p><pre>GET /{itemtype}/{items_id}?expand_dropdowns=true</pre><p>→ champ <code>computertypes_id</code> (ou équivalent) contient le label catégorie</p></div></div>
+  <div class="step"><div class="step-num">4</div><div><p><strong>Récupérer les coûts GLPI</strong></p><pre>GET /Ticket/{id}/TicketCost?range=0-999</pre><p>→ sommer : <code>Number(cost_time) * (actiontime/3600) + Number(cost_fixed) + Number(cost_material)</code></p></div></div>
+  <div class="step"><div class="step-num">5</div><div><p><strong>Calculer costParItem</strong></p><pre>const costParItem = (superCost + glpiCost) / nombreItems</pre></div></div>
+  <div class="step"><div class="step-num">6</div><div><p><strong>Sauvegarder dans SQLite</strong></p><pre>INSERT INTO ticket_costs (idTicket, superCost, glpiCost, idItem, category)
+VALUES (?, ?, ?, ?, ?)</pre></div></div>
+</div>
+<div class="card">
+  <h3>Fonction complète TypeScript</h3>
+  <pre>async function computeCostPerItem(ticketId: number, superCost: number) {
+  // 1. Items
+  const itemsRes = await api.get(`/Ticket/${ticketId}/Item_Ticket`,
+    { params: { range: '0-999' } })
+  const items: ItemTicket[] = itemsRes.data
+  const nombreItems = items.length
+  if (nombreItems === 0) return []
+
+  // 2. Coût GLPI
+  const costsRes = await api.get(`/Ticket/${ticketId}/TicketCost`,
+    { params: { range: '0-999' } })
+  const glpiCost = (costsRes.data as TicketCost[]).reduce((sum, c) =>
+    sum + Number(c.cost_time||0) * ((c.actiontime||0)/3600)
+        + Number(c.cost_fixed||0) + Number(c.cost_material||0), 0)
+
+  // 3. Calcul
+  const costParItem = (superCost + glpiCost) / nombreItems
+
+  // 4. Détails items (catégorie)
+  return Promise.all(items.map(async (item) => {
+    const detail = await api.get(`/${item.itemtype}/${item.items_id}`,
+      { params: { expand_dropdowns: true } })
+    return {
+      idTicket: ticketId,
+      idItem: item.items_id,
+      itemtype: item.itemtype,
+      category: detail.data[`${item.itemtype.toLowerCase()}types_id`] ?? 'N/A',
+      superCost,
+      glpiCost,
+      costParItem
+    }
+  }))
+}</pre>
+</div>
+</div>
+
+<div class="section" id="section-pieges">
+<h2>Pièges & erreurs fréquentes</h2>
+<div class="piege">
+  <div class="titre">Espace dans le nom de paramètre</div>
+  <p><code>'tickets_id '</code> avec un espace → GLPI ignore le filtre et retourne tout. Toujours vérifier les noms de paramètres.</p>
+</div>
+<div class="piege">
+  <div class="titre">cost_time, cost_fixed, cost_material sont des strings</div>
+  <p>GLPI retourne <code>"100.0000"</code> (string). Faire <code>+</code> donne une concaténation. Toujours utiliser <code>Number()</code> ou <code>parseFloat()</code>.</p>
+</div>
+<div class="piege">
+  <div class="titre">Item_Ticket : ne pas filtrer via /Item_Ticket/ global</div>
+  <p>Utiliser <code>/Ticket/{id}/Item_Ticket</code> (sous-ressource). L'endpoint global <code>/Item_Ticket</code> ne supporte pas bien le filtre par tickets_id via query param.</p>
+</div>
+<div class="piege">
+  <div class="titre">items_id n'est pas unique — dépend de itemtype</div>
+  <p><code>items_id: 3</code> peut désigner un Computer ET un Monitor différents. Toujours combiner <code>items_id + itemtype</code> pour identifier un item.</p>
+</div>
+<div class="piege">
+  <div class="titre">expand_dropdowns indispensable pour les labels</div>
+  <p>Sans ce paramètre, <code>computertypes_id</code> retourne un number (ex: <code>4</code>). Avec <code>expand_dropdowns=true</code> on obtient <code>"Laptop"</code>.</p>
+</div>
+<div class="piege">
+  <div class="titre">Search API : résultats dans res.data.data</div>
+  <p>Contrairement aux autres endpoints, <code>/search/</code> encapsule les résultats dans <code>{ data: [...], count: N, totalcount: N }</code>. Ne pas oublier <code>.data.data</code>.</p>
+</div>
+<div class="piege">
+  <div class="titre">TicketCost introuvable dans la doc officielle</div>
+  <p>Jamais mentionné clairement dans la doc API. La table <code>glpi_ticketcosts</code> existe mais le endpoint <code>/Ticket/{id}/TicketCost</code> se découvre via <code>/Ticket/{id}?get_hateoas=true</code> qui liste les sous-ressources disponibles.</p>
+</div>
+<div class="piege">
+  <div class="titre">Statuts ticket GLPI ≠ 3 colonnes Kanban</div>
+  <p>GLPI a 6 statuts (1 à 6). Pour un Kanban à 3 colonnes, mapper : Nouveau=1, In Progress=2, Clos=6. Les statuts 3,4,5 peuvent être ignorés ou mappés selon besoin.</p>
+</div>
+</div>
+
+<div class="section" id="section-recap">
+<h2>Tableau récapitulatif</h2>
+<div class="card" style="overflow-x:auto">
+<table>
+  <tr>
+    <th>Objectif</th>
+    <th>Endpoint</th>
+    <th>Paramètres clés</th>
+    <th>Réponse principale</th>
+    <th>Difficulté</th>
+  </tr>
+  <tr>
+    <td>Init session</td>
+    <td><code>GET /initSession</code></td>
+    <td>Header Authorization</td>
+    <td><code>session_token</code></td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Récupérer un ticket</td>
+    <td><code>GET /Ticket/{id}</code></td>
+    <td>—</td>
+    <td>Objet ticket complet</td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Lister les tickets</td>
+    <td><code>GET /Ticket</code></td>
+    <td><code>range</code>, <code>expand_dropdowns</code></td>
+    <td>Tableau de tickets</td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Créer un ticket</td>
+    <td><code>POST /Ticket</code></td>
+    <td>body <code>{ input: {...} }</code></td>
+    <td><code>{ id, message }</code></td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Changer statut ticket</td>
+    <td><code>PUT /Ticket/{id}</code></td>
+    <td>body <code>{ input: { status } }</code></td>
+    <td>Confirmation</td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Récupérer items d'un ticket</td>
+    <td><code>GET /Ticket/{id}/Item_Ticket</code></td>
+    <td><code>range</code></td>
+    <td><code>[{ items_id, itemtype }]</code></td>
+    <td><span class="badge-diff medium">Moyen</span></td>
+  </tr>
+  <tr>
+    <td>Compter les items</td>
+    <td><code>GET /Ticket/{id}/Item_Ticket</code></td>
+    <td><code>range=0-999</code></td>
+    <td><code>array.length</code></td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Détail d'un item</td>
+    <td><code>GET /{itemtype}/{id}</code></td>
+    <td><code>expand_dropdowns=true</code></td>
+    <td>Objet item avec catégorie</td>
+    <td><span class="badge-diff medium">Moyen</span></td>
+  </tr>
+  <tr>
+    <td>Associer item à ticket</td>
+    <td><code>POST /Item_Ticket</code></td>
+    <td>body <code>{ input: { tickets_id, items_id, itemtype } }</code></td>
+    <td><code>{ id, message }</code></td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+  <tr>
+    <td>Récupérer coûts GLPI</td>
+    <td><code>GET /Ticket/{id}/TicketCost</code></td>
+    <td><code>range</code></td>
+    <td><code>[{ cost_time(str), cost_fixed(str), actiontime }]</code></td>
+    <td><span class="badge-diff hard">Difficile</span></td>
+  </tr>
+  <tr>
+    <td>Calcul coût par item</td>
+    <td>— (calcul local)</td>
+    <td><code>(superCost + glpiCost) / nbItems</code></td>
+    <td>number</td>
+    <td><span class="badge-diff medium">Moyen</span></td>
+  </tr>
+  <tr>
+    <td>Recherche filtrée</td>
+    <td><code>GET /search/Ticket</code></td>
+    <td><code>criteria[n]</code>, <code>forcedisplay</code></td>
+    <td><code>res.data.data</code></td>
+    <td><span class="badge-diff hard">Difficile</span></td>
+  </tr>
+  <tr>
+    <td>IDs de champs dispo</td>
+    <td><code>GET /listSearchOptions/{type}</code></td>
+    <td>—</td>
+    <td>Map id → nom de champ</td>
+    <td><span class="badge-diff easy">Facile</span></td>
+  </tr>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'))
+  document.getElementById('section-' + id).classList.add('active')
+  btn.classList.add('active')
+}
+</script>
