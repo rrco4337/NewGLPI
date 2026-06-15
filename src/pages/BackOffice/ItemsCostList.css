@@ -1,0 +1,123 @@
+.items-cost-page {
+  padding: 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.items-cost-header {
+  margin-bottom: 24px;
+}
+
+.items-cost-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.items-cost-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.items-cost-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  overflow-x: auto;
+}
+
+.items-cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.items-cost-table thead tr {
+  background: #f8fafc;
+}
+
+.items-cost-table th {
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.items-cost-table td {
+  padding: 14px 16px;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.items-cost-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.items-cost-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.items-cost-table tfoot tr {
+  background: #f8fafc;
+}
+
+.items-cost-table tfoot td {
+  padding: 14px 16px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  border-top: 2px solid #e2e8f0;
+  border-bottom: none;
+}
+
+.items-cost-itemtype {
+  font-weight: 600;
+  color: #4f46e5;
+  font-size: 14px;
+}
+
+.items-cost-ticket-line {
+  font-size: 13px;
+  color: #475569;
+  padding: 2px 0;
+}
+
+.items-cost-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+}
+
+.items-cost-amount.total {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.items-cost-loading,
+.items-cost-error,
+.items-cost-empty {
+  padding: 48px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.items-cost-error {
+  color: #ef4444;
+}
