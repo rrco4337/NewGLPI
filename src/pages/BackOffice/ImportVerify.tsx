@@ -161,8 +161,8 @@ export const ImportVerify = () => {
       glpiFetch<Record<string, unknown>>('Document', token, 'Documents'),
     ])
 
-    const computers: GlpiAsset[] = rawComputers.map(c => ({ ...(c as GlpiAsset), itemType: 'Computer' }))
-    const monitors: GlpiAsset[]  = rawMonitors.map(m => ({ ...(m as GlpiAsset), itemType: 'Monitor' }))
+    const computers: GlpiAsset[] = rawComputers.map(c => ({ ...(c as unknown as GlpiAsset), itemType: 'Computer' }))
+    const monitors: GlpiAsset[]  = rawMonitors.map(m => ({ ...(m as unknown as GlpiAsset), itemType: 'Monitor' }))
     const tickets  = rawTickets  as unknown as GlpiTicket[]
     const costs    = rawCosts    as unknown as GlpiTicketCost[]
     const documents: GlpiDocument[] = (rawDocuments as unknown as GlpiDocument[]).map(d => ({ ...d, blobUrl: undefined, blobError: false }))

@@ -79,7 +79,7 @@ export const Tickets = () => {
         </label>
         <label className="space-y-2 text-sm font-medium text-slate-700">
           Priority
-          <select value={priority} onChange={(event) => setPriority(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:bg-white">
+          <select value={priority} onChange={(event) => setPriority(event.target.value as 'all' | 'low' | 'medium' | 'high')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:bg-white">
             <option value="all">Toutes</option>
             <option value="high">Haute</option>
             <option value="medium">Moyenne</option>

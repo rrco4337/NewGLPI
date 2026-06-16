@@ -130,6 +130,45 @@ app.post('/api/item-supercosts/cancel', (req, res) => {
   res.json({ removed: result.changes })
 })
 
+app.get('/api/item-supercosts/:ticketId/detail', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  type DetailRow = { itemtype: string; items_id: number; total: number }
+  const superRows = db.prepare(
+    'SELECT itemtype, items_id, SUM(amount) as total FROM ticket_supercosts WHERE ticket_id = ? GROUP BY itemtype, items_id'
+  ).all(ticketId) as DetailRow[]
+  const reopenRows = db.prepare(
+    'SELECT itemtype, items_id, SUM(amount) as total FROM ticket_reopen_costs WHERE ticket_id = ? GROUP BY itemtype, items_id'
+  ).all(ticketId) as DetailRow[]
+  res.json({ supercosts: superRows, reopenCosts: reopenRows })
+})
+
+// All supercosts grouped by (ticket_id, items_id) for a given itemtype
+app.get('/api/item-supercosts/by-type/:itemtype', (req, res) => {
+  const itemtype = decodeURIComponent(req.params.itemtype)
+  type Row = { ticket_id: number; items_id: number; total: number }
+  const superRows = db.prepare(
+    'SELECT ticket_id, items_id, SUM(amount) as total FROM ticket_supercosts WHERE itemtype = ? GROUP BY ticket_id, items_id'
+  ).all(itemtype) as Row[]
+  const reopenRows = db.prepare(
+    'SELECT ticket_id, items_id, SUM(amount) as total FROM ticket_reopen_costs WHERE itemtype = ? GROUP BY ticket_id, items_id'
+  ).all(itemtype) as Row[]
+  res.json({ supercosts: superRows, reopenCosts: reopenRows })
+})
+
+// Batch-level breakdown for one (ticketId, items_id)
+app.get('/api/item-supercosts/:ticketId/item-batches/:itemsId', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const itemsId  = Number(req.params.itemsId)
+  type BatchRow = { batch: number; amount: number }
+  const supercostBatches = db.prepare(
+    'SELECT batch, amount FROM ticket_supercosts WHERE ticket_id = ? AND items_id = ? ORDER BY batch'
+  ).all(ticketId, itemsId) as BatchRow[]
+  const reopenBatches = db.prepare(
+    'SELECT batch, amount FROM ticket_reopen_costs WHERE ticket_id = ? AND items_id = ? ORDER BY batch'
+  ).all(ticketId, itemsId) as BatchRow[]
+  res.json({ supercostBatches, reopenBatches })
+})
+
 app.get('/api/item-supercosts/:ticketId/last-batch-total', (req, res) => {
   const ticketId = Number(req.params.ticketId)
   const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }

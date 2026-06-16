@@ -34,7 +34,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, #2563eb, #6366f1);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -43,12 +43,12 @@
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
 }
 
 .tickets-toolbar {
@@ -85,8 +85,8 @@
 
 .search-bar input:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .filters {
@@ -228,7 +228,7 @@
 
 .ticket-id {
   font-weight: 600;
-  color: #4f46e5;
+  color: #6366f1;
   cursor: pointer;
 }
 
@@ -243,7 +243,7 @@
 }
 
 .ticket-title:hover {
-  color: #4f46e5;
+  color: #6366f1;
 }
 
 .ticket-requester, .ticket-tech, .ticket-category, .ticket-date {
@@ -289,7 +289,7 @@ input[type="checkbox"] {
   height: 16px;
   border-radius: 4px;
   border: 1px solid #cbd5e1;
-  accent-color: #4f46e5;
+  accent-color: #6366f1;
   cursor: pointer;
 }
 

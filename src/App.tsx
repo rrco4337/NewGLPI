@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { OfflineBanner } from '@/components/OfflineBanner/OfflineBanner'
 import { FrontOfficeLayout } from '@/layouts/FrontOfficeLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Home } from '@/pages/FrontOffice/Home'
@@ -20,6 +21,8 @@ import { MvtImport } from './pages/BackOffice/MvtImport'
 
 function App() {
   return (
+    <>
+    <OfflineBanner />
     <Routes>
       <Route path="/" element={<FrontOfficeLayout />}>
         <Route index element={<Home />} />
@@ -47,6 +50,7 @@ function App() {
 </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 

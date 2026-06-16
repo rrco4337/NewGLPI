@@ -10,11 +10,12 @@ import './KanbanTickets.css'
 
 type ColKey = 'new' | 'progress' | 'closed'
 
-const COLUMNS: { key: ColKey; label: string; cls: string }[] = [
+const _COLUMNS: { key: ColKey; label: string; cls: string }[] = [
   { key: 'new',      label: 'New',         cls: 'kb-col-new'      },
   { key: 'progress', label: 'In Progress', cls: 'kb-col-progress' },
   { key: 'closed',   label: 'Closed',      cls: 'kb-col-closed'   },
 ]
+void _COLUMNS
 
 const NEW_STATUSES      = [1, 'new',     '1']
 const PROGRESS_STATUSES = [2, 3, 4, 'open', 'pending', '2', '3', '4']
@@ -404,32 +405,30 @@ export const KanbanTickets = () => {
     }
   }
 
-  // Helper to get column configuration
   // Helper to get column configuration with language toggle
-const getColumnConfig = () => {
-  if (!settings) {
+  const getColumnConfig = () => {
+    if (!settings) {
+      return [
+        { key: 'new',      label: 'New',         cls: 'kb-col-new',      color: '#4caf50' },
+        { key: 'progress', label: 'In Progress', cls: 'kb-col-progress', color: '#2196f3' },
+        { key: 'closed',   label: 'Closed',      cls: 'kb-col-closed',   color: '#9e9e9e' },
+      ]
+    }
+
+    // useMalagasy = false → Original (anglais)
+    // useMalagasy = true  → Malagasy (status_name_*)
+    const labels = {
+      new:      useMalagasy ? (settings.status_name_new         || 'Vaovao')    : 'New',
+      progress: useMalagasy ? (settings.status_name_in_progress || 'Efa manao') : 'In Progress',
+      closed:   useMalagasy ? (settings.status_name_done        || 'Vita')      : 'Closed',
+    }
+
     return [
-      { key: 'new', label: 'New', cls: 'kb-col-new', color: '#4caf50' },
-      { key: 'progress', label: 'In Progress', cls: 'kb-col-progress', color: '#2196f3' },
-      { key: 'closed', label: 'Closed', cls: 'kb-col-closed', color: '#9e9e9e' }
+      { key: 'new',      label: labels.new,      cls: 'kb-col-new',      color: settings.kanban_color_new          || '#4caf50' },
+      { key: 'progress', label: labels.progress, cls: 'kb-col-progress', color: settings.kanban_color_in_progress  || '#2196f3' },
+      { key: 'closed',   label: labels.closed,   cls: 'kb-col-closed',   color: settings.kanban_color_done         || '#9e9e9e' },
     ]
   }
-  
-  // Choix des libellés selon la langue
-  const labels = {
-    // Si useMalagasy = true → utilise les valeurs de la base (malgache)
-    // Si useMalagasy = false → utilise les valeurs originales (anglais)
-    new: useMalagasy ? (settings.status_name_new || 'Vaovao') : 'New',
-    progress: useMalagasy ? (settings.status_name_in_progress || 'Efa manao') : 'In Progress',
-    closed: useMalagasy ? (settings.status_name_done || 'Vita') : 'Closed'
-  }
-  
-  return [
-    { key: 'new', label: labels.new, cls: 'kb-col-new', color: settings.kanban_color_new || '#4caf50' },
-    { key: 'progress', label: labels.progress, cls: 'kb-col-progress', color: settings.kanban_color_in_progress || '#2196f3' },
-    { key: 'closed', label: labels.closed, cls: 'kb-col-closed', color: settings.kanban_color_done || '#9e9e9e' }
-  ]
-}
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="kb-page">

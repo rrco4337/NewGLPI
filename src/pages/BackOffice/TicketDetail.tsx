@@ -5,17 +5,6 @@ import { glpiTicketService } from '@/services/glpiService'
 import { getTicketPriorityLabel, getTicketPriorityVariant, getTicketStatusLabel, getTicketStatusVariant } from '@/lib/ticketStatus'
 import type { TicketDetail as TicketDetailType } from '@/types/glpi'
 
-const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
-
-function fmtDuration(seconds: number): string {
-  if (!seconds) return '—'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}min`
-  if (m > 0) return `${m}min ${s.toString().padStart(2, '0')}s`
-  return `${s}s`
-}
 
 const ITEMTYPE_ICON: Record<string, string> = {
   Computer: 'bi-laptop', Monitor: 'bi-display', Phone: 'bi-phone',

@@ -2,18 +2,19 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useGlpiStore } from '@/store/glpiStore'
 
+/* Each nav item carries its accent colour for the icon badge */
 const NAV = [
-  { to: '/admin/dashboard',     icon: 'bi-grid-1x2-fill',       label: 'Tableau de bord', end: true },
-  { to: '/admin/tickets',       icon: 'bi-ticket-detailed',      label: 'Tickets' },
-  { to: '/admin/inventory',     icon: 'bi-pc-display',           label: 'Inventaire' },
-  { to: '/admin/import',        icon: 'bi-cloud-upload-fill',    label: 'Import GLPI' },
-  { to: '/admin/verify-import', icon: 'bi-patch-check-fill',     label: 'Vérif. Import' },
-  { to: '/admin/users',         icon: 'bi-people-fill',          label: 'Utilisateurs' },
-  { to: '/admin/reset',            icon: 'bi-arrow-counterclockwise', label: 'Réinitialisation' },
-  { to: '/admin/settings',         icon: 'bi-gear-fill',              label: 'Paramètres' },
-  { to: '/admin/kanban-settings',  icon: 'bi-sliders',                label: 'Kanban Settings' },
-  { to: '/admin/items-cost',       icon: 'bi-calculator',             label: 'Coûts Items' },
-  { to: '/admin/mvt-import',       icon: 'bi-arrow-left-right',       label: 'Import Mvt' },
+  { to: '/admin/dashboard',     icon: 'bi-grid-1x2-fill',          label: 'Tableau de bord', end: true,  color: '#6366f1', bg: 'rgba(99,102,241,.18)'  },
+  { to: '/admin/tickets',       icon: 'bi-ticket-detailed-fill',   label: 'Tickets',                     color: '#f97316', bg: 'rgba(249,115,22,.18)'  },
+  { to: '/admin/inventory',     icon: 'bi-pc-display',             label: 'Inventaire',                  color: '#10b981', bg: 'rgba(16,185,129,.18)'  },
+  { to: '/admin/import',        icon: 'bi-cloud-arrow-up-fill',    label: 'Import GLPI',                 color: '#8b5cf6', bg: 'rgba(139,92,246,.18)'  },
+  { to: '/admin/verify-import', icon: 'bi-patch-check-fill',       label: 'Vérif. Import',               color: '#0ea5e9', bg: 'rgba(14,165,233,.18)'  },
+  { to: '/admin/users',         icon: 'bi-people-fill',            label: 'Utilisateurs',                color: '#ec4899', bg: 'rgba(236,72,153,.18)'  },
+  { to: '/admin/items-cost',    icon: 'bi-currency-dollar',        label: 'Coûts Items',                 color: '#14b8a6', bg: 'rgba(20,184,166,.18)'  },
+  { to: '/admin/mvt-import',    icon: 'bi-arrow-left-right',       label: 'Import Mvt',                  color: '#a78bfa', bg: 'rgba(167,139,250,.18)' },
+  { to: '/admin/kanban-settings',icon: 'bi-kanban-fill',           label: 'Kanban',                      color: '#f59e0b', bg: 'rgba(245,158,11,.18)'  },
+  { to: '/admin/reset',         icon: 'bi-arrow-counterclockwise', label: 'Réinitialisation',            color: '#ef4444', bg: 'rgba(239,68,68,.18)'   },
+  { to: '/admin/settings',      icon: 'bi-gear-fill',              label: 'Paramètres',                  color: '#64748b', bg: 'rgba(100,116,139,.18)' },
 ]
 
 export const DashboardLayout = () => {
@@ -27,59 +28,66 @@ export const DashboardLayout = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-itu-bg font-sans">
+    <div style={{ display: 'flex', minHeight: '100svh', background: 'var(--clr-bg)', fontFamily: 'var(--font-sans)' }}>
 
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside
-        style={{
-          width: collapsed ? 68 : 248,
-          transition: 'width .25s cubic-bezier(.4,0,.2,1)',
-          background: '#ffffff',
-          borderRight: '1px solid #d0d7e1',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          overflow: 'hidden',
-          zIndex: 20,
-        }}
-      >
-        {/* Logo */}
+      {/* ── Sidebar ──────────────────────────────────────────── */}
+      <aside style={{
+        width: collapsed ? 66 : 244,
+        transition: 'width .22s cubic-bezier(.4,0,.2,1)',
+        background: 'var(--sb-bg)',
+        borderRight: '1px solid var(--sb-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        overflow: 'hidden',
+        zIndex: 30,
+      }}>
+
+        {/* Logo row */}
         <div style={{
-          padding: collapsed ? '18px 14px' : '18px 20px',
-          borderBottom: '1px solid #f1f4f9',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
-          minHeight: 64,
+          gap: 11,
+          padding: collapsed ? '16px 15px' : '16px 18px',
+          borderBottom: '1px solid rgba(255,255,255,.06)',
+          minHeight: 62,
+          flexShrink: 0,
         }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+            width: 34, height: 34,
+            borderRadius: 10,
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(79,70,229,.35)',
+            flexShrink: 0,
+            boxShadow: '0 4px 14px rgba(99,102,241,.45)',
           }}>
-            <i className="bi bi-box-seam-fill" style={{ color: '#fff', fontSize: 16 }} />
+            <i className="bi bi-box-seam-fill" style={{ color: '#fff', fontSize: 15 }} />
           </div>
           {!collapsed && (
-            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#1e293b', letterSpacing: '-.3px' }}>ITU Project</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500, marginTop: 1 }}>Back Office v1.0</div>
+            <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 14.5, color: '#f8fafc', letterSpacing: '-.25px', lineHeight: 1.1 }}>ITU Project</div>
+              <div style={{ fontSize: 10.5, color: '#475569', fontWeight: 500, marginTop: 2 }}>Back Office v1.0</div>
             </div>
           )}
         </div>
 
-        {/* Nav section label */}
+        {/* Nav label */}
         {!collapsed && (
-          <div style={{ padding: '16px 20px 6px', fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-            Navigation
+          <div style={{
+            padding: '14px 18px 5px',
+            fontSize: 9.5, fontWeight: 800, color: '#334155',
+            letterSpacing: '.1em', textTransform: 'uppercase',
+            flexShrink: 0,
+          }}>
+            Menu
           </div>
         )}
 
         {/* Nav items */}
-        <nav style={{ flex: 1, padding: '4px 10px', overflowY: 'auto', overflowX: 'hidden' }}>
+        <nav style={{ flex: 1, padding: '4px 9px', overflowY: 'auto', overflowX: 'hidden' }}>
           {NAV.map(item => (
             <NavLink
               key={item.to}
@@ -90,57 +98,66 @@ export const DashboardLayout = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: collapsed ? '10px 0' : '9px 12px',
+                padding: collapsed ? '9px 0' : '8px 10px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                borderRadius: 9,
+                borderRadius: 10,
                 marginBottom: 2,
                 textDecoration: 'none',
-                background: isActive ? '#eef2ff' : 'transparent',
-                color: isActive ? '#4f46e5' : '#64748b',
+                background: isActive ? 'rgba(99,102,241,.14)' : 'transparent',
+                color: isActive ? '#a5b4fc' : '#64748b',
                 fontWeight: isActive ? 600 : 500,
-                fontSize: 13.5,
+                fontSize: 13,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
+                borderLeft: isActive ? '2.5px solid #6366f1' : '2.5px solid transparent',
+                transition: 'all .15s ease',
               })}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement
-                if (!el.style.background.includes('eef2ff')) el.style.background = '#f1f4f9'
+                if (!el.style.background.includes('rgba(99,102,241,.14)'))
+                  el.style.background = 'rgba(255,255,255,.05)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement
-                if (!el.style.background.includes('eef2ff')) el.style.background = 'transparent'
+                if (!el.style.background.includes('rgba(99,102,241,.14)'))
+                  el.style.background = 'transparent'
               }}
             >
-              <i className={`bi ${item.icon}`} style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }} />
-              {!collapsed && <span>{item.label}</span>}
+              {/* Coloured icon badge */}
+              <div style={{
+                width: 28, height: 28,
+                borderRadius: 8,
+                background: item.bg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <i className={`bi ${item.icon}`} style={{ fontSize: 13, color: item.color }} />
+              </div>
+              {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        {/* Bottom actions */}
-        <div style={{ padding: '10px 10px 14px', borderTop: '1px solid #f1f4f9' }}>
+        {/* Divider + user card + logout */}
+        <div style={{ padding: '8px 9px 12px', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}>
           {!collapsed && (
             <div style={{
-              margin: '0 2px 8px',
-              padding: '10px 12px',
-              background: '#f1f4f9',
-              borderRadius: 10,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 10px', borderRadius: 10,
+              background: 'rgba(255,255,255,.04)',
+              marginBottom: 4,
             }}>
               <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                width: 30, height: 30, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>A</span>
+                <span style={{ color: '#fff', fontWeight: 700, fontSize: 12 }}>A</span>
               </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontWeight: 600, fontSize: 12.5, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Administrateur</div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>Super Admin</div>
+              <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 12, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Administrateur</div>
+                <div style={{ fontSize: 10.5, color: '#475569' }}>Super Admin</div>
               </div>
             </div>
           )}
@@ -148,119 +165,139 @@ export const DashboardLayout = () => {
             onClick={logout}
             title={collapsed ? 'Se déconnecter' : undefined}
             style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: collapsed ? '10px 0' : '9px 12px',
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: collapsed ? '9px 0' : '8px 10px',
               justifyContent: collapsed ? 'center' : 'flex-start',
-              borderRadius: 9,
-              border: 'none',
+              borderRadius: 10, border: 'none',
               background: 'transparent',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: 13.5,
+              color: '#f87171',
+              cursor: 'pointer', fontWeight: 500, fontSize: 13,
+              fontFamily: 'var(--font-sans)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,.12)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           >
-            <i className="bi bi-box-arrow-right" style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }} />
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'rgba(239,68,68,.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <i className="bi bi-box-arrow-right" style={{ fontSize: 13, color: '#f87171' }} />
+            </div>
             {!collapsed && <span>Se déconnecter</span>}
           </button>
         </div>
       </aside>
 
-      {/* ── Main ───────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* ── Main area ────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
 
         {/* Topbar */}
         <header style={{
-          height: 60,
-          background: '#ffffff',
-          borderBottom: '1px solid #d0d7e1',
+          height: 58,
+          background: 'var(--clr-surface)',
+          borderBottom: '1px solid var(--clr-border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 24px',
+          padding: '0 20px',
           position: 'sticky',
           top: 0,
-          zIndex: 10,
-          gap: 16,
+          zIndex: 20,
+          gap: 12,
         }}>
-          {/* Collapse toggle */}
+          {/* Sidebar toggle */}
           <button
             onClick={() => setCollapsed(c => !c)}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#64748b', fontSize: 20, padding: '4px 8px',
-              borderRadius: 8, lineHeight: 1,
+              color: 'var(--clr-muted)', fontSize: 19,
+              padding: '6px 8px', borderRadius: 8, lineHeight: 1,
+              display: 'flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f1f4f9' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--clr-surface-3)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
           >
             <i className={`bi bi-${collapsed ? 'layout-sidebar' : 'layout-sidebar-reverse'}`} />
           </button>
 
           {/* Search */}
-          <div style={{ flex: 1, maxWidth: 340, position: 'relative' }}>
+          <div style={{ flex: 1, maxWidth: 360, position: 'relative' }}>
             <i className="bi bi-search" style={{
-              position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-              color: '#94a3b8', fontSize: 14,
+              position: 'absolute', left: 11, top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--clr-subtle)', fontSize: 13,
+              pointerEvents: 'none',
             }} />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder="Rechercher…"
               style={{
                 width: '100%',
-                padding: '7px 12px 7px 36px',
-                border: '1.5px solid #d0d7e1',
-                borderRadius: 9,
-                fontSize: 13.5,
-                background: '#f1f4f9',
-                color: '#1e293b',
+                padding: '7px 12px 7px 33px',
+                border: '1.5px solid var(--clr-border)',
+                borderRadius: 10,
+                fontSize: 13,
+                background: 'var(--clr-surface-3)',
+                color: 'var(--clr-text)',
                 outline: 'none',
+                fontFamily: 'var(--font-sans)',
+                transition: 'border-color .15s, background .15s',
               }}
-              onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.background = '#fff' }}
-              onBlur={e => { e.target.style.borderColor = '#d0d7e1'; e.target.style.background = '#f1f4f9' }}
+              onFocus={e => {
+                e.target.style.borderColor = 'var(--clr-primary)'
+                e.target.style.background = '#fff'
+                e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,.1)'
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'var(--clr-border)'
+                e.target.style.background = 'var(--clr-surface-3)'
+                e.target.style.boxShadow = 'none'
+              }}
             />
           </div>
 
           {/* Right actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Offline indicator */}
             <button style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#64748b', fontSize: 19, padding: '4px 8px',
-              borderRadius: 8, lineHeight: 1, position: 'relative',
+              color: 'var(--clr-muted)', fontSize: 18,
+              padding: '6px 8px', borderRadius: 8, lineHeight: 1,
+              display: 'flex', alignItems: 'center', position: 'relative',
+              fontFamily: 'var(--font-sans)',
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#f1f4f9' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--clr-surface-3)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
             >
-              <i className="bi bi-bell" />
+              <i className="bi bi-bell-fill" style={{ fontSize: 16 }} />
               <span style={{
-                position: 'absolute', top: 4, right: 5,
+                position: 'absolute', top: 5, right: 5,
                 width: 7, height: 7,
-                background: '#ef4444', borderRadius: '50%',
+                background: 'var(--clr-danger)',
+                borderRadius: '50%',
                 border: '1.5px solid #fff',
               }} />
             </button>
 
-            <div style={{ width: 1, height: 24, background: '#d0d7e1' }} />
+            <div style={{ width: 1, height: 22, background: 'var(--clr-border)' }} />
 
             <div style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              width: 33, height: 33, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(79,70,229,.3)',
+              boxShadow: '0 2px 8px rgba(99,102,241,.35)',
             }}>
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>A</span>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: 12 }}>A</span>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflow: 'auto', background: '#f2f5fa' }}>
+        <main style={{ flex: 1, overflow: 'auto', background: 'var(--clr-bg)' }}>
           <Outlet />
         </main>
       </div>

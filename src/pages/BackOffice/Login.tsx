@@ -35,7 +35,7 @@ export const Login = () => {
       {/* ── Left brand panel ── */}
       <div style={{
         flex: '0 0 48%',
-        background: 'linear-gradient(135deg, #4338ca 0%, #4f46e5 40%, #7c3aed 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4c1d95 100%)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -136,7 +136,7 @@ export const Login = () => {
 
           {/* Header */}
           <div style={{ marginBottom: 36 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#4f46e5', marginBottom: 8, letterSpacing: '.03em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#6366f1', marginBottom: 8, letterSpacing: '.03em', textTransform: 'uppercase' }}>
               Bienvenue
             </p>
             <h2 style={{ fontSize: 28, fontWeight: 800, color: '#1e293b', letterSpacing: '-.4px', lineHeight: 1.2 }}>
@@ -194,7 +194,7 @@ export const Login = () => {
                     color: '#1e293b',
                     outline: 'none',
                   }}
-                  onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,.1)' }}
+                  onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,.1)' }}
                   onBlur={e => { e.target.style.borderColor = '#d0d7e1'; e.target.style.boxShadow = 'none' }}
                 />
                 <button
@@ -219,7 +219,7 @@ export const Login = () => {
                 marginTop: 8,
                 width: '100%',
                 padding: '12px',
-                background: loading ? '#c7d2fe' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                background: loading ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #7c3aed)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 10,

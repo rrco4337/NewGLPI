@@ -9,7 +9,10 @@
       "Bash(curl -s -X GET http://localhost/apirest.php/getMyProfiles -H 'App-Token: __TRACKED_VAR__' -H 'Session-Token: __TRACKED_VAR__')",
       "Bash(npx tsc *)",
       "Bash(cat vite.config.ts)",
-      "Bash(cat vite.config.js)"
+      "Bash(cat vite.config.js)",
+      "Bash(npm install *)",
+      "Bash(powershell -Command ' *)",
+      "Bash(npm run *)"
     ]
   }
 }

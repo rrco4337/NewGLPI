@@ -26,13 +26,7 @@ public class SettingDataInitializer implements CommandLineRunner {
             // Libellés en malgache
             settingRepository.save(new Setting("status_name_new", "Vaovao"));
             settingRepository.save(new Setting("status_name_in_progress", "Efa manao"));
-            settingRepository.save(new Setting("status_name_done", "Vita"));
-            
-            // Autres paramètres éventuels
-            settingRepository.save(new Setting("kanban_title_new", "Nouveau"));
-            settingRepository.save(new Setting("kanban_title_in_progress", "En cours"));
-            settingRepository.save(new Setting("kanban_title_done", "Terminé"));
-            
+            settingRepository.save(new Setting("status_name_done", "Vita"));        
             System.out.println("✅ " + settingRepository.count() + " paramètres initialisés");
         } else {
             System.out.println("📦 Base déjà initialisée avec " + settingRepository.count() + " paramètres");

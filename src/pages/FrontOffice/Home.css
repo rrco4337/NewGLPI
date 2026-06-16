@@ -3,17 +3,17 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --fo-bg:       #f0f4f8;
+  --fo-bg:       #f1f5f9;
   --fo-card:     #ffffff;
   --fo-border:   #e2e8f0;
-  --fo-text:     #1e293b;
+  --fo-text:     #0f172a;
   --fo-muted:    #64748b;
-  --fo-accent:   #4f46e5;
-  --fo-accent2:  #7c3aed;
+  --fo-accent:   #6366f1;
+  --fo-accent2:  #8b5cf6;
   --fo-radius:   16px;
-  --fo-shadow:   0 4px 24px rgba(15,23,42,.07);
-  --fo-shadow-h: 0 12px 40px rgba(79,70,229,.18);
-  --fo-trans:    .22s cubic-bezier(.4,0,.2,1);
+  --fo-shadow:   0 4px 24px rgba(15,23,42,.06);
+  --fo-shadow-h: 0 12px 40px rgba(99,102,241,.2);
+  --fo-trans:    .2s cubic-bezier(.4,0,.2,1);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -201,7 +201,7 @@
 .fo-hero {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%);
+  background: linear-gradient(135deg, #0c0f1a 0%, #1e1b4b 45%, #2e1065 100%);
   padding: 52px 40px 48px;
   color: #fff;
 }

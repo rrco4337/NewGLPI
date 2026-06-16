@@ -19,6 +19,31 @@ interface ResultLine {
   message: string
 }
 
+interface DetailItem {
+  itemtype: string
+  items_id: number
+  supercost: number
+  reopenCost: number
+}
+
+interface Movement {
+  id: number
+  ticket_id: number
+  mvt: string
+  valeur: string | null
+  statut: string
+  message: string | null
+  created_at: string
+}
+
+interface DetailData {
+  items: DetailItem[]
+  movements: Movement[]
+}
+
+const fmt = (n: number) =>
+  n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+
 const VALID_MVTS = ['open', 'close', 'cancel']
 
 function detectSeparator(line: string): string {
@@ -58,12 +83,18 @@ function parseLine(raw: string): ParsedLine | null {
   return { raw: trimmed, ticketId, mvt, valeur }
 }
 
+// Codes de statut GLPI
+const GLPI_STATUS = { EN_COURS: 2, RESOLU: 5, CLOS: 6 } as const
+
 async function executeLine(line: ParsedLine): Promise<{ statut: 'ok' | 'error'; message: string }> {
   const { ticketId, mvt, valeur } = line
   try {
     if (mvt === 'cancel') {
-      const r = await ItemSuperCostApi.cancelLastBatch(ticketId)
-      return { statut: 'ok', message: `${r.removed} entrée(s) annulée(s)` }
+      const [r] = await Promise.all([
+        ItemSuperCostApi.cancelLastBatch(ticketId),
+        glpiTicketService.updateTicket(ticketId, { status: GLPI_STATUS.EN_COURS }),
+      ])
+      return { statut: 'ok', message: `${r.removed} entrée(s) annulée(s) — statut → En cours` }
     }
 
     if (mvt === 'open') {
@@ -72,8 +103,11 @@ async function executeLine(line: ParsedLine): Promise<{ statut: 'ok' | 'error'; 
       if (isNaN(percent) || percent < 0) {
         return { statut: 'error', message: `Pourcentage invalide: "${valeur}"` }
       }
-      await ItemSuperCostApi.addReopenCost(ticketId, percent)
-      return { statut: 'ok', message: `Frais de réouverture: ${percent}%` }
+      await Promise.all([
+        ItemSuperCostApi.addReopenCost(ticketId, percent),
+        glpiTicketService.updateTicket(ticketId, { status: GLPI_STATUS.EN_COURS }),
+      ])
+      return { statut: 'ok', message: `Réouverture: ${percent}% — statut → En cours` }
     }
 
     if (mvt === 'close') {
@@ -82,8 +116,11 @@ async function executeLine(line: ParsedLine): Promise<{ statut: 'ok' | 'error'; 
         return { statut: 'error', message: `Montant invalide: "${valeur}"` }
       }
       const items = await glpiTicketService.getTicketLinkedItems(ticketId)
-      const r = await ItemSuperCostApi.addSuperCost(ticketId, amount, items)
-      return { statut: 'ok', message: `SuperCost ${amount}€ enregistré — ${r.saved} item(s) suivi(s)` }
+      const [r] = await Promise.all([
+        ItemSuperCostApi.addSuperCost(ticketId, amount, items),
+        glpiTicketService.updateTicket(ticketId, { status: GLPI_STATUS.CLOS }),
+      ])
+      return { statut: 'ok', message: `SuperCost ${amount}€ — ${r.saved} item(s) — statut → Clos` }
     }
 
     return { statut: 'error', message: 'Mouvement non supporté' }
@@ -101,12 +138,46 @@ async function recordMovement(ticketId: number, mvt: string, valeur: string, sta
 }
 
 export const MvtImport = () => {
-  //const [manualTicket, setManualTicket] = useState('')
-  //const [manualMvt, setManualMvt] = useState('close')
-  //const [manualValeur, setManualValeur] = useState('')
+  const [manualTicket, setManualTicket] = useState('')
+  const [manualMvt, setManualMvt] = useState('close')
+  const [manualValeur, setManualValeur] = useState('')
   const [results, setResults] = useState<ResultLine[]>([])
   const [processing, setProcessing] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [selectedResult, setSelectedResult] = useState<ResultLine | null>(null)
+  const [detail, setDetail] = useState<DetailData | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  const handleResultClick = async (r: ResultLine) => {
+    if (r.ticketId <= 0) return
+    setSelectedResult(r)
+    setDetailLoading(true)
+    setDetail(null)
+    try {
+      const [scRes, mvtRes] = await Promise.all([
+        fetch(`/api/item-supercosts/${r.ticketId}/detail`),
+        fetch(`/api/ticket-movements/${r.ticketId}`),
+      ])
+      const { supercosts, reopenCosts } = await scRes.json() as {
+        supercosts: { itemtype: string; items_id: number; total: number }[]
+        reopenCosts: { itemtype: string; items_id: number; total: number }[]
+      }
+      const movements = await mvtRes.json() as Movement[]
+      const map = new Map<string, DetailItem>()
+      for (const s of supercosts) {
+        map.set(`${s.itemtype}::${s.items_id}`, { itemtype: s.itemtype, items_id: s.items_id, supercost: s.total, reopenCost: 0 })
+      }
+      for (const rc of reopenCosts) {
+        const k = `${rc.itemtype}::${rc.items_id}`
+        const ex = map.get(k)
+        if (ex) ex.reopenCost = rc.total
+        else map.set(k, { itemtype: rc.itemtype, items_id: rc.items_id, supercost: 0, reopenCost: rc.total })
+      }
+      setDetail({ items: Array.from(map.values()), movements })
+    } catch { /* ignore */ }
+    setDetailLoading(false)
+  }
 
   const processLines = async (lines: ParsedLine[]) => {
     setProcessing(true)
@@ -128,15 +199,15 @@ export const MvtImport = () => {
     setProcessing(false)
   }
 
-  //const handleManual = async () => {
-   // if (!manualTicket.trim()) return
-   // const raw = `${manualTicket}_${manualMvt}_${manualValeur}`
-   // const parsed = parseLine(raw)
-   // if (!parsed) return
-   // await processLines([parsed])
-   // setManualTicket('')
-   // setManualValeur('')
-  //}
+  const handleManual = async () => {
+    if (!manualTicket.trim()) return
+   const raw = `${manualTicket}_${manualMvt}_${manualValeur}`
+   const parsed = parseLine(raw)
+    if (!parsed) return
+    await processLines([parsed])
+   setManualTicket('')
+   setManualValeur('')
+  }
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -160,10 +231,10 @@ export const MvtImport = () => {
         Import de Mouvements
       </h2>
       <p style={{ fontSize: 13.5, color: '#64748b', marginBottom: 24 }}>
-        Appliquez des mouvements (close / open / cancel) sur des tickets via saisie manuelle ou fichier.
+        Appliquez des mouvements (close / open / cancel) sur des tickets via import
       </p>
 
-      {/* Manual entry 
+      {/* Manual entry */}
       <div style={cardStyle}>
         <h3 style={cardTitleStyle}>Saisie manuelle</h3>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -212,7 +283,7 @@ export const MvtImport = () => {
             {processing ? '...' : 'Traiter'}
           </button>
         </div>
-      </div> */}
+      </div> 
 
       {/* File import */}
       <div style={cardStyle}>
@@ -269,8 +340,23 @@ export const MvtImport = () => {
               </thead>
               <tbody>
                 {results.map((r, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={tdStyle}>#{r.ticketId || '—'}</td>
+                  <tr
+                    key={i}
+                    onClick={() => r.ticketId > 0 && void handleResultClick(r)}
+                    style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      cursor: r.ticketId > 0 ? 'pointer' : 'default',
+                      background: selectedResult === r ? '#eef2ff' : undefined,
+                      transition: 'background .12s',
+                    }}
+                    onMouseEnter={e => { if (r.ticketId > 0 && selectedResult !== r) (e.currentTarget as HTMLElement).style.background = '#f8fafc' }}
+                    onMouseLeave={e => { if (selectedResult !== r) (e.currentTarget as HTMLElement).style.background = '' }}
+                    title={r.ticketId > 0 ? 'Voir le détail' : undefined}
+                  >
+                    <td style={tdStyle}>
+                      <span style={{ fontWeight: 600 }}>#{r.ticketId || '—'}</span>
+                      {r.ticketId > 0 && <i className="bi bi-box-arrow-up-right" style={{ marginLeft: 5, fontSize: 10, color: '#a5b4fc' }} />}
+                    </td>
                     <td style={tdStyle}>
                       {r.mvt ? (
                         <span style={{ ...badgeStyle, background: MVT_COLORS[r.mvt] ?? '#e2e8f0', color: '#1e293b' }}>{r.mvt}</span>
@@ -300,14 +386,211 @@ export const MvtImport = () => {
           Traitement en cours...
         </div>
       )}
+
+      {/* ── Detail Panel ─────────────────────────────────────────────────── */}
+      {selectedResult && (
+        <>
+          {/* Overlay */}
+          <div
+            onClick={() => { setSelectedResult(null); setDetail(null) }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.3)', zIndex: 40 }}
+          />
+
+          {/* Drawer */}
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 480,
+            background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,.12)',
+            zIndex: 50, display: 'flex', flexDirection: 'column',
+            fontFamily: 'system-ui, sans-serif',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Détail du mouvement</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>#{selectedResult.ticketId}</span>
+                  {selectedResult.mvt && (
+                    <span style={{
+                      background: MVT_BADGE[selectedResult.mvt]?.bg ?? '#e2e8f0',
+                      color:      MVT_BADGE[selectedResult.mvt]?.fg ?? '#1e293b',
+                      padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                    }}>
+                      {selectedResult.mvt}
+                    </span>
+                  )}
+                  {selectedResult.valeur && (
+                    <span style={{ fontSize: 14, color: '#475569', fontWeight: 600 }}>{selectedResult.valeur}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: selectedResult.statut === 'ok' ? '#166534' : '#991b1b' }}>
+                  <span style={{
+                    background: selectedResult.statut === 'ok' ? '#dcfce7' : '#fee2e2',
+                    padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 600, marginRight: 6,
+                  }}>
+                    {selectedResult.statut === 'ok' ? '✓ OK' : '✗ Erreur'}
+                  </span>
+                  {selectedResult.message}
+                </div>
+              </div>
+              <button
+                onClick={() => { setSelectedResult(null); setDetail(null) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: '#94a3b8', lineHeight: 1, padding: '0 4px', marginLeft: 8 }}
+              >×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+              {detailLoading && (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>Chargement...</div>
+              )}
+
+              {!detailLoading && detail && (
+                <>
+                  {/* Items affectés */}
+                  {detail.items.length > 0 && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div style={sectionLabel}>Items affectés</div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc' }}>
+                              <th style={pthStyle}>Item</th>
+                              <th style={{ ...pthStyle, textAlign: 'right' }}>Supercost</th>
+                              <th style={{ ...pthStyle, textAlign: 'right' }}>Réouverture</th>
+                              <th style={{ ...pthStyle, textAlign: 'right' }}>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detail.items.map((item, i) => {
+                              const total = item.supercost + item.reopenCost
+                              return (
+                                <tr key={i} style={{ borderTop: '1px solid #f1f5f9' }}>
+                                  <td style={ptdStyle}>
+                                    <span style={{ fontWeight: 600, color: '#374151' }}>{item.itemtype}</span>
+                                    <span style={{ color: '#94a3b8', marginLeft: 4, fontSize: 11 }}>#{item.items_id}</span>
+                                  </td>
+                                  <td style={{ ...ptdStyle, textAlign: 'right', color: item.supercost  ? '#1e40af' : '#cbd5e1' }}>{fmt(item.supercost)}</td>
+                                  <td style={{ ...ptdStyle, textAlign: 'right', color: item.reopenCost ? '#854d0e' : '#cbd5e1' }}>{fmt(item.reopenCost)}</td>
+                                  <td style={{ ...ptdStyle, textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt(total)}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                          {detail.items.length > 1 && (
+                            <tfoot>
+                              <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                                <td style={{ ...ptdStyle, fontWeight: 700, color: '#64748b' }}>Total</td>
+                                <td style={{ ...ptdStyle, textAlign: 'right', fontWeight: 700, color: '#1e40af' }}>{fmt(detail.items.reduce((s, i) => s + i.supercost,  0))}</td>
+                                <td style={{ ...ptdStyle, textAlign: 'right', fontWeight: 700, color: '#854d0e' }}>{fmt(detail.items.reduce((s, i) => s + i.reopenCost, 0))}</td>
+                                <td style={{ ...ptdStyle, textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt(detail.items.reduce((s, i) => s + i.supercost + i.reopenCost, 0))}</td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {detail.items.length === 0 && selectedResult.mvt === 'cancel' && (
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#92400e' }}>
+                      Le dernier batch a été annulé — les coûts associés ont été supprimés.
+                    </div>
+                  )}
+
+                  {/* Historique des mouvements */}
+                  <div style={sectionLabel}>Historique — ticket #{selectedResult.ticketId}</div>
+
+                  {detail.movements.length === 0 ? (
+                    <div style={{ color: '#94a3b8', fontSize: 13, fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>
+                      Aucun mouvement enregistré
+                    </div>
+                  ) : detail.movements.map(m => {
+                    const c = MVT_BADGE[m.mvt] ?? { bg: '#e2e8f0', fg: '#1e293b' }
+                    const date = new Date(m.created_at).toLocaleString('fr-FR', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })
+                    const isCurrentMvt = selectedResult.message === m.message && selectedResult.mvt === m.mvt
+                    return (
+                      <div key={m.id} style={{
+                        border: `1px solid ${isCurrentMvt ? '#a5b4fc' : '#e2e8f0'}`,
+                        borderRadius: 10,
+                        padding: '10px 14px',
+                        marginBottom: 8,
+                        background: isCurrentMvt ? '#eef2ff' : m.statut === 'error' ? '#fef2f2' : '#fafafa',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ background: c.bg, color: c.fg, padding: '1px 9px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{m.mvt}</span>
+                            {m.valeur && <span style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>{m.valeur}</span>}
+                            {isCurrentMvt && <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>← ce mouvement</span>}
+                          </div>
+                          <span style={{ fontSize: 10, color: '#94a3b8' }}>{date}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: m.statut === 'error' ? '#dc2626' : '#64748b' }}>
+                          <span style={{
+                            background: m.statut === 'ok' ? '#dcfce7' : '#fee2e2',
+                            color: m.statut === 'ok' ? '#166534' : '#991b1b',
+                            padding: '0 5px', borderRadius: 999, fontSize: 10, fontWeight: 600, marginRight: 5,
+                          }}>
+                            {m.statut === 'ok' ? '✓' : '✗'}
+                          </span>
+                          {m.message}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '10px 20px', borderTop: '1px solid #e2e8f0', fontSize: 11, color: '#94a3b8' }}>
+              {detail && `${detail.items.length} item(s) · ${detail.movements.length} mouvement(s)`}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
 const MVT_COLORS: Record<string, string> = {
-  close: '#dbeafe',
-  open:  '#fef9c3',
+  close:  '#dbeafe',
+  open:   '#fef9c3',
   cancel: '#fce7f3',
+}
+
+const MVT_BADGE: Record<string, { bg: string; fg: string }> = {
+  close:  { bg: '#dbeafe', fg: '#1e40af' },
+  open:   { bg: '#fef9c3', fg: '#854d0e' },
+  cancel: { bg: '#fce7f3', fg: '#9d174d' },
+}
+
+const sectionLabel: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: '#94a3b8',
+  textTransform: 'uppercase',
+  letterSpacing: '.06em',
+  marginBottom: 10,
+}
+
+const pthStyle: React.CSSProperties = {
+  padding: '7px 10px',
+  textAlign: 'left',
+  fontWeight: 700,
+  color: '#64748b',
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: '.05em',
+  borderBottom: '1px solid #e2e8f0',
+}
+
+const ptdStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  fontSize: 12,
+  verticalAlign: 'middle',
 }
 
 const cardStyle: React.CSSProperties = {
@@ -327,34 +610,34 @@ const cardTitleStyle: React.CSSProperties = {
   marginTop: 0,
 }
 
-//const labelStyle: React.CSSProperties = {
-  //display: 'block',
-  //fontSize: 12,
-  //color: '#64748b',
-  //fontWeight: 500,
-  //marginBottom: 4,
-//}
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 500,
+marginBottom: 4,
+}
 
-//const inputStyle: React.CSSProperties = {
-  //padding: '8px 12px',
-  //border: '1.5px solid #d0d7e1',
-  //borderRadius: 8,
-  //fontSize: 13.5,
-  //outline: 'none',
-  //background: '#fff',
-//}
+const inputStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  border: '1.5px solid #d0d7e1',
+  borderRadius: 8,
+  fontSize: 13.5,
+  outline: 'none',
+  background: '#fff',
+}
 
-//const btnPrimaryStyle: React.CSSProperties = {
-  //padding: '8px 22px',
-  //background: '#4f46e5',
-  //color: '#fff',
-  //border: 'none',
-  //borderRadius: 8,
-  //fontSize: 13.5,
-  //fontWeight: 600,
-  //cursor: 'pointer',
-  //height: 38,
-//}
+const btnPrimaryStyle: React.CSSProperties = {
+  padding: '8px 22px',
+  background: '#4f46e5',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: 'pointer',
+  height: 38,
+}
 
 const thStyle: React.CSSProperties = {
   padding: '10px 12px',

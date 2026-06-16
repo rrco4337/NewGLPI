@@ -11,7 +11,7 @@
   margin: 0 auto;
 }
 
-/* ── Header ── */
+/* â”€â”€ Header â”€â”€ */
 .create-ticket-header {
   margin-bottom: 1.75rem;
 }
@@ -29,7 +29,7 @@
   margin: 0;
 }
 
-/* ── Banners ── */
+/* â”€â”€ Banners â”€â”€ */
 .success-banner {
   background: #f0fdf4;
   border: 1.5px solid #86efac;
@@ -89,10 +89,10 @@
   font-size: 13.5px;
 }
 
-/* ── Form hidden ── */
+/* â”€â”€ Form hidden â”€â”€ */
 .form-hidden { display: none; }
 
-/* ── Form sections ── */
+/* â”€â”€ Form sections â”€â”€ */
 .form-section {
   background: #fff;
   border: 1.5px solid #e2e8f0;
@@ -119,7 +119,7 @@
   margin: -8px 0 16px;
 }
 
-/* ── Form fields ── */
+/* â”€â”€ Form fields â”€â”€ */
 .form-group {
   margin-bottom: 14px;
   display: flex;
@@ -159,7 +159,7 @@
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
 
-/* ── Asset search ── */
+/* â”€â”€ Asset search â”€â”€ */
 .asset-search-wrapper { margin-top: 4px; }
 
 .search-input-group {
@@ -274,7 +274,7 @@
 
 .btn-add-asset {
   background: #eef2ff;
-  color: #4f46e5;
+  color: #6366f1;
   border: none;
   padding: 6px 12px;
   border-radius: 8px;
@@ -289,7 +289,7 @@
   flex-shrink: 0;
 }
 
-.btn-add-asset:hover { background: #4f46e5; color: #fff; }
+.btn-add-asset:hover { background: #6366f1; color: #fff; }
 
 .selected-assets {
   background: #f0fdf4;
@@ -335,7 +335,7 @@
 
 .btn-remove-asset:hover { background: #fef2f2; color: #ef4444; }
 
-/* ── Actions ── */
+/* â”€â”€ Actions â”€â”€ */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -347,7 +347,7 @@
   align-items: center;
   gap: 8px;
   padding: 11px 28px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -356,18 +356,18 @@
   cursor: pointer;
   font-family: inherit;
   transition: all 0.18s;
-  box-shadow: 0 4px 14px rgba(79,70,229,0.3);
+  box-shadow: 0 4px 14px rgba(99,102,241,0.3);
 }
 
 .btn-submit:hover:not(:disabled) {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(79,70,229,0.4);
+  box-shadow: 0 6px 18px rgba(99,102,241,0.4);
 }
 
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(0.3); }
 
-/* ── Spinner ── */
+/* â”€â”€ Spinner â”€â”€ */
 .spin { display: inline-block; animation: ct-spin 0.8s linear infinite; }
 
 @keyframes ct-spin {
@@ -375,7 +375,7 @@
   to   { transform: rotate(360deg); }
 }
 
-/* ── Responsive ── */
+/* â”€â”€ Responsive â”€â”€ */
 @media (max-width: 640px) {
   .create-ticket-container { padding: 1.25rem 1rem; }
   .form-section { padding: 16px; }

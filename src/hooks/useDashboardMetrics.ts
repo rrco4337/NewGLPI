@@ -28,7 +28,8 @@ export const useDashboardMetrics = () => {
       setLoading(true)
       try {
         const overview = await glpiDashboardService.getOverview()
-        if (mounted) setData(overview)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (mounted) setData(overview as any)
       } catch (err) {
         if (mounted) setError(err instanceof Error ? err.message : 'Impossible de charger le dashboard')
       } finally {

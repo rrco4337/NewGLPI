@@ -7,7 +7,7 @@
 }
 .iv-header h1 { font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -.4px; margin: 0 0 5px; }
 .iv-header p  { color: #64748b; margin: 0; font-size: 14px; }
-.iv-lastfetch { color: #4f46e5; margin-left: .4rem; font-weight: 600; }
+.iv-lastfetch { color: #6366f1; margin-left: .4rem; font-weight: 600; }
 
 .iv-error-banner {
   display: flex; align-items: center; gap: 10px;
@@ -19,12 +19,12 @@
 /* ── Refresh button ─────────────────────────────────────────────────────────── */
 .iv-btn-refresh {
   display: inline-flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+  background: linear-gradient(135deg, #6366f1, #7c3aed); color: #fff;
   border: none; border-radius: 10px; padding: 9px 18px;
   font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
-  box-shadow: 0 3px 10px rgba(79,70,229,.3); transition: all .2s;
+  box-shadow: 0 3px 10px rgba(99,102,241,.3); transition: all .2s;
 }
-.iv-btn-refresh:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(79,70,229,.4); transform: translateY(-1px); }
+.iv-btn-refresh:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(99,102,241,.4); transform: translateY(-1px); }
 .iv-btn-refresh:disabled { opacity: .5; cursor: default; transform: none; }
 
 /* ── Tabs ───────────────────────────────────────────────────────────────────── */
@@ -41,9 +41,9 @@
   transition: all .15s;
 }
 .iv-tab:hover { color: #1e293b; background: rgba(255,255,255,.6); }
-.iv-tab.active { background: #fff; color: #4f46e5; box-shadow: 0 1px 4px rgba(0,0,0,.09); }
+.iv-tab.active { background: #fff; color: #6366f1; box-shadow: 0 1px 4px rgba(0,0,0,.09); }
 .iv-tab-badge {
-  background: #eef2ff; color: #4f46e5; border-radius: 99px;
+  background: #eef2ff; color: #6366f1; border-radius: 99px;
   font-size: 11px; font-weight: 700; padding: 1px 7px;
 }
 .iv-tab:not(.active) .iv-tab-badge { background: #e2e8f0; color: #64748b; }
@@ -62,7 +62,7 @@
 }
 .iv-spinner {
   width: 22px; height: 22px;
-  border: 3px solid #ecedf5; border-top-color: #4f46e5;
+  border: 3px solid #ecedf5; border-top-color: #6366f1;
   border-radius: 50%; animation: iv-spin .7s linear infinite; flex-shrink: 0;
 }
 @keyframes iv-spin { to { transform: rotate(360deg); } }
@@ -95,7 +95,7 @@
 .iv-badge { display: inline-block; padding: .15rem .55rem; border-radius: 6px; font-size: 12px; font-weight: 600; }
 .iv-badge.empty  { color: #94a3b8; }
 .iv-badge.id     { background: #f1f4f9; color: #64748b; }
-.iv-badge.label  { background: #eef2ff; color: #4f46e5; }
+.iv-badge.label  { background: #eef2ff; color: #6366f1; }
 .iv-badge.type   { background: #e0f2fe; color: #0284c7; }
 .iv-badge.status.open    { background: #d1fae5; color: #065f46; }
 .iv-badge.status.solved  { background: #fef3c7; color: #92400e; }
@@ -114,7 +114,7 @@
   overflow: hidden; transition: all .2s;
   box-shadow: 0 1px 3px rgba(0,0,0,.04);
 }
-.iv-image-card:hover { border-color: #a5b4fc; box-shadow: 0 4px 12px rgba(79,70,229,.1); transform: translateY(-2px); }
+.iv-image-card:hover { border-color: #a5b4fc; box-shadow: 0 4px 12px rgba(99,102,241,.1); transform: translateY(-2px); }
 .iv-image-wrap {
   width: 100%; aspect-ratio: 4/3; background: #f8fafc;
   display: flex; align-items: center; justify-content: center; overflow: hidden;

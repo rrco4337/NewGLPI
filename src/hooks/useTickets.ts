@@ -20,7 +20,7 @@ export const useTickets = () => {
       setLoading(true)
       try {
         const data = await glpiTicketService.listTickets()
-        if (mounted) setTickets(data)
+        if (mounted && data) setTickets(data as GlpiTicket[])
       } catch (err) {
         if (mounted) setError(err instanceof Error ? err.message : 'Impossible de récupérer les tickets.')
       } finally {
