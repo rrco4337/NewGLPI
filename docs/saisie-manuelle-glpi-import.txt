@@ -1,0 +1,292 @@
+SAISIE MANUELLE — GlpiImport (/admin/import)
+============================================
+Date d'analyse : 2026-06-16
+Fichier cible  : src/pages/BackOffice/GlpiImport.tsx
+Modèle suivi   : src/pages/BackOffice/CsvMvtImport.tsx (pattern saisie manuelle)
+
+
+PREREQUIS — ROUTE MANQUANTE
+-----------------------------
+/admin/import est dans la nav (DashboardLayout.tsx ligne 8) mais absent de appRoutes.tsx.
+Il faut d'abord l'enregistrer, sinon la page n'est jamais rendue :
+
+  // src/routes/appRoutes.tsx
+  import { GlpiImport } from '@/pages/BackOffice/GlpiImport'  ← ajouter
+  <Route path="import" element={<GlpiImport />} />             ← ajouter dans /admin
+
+
+PARALLÈLE AVEC CsvMvtImport
+-----------------------------
+Dans CsvMvtImport :
+  - traiterLigne(ticket, mvt, valeur) = source de vérité métier, ignorant l'origine des données
+  - L'import CSV et la saisie manuelle appellent toutes les deux traiterLigne()
+  - États séparés : miasa (CSV) vs manMiasa (manuel)
+
+Dans GlpiImport, l'équivalent est :
+  - runImport(assets, tickets, costs, images, onProgress, token) = source de vérité
+  - L'import CSV appelle déjà runImport() avec des tableaux parsés depuis les fichiers
+  - La saisie manuelle appellerait runImport() avec un tableau de 1 seul AssetRow
+  - États séparés du state machine CSV (phase : upload/validating/validated/importing/done)
+
+
+CE QU'ON PEUT SAISIR MANUELLEMENT
+-----------------------------------
+Un seul type d'objet par soumission : un asset (Computer, Monitor, Printer, etc.)
+
+Le type AssetRow (src/lib/import/types.ts) définit les champs nécessaires :
+  - itemType      : GlpiItemType  → <select> avec les types courants
+  - name          : string        → <input> texte, OBLIGATOIRE
+  - inventoryNumber: string       → <input> texte
+  - status        : string        → <input> texte (résolu en ID par l'orchestrateur)
+  - location      : string        → <input> texte (résolu en ID)
+  - manufacturer  : string        → <input> texte (résolu en ID)
+  - model         : string        → <input> texte (résolu en ID)
+  - user          : string        → <input> texte (résolu en ID)
+  - rowIndex      : number        → toujours 0 en saisie manuelle
+
+Les champs status/location/manufacturer/model/user sont optionnels —
+l'orchestrateur gère les valeurs vides (il met simplement 0 dans les dropdowns GLPI).
+
+Types courants à proposer dans le <select> :
+  Computer, Monitor, Printer, NetworkEquipment, Peripheral, Phone, Rack
+
+
+ÉTAT À AJOUTER (indépendant du flow CSV)
+------------------------------------------
+  const [manItemType, setManItemType] = useState<GlpiItemType>('Computer')
+  const [manName, setManName] = useState('')
+  const [manInvNum, setManInvNum] = useState('')
+  const [manStatus, setManStatus] = useState('')
+  const [manLocation, setManLocation] = useState('')
+  const [manManufacturer, setManManufacturer] = useState('')
+  const [manModel, setManModel] = useState('')
+  const [manUser, setManUser] = useState('')
+  const [manSaving, setManSaving] = useState(false)
+  const [manResults, setManResults] = useState<{ name: string; ok: boolean; message: string }[]>([])
+
+
+FONCTION DE SOUMISSION
+------------------------
+async function handleManualSubmit() {
+  if (!manName.trim()) return
+  setManSaving(true)
+  const token = localStorage.getItem('glpi_session_token') ?? undefined
+  try {
+    const result = await runImport(
+      [{
+        rowIndex: 0,
+        itemType: manItemType,
+        name: manName.trim(),
+        inventoryNumber: manInvNum.trim(),
+        status: manStatus.trim(),
+        location: manLocation.trim(),
+        manufacturer: manManufacturer.trim(),
+        model: manModel.trim(),
+        user: manUser.trim(),
+      }],
+      [],     // pas de tickets
+      [],     // pas de coûts
+      [],     // pas d'images
+      () => {},  // pas de barre de progression (1 seul item)
+      token,
+    )
+    const ok = result.success && result.errors.length === 0
+    const nbCreated = result.created.computers + result.created.monitors + result.created.otherAssets
+    setManResults(prev => [{
+      name: manName.trim(),
+      ok,
+      message: ok
+        ? `${manItemType} créé (${nbCreated} item GLPI)`
+        : (result.errors[0] ?? 'erreur inconnue'),
+    }, ...prev])
+    if (ok) {
+      setManName('')
+      setManInvNum('')
+    }
+  } catch (e: unknown) {
+    setManResults(prev => [{
+      name: manName.trim(),
+      ok: false,
+      message: e instanceof Error ? e.message : 'erreur inconnue',
+    }, ...prev])
+  }
+  setManSaving(false)
+}
+
+
+JSX — SECTION À AJOUTER
+-------------------------
+À placer AVANT le bloc {(phase === 'upload' || ...) && (...)} du CSV,
+ou juste après le header. Elle est toujours visible quelle que soit la phase CSV.
+
+  <div className="man-section">
+    <h3 className="man-title">Saisie manuelle — un asset</h3>
+
+    <div className="man-form">
+      <div className="man-row">
+        <select value={manItemType} onChange={e => setManItemType(e.target.value as GlpiItemType)}>
+          <option value="Computer">Computer</option>
+          <option value="Monitor">Monitor</option>
+          <option value="Printer">Printer</option>
+          <option value="NetworkEquipment">NetworkEquipment</option>
+          <option value="Peripheral">Peripheral</option>
+          <option value="Phone">Phone</option>
+          <option value="Rack">Rack</option>
+        </select>
+        <input
+          type="text" placeholder="Nom *"
+          value={manName} onChange={e => setManName(e.target.value)}
+        />
+        <input
+          type="text" placeholder="N° inventaire"
+          value={manInvNum} onChange={e => setManInvNum(e.target.value)}
+        />
+      </div>
+      <div className="man-row">
+        <input type="text" placeholder="Statut"      value={manStatus}       onChange={e => setManStatus(e.target.value)} />
+        <input type="text" placeholder="Localisation" value={manLocation}    onChange={e => setManLocation(e.target.value)} />
+        <input type="text" placeholder="Fabricant"   value={manManufacturer} onChange={e => setManManufacturer(e.target.value)} />
+        <input type="text" placeholder="Modèle"      value={manModel}        onChange={e => setManModel(e.target.value)} />
+        <input type="text" placeholder="Utilisateur" value={manUser}         onChange={e => setManUser(e.target.value)} />
+      </div>
+      <button
+        className="btn-verify"
+        onClick={handleManualSubmit}
+        disabled={manSaving || !manName.trim()}
+      >
+        {manSaving ? 'Création...' : 'Créer l\'asset'}
+      </button>
+    </div>
+
+    {manResults.length > 0 && (
+      <table className="man-results-table">
+        <thead>
+          <tr><th>nom</th><th>statut</th><th>message</th></tr>
+        </thead>
+        <tbody>
+          {manResults.map((r, i) => (
+            <tr key={i}>
+              <td>{r.name}</td>
+              <td className={r.ok ? 'man-ok' : 'man-err'}>{r.ok ? 'ok' : 'erreur'}</td>
+              <td>{r.message}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+
+CSS À AJOUTER dans GlpiImport.css
+------------------------------------
+.man-section {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #d0d7e1;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.man-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 14px;
+}
+
+.man-form { display: flex; flex-direction: column; gap: 10px; }
+
+.man-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.man-row input,
+.man-row select {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid #d0d7e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+}
+
+.man-row input:focus,
+.man-row select:focus {
+  border-color: #4f46e5;
+  background: #fff;
+}
+
+.man-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+.man-results-table th {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.man-results-table td { padding: 8px 12px; border-bottom: 1px solid #f8fafc; }
+
+.man-ok  { color: #065f46; font-weight: 700; }
+.man-err { color: #dc2626; font-weight: 700; }
+
+
+POINTS D'ATTENTION
+--------------------
+
+0. APPEL API PARASITE — ensureImageDocumentTypes(token) est appelé à la ligne 291
+   de importOrchestrator.ts MÊME QUAND images = []. C'est un appel à l'endpoint GLPI
+   DocumentType qui se produit avant la boucle d'images vide. Conséquence : si GLPI
+   refuse cet endpoint (droits insuffisants ou endpoint absent), la saisie manuelle
+   d'un asset échouera ici même sans image. Pas bloquant si l'import CSV fonctionne
+   déjà, mais point de fragilité à connaître.
+
+0b. PERFORMANCE — resolver.preloadAll(token) recharge tous les dropdowns GLPI à
+   chaque soumission manuelle. Pour le CSV c'est fait une seule fois pour N lignes.
+   Ici ce sera refait à chaque asset créé. Pas un bug, mais peut être lent si
+   l'utilisateur crée plusieurs assets à la suite.
+
+1. L'orchestrateur gère le rollback automatiquement si la création échoue à mi-chemin.
+   Une saisie manuelle bénéficie donc du même mécanisme de sécurité que l'import CSV.
+
+2. Le token GLPI est lu depuis localStorage (même logique que handleImport dans GlpiImport).
+   Si l'utilisateur n'est pas authentifié, runImport lèvera une erreur capturée dans le catch.
+
+3. onProgress est passé comme () => {} car 1 seul item = pas besoin d'une barre de progression.
+   Si on veut quand même afficher un spinner, utiliser manSaving (déjà dans l'état).
+
+4. La section manuelle est indépendante du state machine CSV (phase).
+   Elle reste visible et utilisable même si un CSV est en train d'être validé ou importé.
+   Seule exception possible : désactiver le bouton si phase === 'importing' pour éviter
+   deux appels concurrents à runImport sur la même session GLPI.
+
+5. Les champs status/location/manufacturer/model/user sont des strings libres.
+   L'orchestrateur (DropdownResolver) crée automatiquement la valeur dans GLPI si elle
+   n'existe pas encore (comportement identique à l'import CSV).
+
+6. Pour les tickets et coûts manuels, même principe :
+   - Ticket : passer [] en assets, un TicketRow en tickets, [] en costs
+   - Coût : nécessite que le ticket existe déjà dans GLPI (refTicket doit être valide)
+   Ces cas sont moins prioritaires que l'asset car CsvMvtImport couvre déjà les coûts.
+
+
+ESTIMATION
+-----------
+Durée réelle : ~45 minutes
+  - 5 min  : ajouter la route dans appRoutes.tsx
+  - 15 min : ajouter l'état + handleManualSubmit dans GlpiImport.tsx
+  - 15 min : JSX de la section
+  - 10 min : CSS + test avec un Computer réel
