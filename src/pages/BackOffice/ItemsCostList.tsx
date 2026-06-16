@@ -13,6 +13,7 @@ interface ItemTypeRow {
   fraisReouverture: number
   total: number
   totalSansHoraire: number
+  totalGlpi: number
 }
 
 const fmt = (n: number) =>
@@ -84,6 +85,7 @@ export const ItemsCostList = () => {
                 fraisReouverture: 0,
                 total: 0,
                 totalSansHoraire: 0,
+                totalGlpi: 0
               })
             }
             const row = byItemtype.get(item.itemtype)!
@@ -109,6 +111,7 @@ export const ItemsCostList = () => {
               fraisReouverture: 0,
               total: 0,
               totalSansHoraire: 0,
+              totalGlpi: 0
             })
           }
           const row = byItemtype.get(s.itemtype)!
@@ -119,7 +122,7 @@ export const ItemsCostList = () => {
         // Calculer les totaux après fusion
         for (const row of byItemtype.values()) {
           row.total = row.coutFixed + row.coutHoraire + row.nouveauPrix + row.fraisReouverture
-          row.totalSansHoraire = row.coutFixed + row.nouveauPrix + row.fraisReouverture
+          row.totalGlpi = row.coutFixed + row.coutHoraire
         }
 
         const result = Array.from(byItemtype.values()).sort((a, b) =>
@@ -157,7 +160,16 @@ export const ItemsCostList = () => {
   }
 
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0)
-  const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
+
+  // const grandTotalSansHoraire = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
+  // const totalGlpi = rows.reduce((sum, r) => sum + r.totalSansHoraire, 0)
+  const ticketName= new Map<number, string>()
+    for(const row of rows){
+      for(const t of row.tickets){
+        ticketName.set(t.ticketId, t.ticketName)
+      }
+    }
+
 
   return (
     <div className="items-cost-page">
@@ -177,9 +189,9 @@ export const ItemsCostList = () => {
               <tr>
                 <th>Type item</th>
                 <th>Tickets concernés</th>
-                <th style={{ textAlign: 'right' }}>Coût fixe</th>
-                <th style={{ textAlign: 'right' }}>Coût horaire</th>
-                <th style={{ textAlign: 'right' }}>Nouveau prix</th>
+
+                <th style={{ textAlign: 'right' }}>Coût GlpiTicket</th>
+                <th style={{ textAlign: 'right' }}>Super Cost</th>
                 <th style={{ textAlign: 'right' }}>Frais de réouverture</th>
                 <th style={{ textAlign: 'right' }}>Total</th>
 
@@ -198,8 +210,8 @@ export const ItemsCostList = () => {
                       </div>
                     ))}
                   </td>
-                  <td className="items-cost-amount">{fmt(row.coutFixed)}</td>
-                  <td className="items-cost-amount">{fmt(row.coutHoraire)}</td>
+
+                  <td className="items-cost-amount">{fmt(row.totalGlpi) }</td>
                   <td className="items-cost-amount">{fmt(row.nouveauPrix)}</td>
                   <td className="items-cost-amount">{fmt(row.fraisReouverture)}</td>
                   <td className="items-cost-amount total">{fmt(row.total)}</td>
@@ -209,7 +221,7 @@ export const ItemsCostList = () => {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={6} style={{ textAlign: 'right' }}>Total général</td>
+                <td colSpan={5} style={{ textAlign: 'right' }}></td>
                 <td className="items-cost-amount total">{fmt(grandTotal)}</td>
 
               </tr>
@@ -228,12 +240,14 @@ export const ItemsCostList = () => {
               {detailData.supercosts.length === 0 ? <p>Aucun</p> : (
                 <table border={1} cellPadding={4}>
                   <thead>
-                    <tr><th>ticket</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                    <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+
                   </thead>
                   <tbody>
                     {detailData.supercosts.map((sc, i) => (
                       <tr key={i}>
-                        <td>#{sc.ticket_id}</td>
+                        <td>#{sc.ticket_id} — {ticketName.get(sc.ticket_id) ?? '?'}</td>
+                        <td>Supercost</td>
                         <td>{sc.items_id}</td>
                         <td>{sc.batch}</td>
                         <td>{fmt(sc.amount)}</td>
