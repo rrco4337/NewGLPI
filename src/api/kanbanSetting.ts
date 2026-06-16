@@ -34,29 +34,4 @@ export const KanbanSettingApi = {
     return response.json();
   },
 
-  // Sauvegarder le super cost d'un ticket clôturé
-  async saveSuperCost(ticketId: number, amount: number): Promise<void> {
-    await this.updateSetting(`ticket_super_cost_${ticketId}`, String(amount));
-  },
-
-  // Récupérer le super cost d'un ticket
-  async getSuperCost(ticketId: number): Promise<number> {
-    const map = await this.getSettingsMap();
-    return parseFloat(map[`ticket_super_cost_${ticketId}`] ?? '0') || 0;
-  },
-
-  // Effacer le super cost d'un ticket (remise à 0)
-  async clearSuperCost(ticketId: number): Promise<void> {
-    await this.updateSetting(`ticket_super_cost_${ticketId}`, '0');
-  },
-
-  // Sauvegarder les frais de réouverture d'un ticket (calculés sur le superCost précédent)
-  async saveReopenCost(ticketId: number, amount: number): Promise<void> {
-    await this.updateSetting(`ticket_reopen_cost_${ticketId}`, String(amount));
-  },
-
-  // Effacer les frais de réouverture (remise à 0, ex: annulation ou nouvelle clôture)
-  async clearReopenCost(ticketId: number): Promise<void> {
-    await this.updateSetting(`ticket_reopen_cost_${ticketId}`, '0');
-  },
 };

@@ -78,10 +78,4 @@ export const ItemSuperCostApi = {
     if (!res.ok) throw new Error('Erreur chargement details')
     return res.json()
   },
-
-  /** Vide les deux tables. */
-  async resetAll(): Promise<void> {
-    const res = await fetch(`${API_BASE}/reset`, { method: 'POST' })
-    if (!res.ok) throw new Error('Erreur reset')
-  },
 }

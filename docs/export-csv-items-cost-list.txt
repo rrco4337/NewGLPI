@@ -1,0 +1,150 @@
+EXPORT CSV — ItemsCostList
+=========================
+Date d'analyse : 2026-06-16
+Fichier cible  : src/pages/BackOffice/ItemsCostList.tsx
+
+
+OBJECTIF
+--------
+Permettre à l'utilisateur de télécharger les données affichées dans le tableau
+"Coûts par type d'item" sous forme de fichier CSV, sans appel API supplémentaire
+(les données sont déjà dans l'état React `rows`).
+
+
+DONNÉES DISPONIBLES DANS `rows` (type ItemTypeRow)
+---------------------------------------------------
+- itemtype            : string
+- tickets             : { ticketId, ticketName, items_id }[]
+- coutFixed           : number  (part coût fixe GLPI)
+- coutHoraire         : number  (part coût horaire GLPI)
+- nouveauPrix         : number  (super cost SQLite)
+- fraisReouverture    : number  (frais réouverture SQLite)
+- totalGlpi           : number  = coutFixed + coutHoraire
+- total               : number  = totalGlpi + nouveauPrix + fraisReouverture
+
+
+DEUX FORMATS POSSIBLES
+-----------------------
+
+Format A — Résumé (1 ligne par itemtype, miroir du tableau affiché)
+  Colonnes : Type item ; Nb tickets ; Coût GLPI ; Super Cost ; Frais réouverture ; Total
+  Avantage : simple, lisible, correspond exactement à ce que l'utilisateur voit
+  Inconvénient : perd le détail des tickets individuels
+
+Format B — Détaillé (1 ligne par ticket × itemtype)
+  Colonnes : Type item ; Ticket ID ; Nom ticket ; Item ID ; Coût GLPI ; Super Cost ; Frais réouv ; Total
+  Avantage : granularité comptable, chaque ligne est traçable
+  Inconvénient : les colonnes Coût GLPI / Super Cost / Frais réouv sont des parts fractionnées
+                 (divisées par nb items du ticket) → peut sembler contre-intuitif
+
+=> Recommandation : implémenter Format A en v1 (30 min).
+   Format B nécessite de comprendre comment interpréter les montants fractionnés,
+   risque de confusion comptable sans documentation.
+
+
+IMPLÉMENTATION — Format A
+--------------------------
+
+1. Fonction exporterCSV() dans le composant, après la déclaration de `grandTotal` :
+
+  function exporterCSV() {
+    const BOM = '﻿'  // nécessaire pour Excel + accents français
+    const sep = ';'
+
+    const entete = [
+      'Type item',
+      'Nb tickets',
+      'Coût GLPI',
+      'Super Cost',
+      'Frais réouverture',
+      'Total',
+    ].join(sep)
+
+    const lignes = rows.map(r => [
+      r.itemtype,
+      r.tickets.length,
+      r.totalGlpi.toFixed(2),
+      r.nouveauPrix.toFixed(2),
+      r.fraisReouverture.toFixed(2),
+      r.total.toFixed(2),
+    ].join(sep))
+
+    const totalLigne = [
+      'TOTAL',
+      '',
+      rows.reduce((s, r) => s + r.totalGlpi, 0).toFixed(2),
+      rows.reduce((s, r) => s + r.nouveauPrix, 0).toFixed(2),
+      rows.reduce((s, r) => s + r.fraisReouverture, 0).toFixed(2),
+      grandTotal.toFixed(2),
+    ].join(sep)
+
+    const contenu = [BOM + entete, ...lignes, totalLigne].join('\n')
+    const blob = new Blob([contenu], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `couts-items-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+2. Bouton dans le header (à côté du titre h2) :
+
+  <button
+    className="items-cost-export-btn"
+    onClick={exporterCSV}
+    disabled={rows.length === 0}
+  >
+    Exporter CSV
+  </button>
+
+3. Style minimal à ajouter dans ItemsCostList.css :
+
+  .items-cost-export-btn {
+    margin-left: 12px;
+    padding: 6px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .items-cost-export-btn:hover { background: #f1f5f9; }
+  .items-cost-export-btn:disabled { opacity: 0.4; cursor: default; }
+
+
+POINTS D'ATTENTION
+-------------------
+
+Séparateur décimal :
+  Utiliser `.toFixed(2)` (point anglais) car le séparateur de colonnes est `;`.
+  Si on utilisait `,` pour les décimales ET `,` comme séparateur, Excel verrait 3 colonnes
+  au lieu d'une valeur comme "1 234,56".
+
+Encodage :
+  Le BOM `﻿` est indispensable pour que Excel (Windows/Mac) ouvre directement
+  le fichier avec les bons accents sans passer par l'assistant d'import.
+
+Nom de fichier :
+  `couts-items-YYYY-MM-DD.csv` — la date évite les collisions sur plusieurs exports
+  dans la même session de travail.
+
+Données manquantes :
+  `totalSansHoraire` est actuellement à 0 pour toutes les lignes (champ non calculé).
+  Ne pas l'inclure dans l'export.
+
+Tickets dans l'export :
+  Le Format A n'exporte pas les noms/IDs de tickets individuels.
+  Si besoin, on peut ajouter une colonne "Tickets" avec les IDs joints par " | "
+  ex: r.tickets.map(t => `#${t.ticketId}`).join(' | ')
+  mais ça alourdit la lisibilité — à décider selon le besoin métier.
+
+
+ESTIMATION
+-----------
+Durée réelle : ~25 minutes
+  - 10 min : fonction exporterCSV()
+  - 5 min  : bouton dans le JSX
+  - 10 min : style + test avec données réelles (vérifier l'ouverture Excel/LibreOffice)
+
+Aucune dépendance externe nécessaire — tout en natif browser API.
