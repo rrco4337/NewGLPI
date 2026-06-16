@@ -103,6 +103,7 @@ export const KanbanTickets = () => {
   // Reopen dialog (closed → in progress)
   const [reopenDialog,  setReopenDialog]  = useState<{ ticketId: number; prevStatus: string | number; previousSuperCost: number } | null>(null)
   const [reopenPct,     setReopenPct]     = useState('')
+  const [reopenMode,    setReopenMode]    = useState(1)
   const [reopenSaving,  setReopenSaving]  = useState(false)
 
   const { settings, loading: settingsLoading } = useSettings()
@@ -267,6 +268,7 @@ export const KanbanTickets = () => {
   const cancelReopenDialog = () => {
     setReopenDialog(null)
     setReopenPct('')
+    setReopenMode(1)
   }
 
   const handleReopenAnnulation = async () => {
@@ -298,10 +300,11 @@ export const KanbanTickets = () => {
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 2 } : t))
     try {
       await glpiTicketService.updateTicket(ticketId, { status: 2 })
-      // Le backend calcule pct% du dernier batch et stocke dans ticket_reopen_costs
-      await ItemSuperCostApi.addReopenCost(ticketId, pct)
+      // Le backend calcule pct% de la base Supercost choisie (mode) et stocke dans ticket_reopen_costs
+      await ItemSuperCostApi.addReopenCost(ticketId, pct, reopenMode)
       setReopenDialog(null)
       setReopenPct('')
+      setReopenMode(1)
     } catch (err) {
       console.error('Failed to reopen ticket with cost:', err)
       setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: prevStatus } : t))
@@ -646,23 +649,41 @@ const getColumnConfig = () => {
               </p>
             )}
             <div className="kb-field">
-              <label>% Réouverture (calcul sur le Super Cost précédent)</label>
+              <label>Mode de calcul de la base Super Cost</label>
+              <select
+                value={reopenMode}
+                onChange={e => setReopenMode(Number(e.target.value))}
+                disabled={reopenSaving}
+              >
+                <option value={1}>1 — Dernier Super Cost</option>
+                <option value={2}>2 — Premier Super Cost</option>
+                <option value={3}>3 — Moyenne des Super Cost</option>
+                <option value={4}>4 — Somme des Super Cost</option>
+              </select>
+            </div>
+            <div className="kb-field">
+              <label>% Réouverture (calcul sur la base Super Cost choisie)</label>
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={reopenPct}
                 onChange={e => setReopenPct(e.target.value)}
-                placeholder="Ex : 50 → 50% du coût précédent"
+                placeholder="Ex : 50 → 50% de la base choisie"
                 disabled={reopenSaving}
               />
-              {reopenPct !== '' && !isNaN(parseFloat(reopenPct)) && (
+              {reopenMode === 1 && reopenPct !== '' && !isNaN(parseFloat(reopenPct)) && (
                 <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
                   Frais de réouverture :{' '}
                   <strong>
                     {(reopenDialog.previousSuperCost * parseFloat(reopenPct) / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                   </strong>
                   {' '}(le Super Cost de base reste inchangé)
+                </small>
+              )}
+              {reopenMode !== 1 && (
+                <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
+                  Le montant exact est calculé côté serveur selon le mode {reopenMode}.
                 </small>
               )}
             </div>

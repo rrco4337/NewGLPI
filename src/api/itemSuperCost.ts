@@ -27,14 +27,14 @@ export const ItemSuperCostApi = {
   },
 
   /**
-   * Enregistre les frais de réouverture = percent% du dernier batch.
-   * Le calcul est fait côté backend.
+   * Enregistre les frais de réouverture = percent% d'une base Supercost.
+   * mode : 1=dernier Supercost, 2=premier, 3=moyenne, 4=somme. Le calcul est fait côté backend.
    */
-  async addReopenCost(ticketId: number, percent: number): Promise<void> {
+  async addReopenCost(ticketId: number, percent: number, mode = 1): Promise<void> {
     const res = await fetch(`${API_BASE}/reopen`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId, percent }),
+      body: JSON.stringify({ ticketId, percent, mode }),
     })
     if (!res.ok) throw new Error('Erreur enregistrement frais de réouverture')
   },
@@ -72,7 +72,7 @@ export const ItemSuperCostApi = {
 
   async getDetailsByItemtype(itemtype: string): Promise<{
     supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
-    reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+    reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number; mode: number }[]
   }> {
     const res = await fetch(`${API_BASE}/details/${encodeURIComponent(itemtype)}`)
     if (!res.ok) throw new Error('Erreur chargement details')

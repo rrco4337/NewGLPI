@@ -24,7 +24,8 @@ db.exec(`
     batch INTEGER NOT NULL,
     itemtype TEXT NOT NULL,
     items_id INTEGER NOT NULL,
-    amount REAL NOT NULL
+    amount REAL NOT NULL,
+    mode INTEGER NOT NULL DEFAULT 1
   );
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -39,6 +40,12 @@ db.exec(`
     status TEXT
   );
 `)
+
+// Migration : ajout de la colonne `mode` sur ticket_reopen_costs pour les bases existantes
+const reopenCols = db.prepare("PRAGMA table_info(ticket_reopen_costs)").all() as { name: string }[]
+if (!reopenCols.some(c => c.name === 'mode')) {
+  db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN mode INTEGER NOT NULL DEFAULT 1')
+}
 
 const settingsCount = (db.prepare('SELECT COUNT(*) as c FROM settings').get() as { c: number }).c
 if (settingsCount === 0) {
@@ -100,15 +107,39 @@ app.post('/api/item-supercosts', (req, res) => {
 })
 
 app.post('/api/item-supercosts/reopen', (req, res) => {
-  const { ticketId, percent } = req.body as { ticketId: number; percent: number }
-  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }
-  if (maxBatchRow.m === null) { res.status(200).end(); return }
+  // mode = base de calcul du % : 1=dernier Supercost, 2=premier, 3=moyenne, 4=somme
+  const { ticketId, percent, mode = 1 } = req.body as { ticketId: number; percent: number; mode?: number }
 
-  type ScRow = { ticket_id: number; batch: number; itemtype: string; items_id: number; amount: number }
-  const lastBatch = db.prepare('SELECT * FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').all(ticketId, maxBatchRow.m) as ScRow[]
-  const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount) VALUES (?, ?, ?, ?, ?)')
+  type ScRow = { batch: number; itemtype: string; items_id: number; amount: number }
+  const rows = db.prepare('SELECT batch, itemtype, items_id, amount FROM ticket_supercosts WHERE ticket_id = ?').all(ticketId) as ScRow[]
+  if (rows.length === 0) { res.status(200).end(); return }
+
+  // Regrouper par item (itemtype + items_id) car les Supercost sont stockés répartis par item
+  const groups = new Map<string, ScRow[]>()
+  for (const r of rows) {
+    const key = `${r.itemtype}|${r.items_id}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(r)
+  }
+
+  // Base de calcul selon le mode (le Supercost peut valoir 0)
+  const baseAmount = (sorted: ScRow[]): number => {
+    switch (mode) {
+      case 2: return sorted[0].amount                                           // premier
+      case 3: return sorted.reduce((s, r) => s + r.amount, 0) / sorted.length   // moyenne
+      case 4: return sorted.reduce((s, r) => s + r.amount, 0)                   // somme
+      case 1:
+      default: return sorted[sorted.length - 1].amount                          // dernier
+    }
+  }
+
+  const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount, mode) VALUES (?, ?, ?, ?, ?, ?)')
   db.transaction(() => {
-    for (const sc of lastBatch) ins.run(sc.ticket_id, sc.batch, sc.itemtype, sc.items_id, sc.amount * (percent / 100))
+    for (const list of groups.values()) {
+      const sorted = [...list].sort((a, b) => a.batch - b.batch)
+      const lastBatch = sorted[sorted.length - 1].batch
+      ins.run(ticketId, lastBatch, sorted[0].itemtype, sorted[0].items_id, baseAmount(sorted) * (percent / 100), mode)
+    }
   })()
   res.status(200).end()
 })
@@ -132,8 +163,9 @@ app.get('/api/item-supercosts/:ticketId/last-batch-total', (req, res) => {
 app.get('/api/item-supercosts/details/:itemtype', (req, res) => {
   const { itemtype } = req.params
   type ScRow = { ticket_id: number; batch: number; items_id: number; amount: number }
+  type RcRow = ScRow & { mode: number }
   const supercosts = db.prepare('SELECT ticket_id, batch, items_id, amount FROM ticket_supercosts WHERE itemtype = ?').all(itemtype) as ScRow[]
-  const reopencosts = db.prepare('SELECT ticket_id, batch, items_id, amount FROM ticket_reopen_costs WHERE itemtype = ?').all(itemtype) as ScRow[]
+  const reopencosts = db.prepare('SELECT ticket_id, batch, items_id, amount, mode FROM ticket_reopen_costs WHERE itemtype = ?').all(itemtype) as RcRow[]
   res.json({ supercosts, reopencosts })
 })
 

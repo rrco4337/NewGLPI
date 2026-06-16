@@ -21,8 +21,11 @@ const fmt = (n: number) =>
 
 type DetailData = {
   supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
-  reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+  reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number; mode: number }[]
 }
+
+// Libellé court du mode de calcul de la base Super Cost (1-4)
+const MODE_LABEL: Record<number, string> = { 1: 'dernier', 2: 'premier', 3: 'moyenne', 4: 'somme' }
 
 export const ItemsCostList = () => {
   const [rows, setRows] = useState<ItemTypeRow[]>([])
@@ -262,7 +265,7 @@ export const ItemsCostList = () => {
                 {detailData.reopencosts.length === 0 ? <p style={{ padding: '8px 14px', margin: 0, color: '#94a3b8', fontSize: 13 }}>Aucun</p> : (
                   <table className="detail-table">
                     <thead>
-                      <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                      <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>mode</th><th>montant</th></tr>
                     </thead>
                     <tbody>
                       {detailData.reopencosts.map((rc, i) => (
@@ -271,6 +274,7 @@ export const ItemsCostList = () => {
                           <td>Réouverture</td>
                           <td>{rc.items_id}</td>
                           <td>{rc.batch}</td>
+                          <td>{rc.mode} — {MODE_LABEL[rc.mode] ?? '?'}</td>
                           <td>{fmt(rc.amount)}</td>
                         </tr>
                       ))}

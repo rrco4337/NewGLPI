@@ -1,0 +1,397 @@
+# Aléa — Mode de calcul du % de réouverture (1=dernier, 2=premier, 3=moyenne, 4=somme)
+
+Documentation d'implémentation autonome. Permet de reproduire la fonctionnalité dans un autre projet NewApp.
+
+## Résumé fonctionnel
+
+Lors d'une **réouverture** d'un ticket clôturé, les frais de réouverture valaient toujours
+`percent %` du **dernier** Super Cost enregistré. On ajoute un **mode** de calcul de la base :
+
+| mode | base utilisée pour le calcul du % |
+|------|-----------------------------------|
+| 1    | **dernier** Super Cost (comportement historique = défaut) |
+| 2    | **premier** Super Cost |
+| 3    | **moyenne** des Super Cost |
+| 4    | **somme** de tous les Super Cost |
+
+- Le Super Cost peut valoir `0` (aucun blocage, on insère quand même `0`).
+- Le mode est exposé à 3 endroits : Kanban (dialog réouverture), saisie manuelle CSV (ligne `open`),
+  et fichier CSV (dernière colonne `mode`, valable uniquement pour `open`).
+- **Rétrocompatibilité** : `mode` par défaut = `1`. Tout appel sans mode garde le comportement actuel.
+
+Les Super Cost sont stockés **répartis par item** (`itemtype` + `items_id`), un *batch* par clôture.
+Le calcul du mode se fait donc **par item** (groupe), puis `base * percent / 100`.
+
+---
+
+## Ordre des modifications
+
+1. `server/api.ts` — backend (source de vérité du calcul)
+2. `src/api/itemSuperCost.ts` — client API
+3. `src/pages/FrontOffice/KanbanTickets.tsx` — UI Kanban
+4. `src/pages/BackOffice/CsvMvtImport.tsx` — import CSV + saisie manuelle
+5. `import_mvt.csv` — fichier exemple
+
+---
+
+## 1. `server/api.ts`
+
+### Endpoint `POST /api/item-supercosts/reopen` (≈ lignes 102-140)
+
+**AVANT**
+```ts
+app.post('/api/item-supercosts/reopen', (req, res) => {
+  const { ticketId, percent } = req.body as { ticketId: number; percent: number }
+  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }
+  if (maxBatchRow.m === null) { res.status(200).end(); return }
+
+  type ScRow = { ticket_id: number; batch: number; itemtype: string; items_id: number; amount: number }
+  const lastBatch = db.prepare('SELECT * FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').all(ticketId, maxBatchRow.m) as ScRow[]
+  const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount) VALUES (?, ?, ?, ?, ?)')
+  db.transaction(() => {
+    for (const sc of lastBatch) ins.run(sc.ticket_id, sc.batch, sc.itemtype, sc.items_id, sc.amount * (percent / 100))
+  })()
+  res.status(200).end()
+})
+```
+
+**APRÈS**
+```ts
+app.post('/api/item-supercosts/reopen', (req, res) => {
+  // mode = base de calcul du % : 1=dernier Supercost, 2=premier, 3=moyenne, 4=somme
+  const { ticketId, percent, mode = 1 } = req.body as { ticketId: number; percent: number; mode?: number }
+
+  type ScRow = { batch: number; itemtype: string; items_id: number; amount: number }
+  const rows = db.prepare('SELECT batch, itemtype, items_id, amount FROM ticket_supercosts WHERE ticket_id = ?').all(ticketId) as ScRow[]
+  if (rows.length === 0) { res.status(200).end(); return }
+
+  // Regrouper par item (itemtype + items_id) car les Supercost sont stockés répartis par item
+  const groups = new Map<string, ScRow[]>()
+  for (const r of rows) {
+    const key = `${r.itemtype}|${r.items_id}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(r)
+  }
+
+  // Base de calcul selon le mode (le Supercost peut valoir 0)
+  const baseAmount = (sorted: ScRow[]): number => {
+    switch (mode) {
+      case 2: return sorted[0].amount                                           // premier
+      case 3: return sorted.reduce((s, r) => s + r.amount, 0) / sorted.length   // moyenne
+      case 4: return sorted.reduce((s, r) => s + r.amount, 0)                   // somme
+      case 1:
+      default: return sorted[sorted.length - 1].amount                          // dernier
+    }
+  }
+
+  const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount) VALUES (?, ?, ?, ?, ?)')
+  db.transaction(() => {
+    for (const list of groups.values()) {
+      const sorted = [...list].sort((a, b) => a.batch - b.batch)
+      const lastBatch = sorted[sorted.length - 1].batch
+      ins.run(ticketId, lastBatch, sorted[0].itemtype, sorted[0].items_id, baseAmount(sorted) * (percent / 100))
+    }
+  })()
+  res.status(200).end()
+})
+```
+
+**Rôle** : lit tous les batches du ticket, les regroupe par item, calcule la base selon `mode`,
+puis insère `base * percent / 100` dans `ticket_reopen_costs`. Aucune autre route modifiée,
+aucune migration de schéma (les tables existaient déjà).
+
+---
+
+## 2. `src/api/itemSuperCost.ts`
+
+### Méthode `addReopenCost` (ajout du 3ᵉ paramètre `mode`)
+
+**AVANT**
+```ts
+  async addReopenCost(ticketId: number, percent: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId, percent }),
+    })
+    if (!res.ok) throw new Error('Erreur enregistrement frais de réouverture')
+  },
+```
+
+**APRÈS**
+```ts
+  async addReopenCost(ticketId: number, percent: number, mode = 1): Promise<void> {
+    const res = await fetch(`${API_BASE}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId, percent, mode }),
+    })
+    if (!res.ok) throw new Error('Erreur enregistrement frais de réouverture')
+  },
+```
+
+**Rôle** : transmet `mode` au backend. Défaut `1` → les appels existants restent valides.
+
+---
+
+## 3. `src/pages/FrontOffice/KanbanTickets.tsx`
+
+### 3.1 Nouvel état (à côté de `reopenPct`)
+```ts
+const [reopenMode,    setReopenMode]    = useState(1)
+```
+
+### 3.2 Reset dans `cancelReopenDialog`
+```ts
+const cancelReopenDialog = () => {
+  setReopenDialog(null)
+  setReopenPct('')
+  setReopenMode(1)
+}
+```
+
+### 3.3 `handleReopenWithPct` — passer le mode + reset
+```ts
+// Le backend calcule pct% de la base Supercost choisie (mode) et stocke dans ticket_reopen_costs
+await ItemSuperCostApi.addReopenCost(ticketId, pct, reopenMode)
+setReopenDialog(null)
+setReopenPct('')
+setReopenMode(1)
+```
+
+### 3.4 Liste déroulante dans le dialog de réouverture (au-dessus du champ %)
+```tsx
+<div className="kb-field">
+  <label>Mode de calcul de la base Super Cost</label>
+  <select
+    value={reopenMode}
+    onChange={e => setReopenMode(Number(e.target.value))}
+    disabled={reopenSaving}
+  >
+    <option value={1}>1 — Dernier Super Cost</option>
+    <option value={2}>2 — Premier Super Cost</option>
+    <option value={3}>3 — Moyenne des Super Cost</option>
+    <option value={4}>4 — Somme des Super Cost</option>
+  </select>
+</div>
+```
+
+### 3.5 Aperçu du montant restreint au mode 1 (sinon message générique)
+```tsx
+{reopenMode === 1 && reopenPct !== '' && !isNaN(parseFloat(reopenPct)) && (
+  <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
+    Frais de réouverture :{' '}
+    <strong>
+      {(reopenDialog.previousSuperCost * parseFloat(reopenPct) / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+    </strong>
+    {' '}(le Super Cost de base reste inchangé)
+  </small>
+)}
+{reopenMode !== 1 && (
+  <small style={{ color: '#64748b', marginTop: 4, display: 'block' }}>
+    Le montant exact est calculé côté serveur selon le mode {reopenMode}.
+  </small>
+)}
+```
+
+**Rôle** : `previousSuperCost` n'est que le total du **dernier** batch ; l'aperçu chiffré ne serait
+exact que pour le mode 1, on l'affiche donc uniquement dans ce cas.
+
+---
+
+## 4. `src/pages/BackOffice/CsvMvtImport.tsx`
+
+### 4.1 Type `LigneCSV` — champ `mode`
+```ts
+type LigneCSV = {
+  ticket: number
+  mvt: string
+  valeur: number | null
+  mode?: number   // 1-4, uniquement pour mvt=open (base de calcul du %)
+}
+```
+`VokatraLigne` étend `LigneCSV` → `mode` est automatiquement propagé aux résultats.
+
+### 4.2 `parseCSV` — dernière colonne = mode (open + valeur 1-4 seulement)
+```ts
+const ticketId = parseInt(kolona[0]?.trim())
+const mvt = kolona[1]?.trim().toLowerCase()
+// mode = dernière colonne, uniquement pour open et seulement si valeur 1-4
+// (sinon on garde le comportement décimale "100,50" intact)
+let valeurCols = kolona.slice(2)
+let mode: number | undefined
+if (mvt === 'open' && valeurCols.length >= 2) {
+  const m = parseInt(valeurCols[valeurCols.length - 1]?.trim())
+  if (m >= 1 && m <= 4) {
+    mode = m
+    valeurCols = valeurCols.slice(0, -1)
+  }
+}
+// on rejoint tout ce qui reste après mvt pour gérer les virgules décimales (ex: 100,50)
+const valeurBrut = valeurCols.join(separateur).trim().replace(',', '.')
+const valeur = valeurBrut && valeurBrut !== 'null' && valeurBrut !== '' ? parseFloat(valeurBrut) : null
+if (!isNaN(ticketId) && mvt) {
+  lisitra.push({ ticket: ticketId, mvt, valeur, mode })
+}
+```
+
+### 4.3 `traiterLigne` — signature + passage du mode (source de vérité partagée)
+```ts
+async function traiterLigne(ticket: number, mvt: string, valeur: number | null, mode?: number): Promise<VokatraLigne> {
+  const base: LigneCSV = { ticket, mvt, valeur, mode }
+  try {
+    if (mvt === 'open') {
+      if (valeur === null) return { ...base, status: 'skip', message: 'valeur manquante' }
+      const modeFinal = mode ?? 1
+      await ItemSuperCostApi.addReopenCost(ticket, valeur, modeFinal)
+      await glpiTicketService.updateTicket(ticket, { status: GLPI_STATUS.EN_COURS })
+      return { ...base, status: 'ok', message: `réouverture ${valeur}% (mode ${modeFinal}) enregistrée` }
+    // ... close / cancel inchangés
+```
+
+### 4.4 État saisie manuelle
+```ts
+const [manMode, setManMode] = useState(1)
+```
+
+### 4.5 Appels — import CSV & saisie manuelle
+```ts
+// import CSV
+resultats.push(await traiterLigne(ligne.ticket, ligne.mvt, ligne.valeur, ligne.mode))
+
+// saisie manuelle (mode seulement pour open)
+const resultat = await traiterLigne(ticketId, manMvt, valeur, manMvt === 'open' ? manMode : undefined)
+```
+
+### 4.6 Select mode dans la saisie manuelle (affiché si open)
+```tsx
+{manMvt === 'open' && (
+  <select value={manMode} onChange={e => setManMode(Number(e.target.value))} title="Mode de calcul (open uniquement)">
+    <option value={1}>mode 1 — dernier</option>
+    <option value={2}>mode 2 — premier</option>
+    <option value={3}>mode 3 — moyenne</option>
+    <option value={4}>mode 4 — somme</option>
+  </select>
+)}
+```
+
+### 4.7 Aide format + colonnes `mode` des tableaux
+```tsx
+<p>Format attendu : <strong>ticket,mvt,valeur,mode</strong> (mode = dernière colonne, 1-4, uniquement pour open)</p>
+<p>mvt possible : <strong>open</strong> (réouverture en %), <strong>cancel</strong> (annuler), <strong>close</strong> (supercost montant)</p>
+<p>mode (open) : <strong>1</strong>=dernier Super Cost, <strong>2</strong>=premier, <strong>3</strong>=moyenne, <strong>4</strong>=somme</p>
+```
+Tableau aperçu : ajout `<th>mode</th>` et `<td>{l.mvt === 'open' ? (l.mode ?? 1) : '—'}</td>`.
+Tableau résultats : ajout `<th>mode</th>` et `<td>{v.mvt === 'open' ? (v.mode ?? 1) : '—'}</td>`.
+
+---
+
+## 5. `import_mvt.csv` (fichier exemple — nouveau format)
+```csv
+ticket,mvt,valeur,mode
+1,open,50,1
+2,open,5,3
+2,close,20
+2,cancel,
+```
+
+---
+
+## 6. Affichage du mode dans `ItemsCostList` (« Coûts par type d'item »)
+
+Le mode est **persisté** pour pouvoir être affiché dans le détail des frais de réouverture.
+
+### 6.1 `server/api.ts` — schéma + migration
+```ts
+// dans le CREATE TABLE ticket_reopen_costs, ajouter :
+amount REAL NOT NULL,
+mode INTEGER NOT NULL DEFAULT 1
+
+// après le db.exec(...) de création des tables — migration bases existantes :
+const reopenCols = db.prepare("PRAGMA table_info(ticket_reopen_costs)").all() as { name: string }[]
+if (!reopenCols.some(c => c.name === 'mode')) {
+  db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN mode INTEGER NOT NULL DEFAULT 1')
+}
+```
+
+### 6.2 `server/api.ts` — insertion du mode dans `/reopen`
+```ts
+const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount, mode) VALUES (?, ?, ?, ?, ?, ?)')
+// ...
+ins.run(ticketId, lastBatch, sorted[0].itemtype, sorted[0].items_id, baseAmount(sorted) * (percent / 100), mode)
+```
+
+### 6.3 `server/api.ts` — exposer le mode dans `/details/:itemtype`
+```ts
+type RcRow = ScRow & { mode: number }
+const reopencosts = db.prepare('SELECT ticket_id, batch, items_id, amount, mode FROM ticket_reopen_costs WHERE itemtype = ?').all(itemtype) as RcRow[]
+```
+
+### 6.4 `src/api/itemSuperCost.ts` — type retour
+```ts
+reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number; mode: number }[]
+```
+
+### 6.5 `src/pages/BackOffice/ItemsCostList.tsx`
+```ts
+type DetailData = {
+  supercosts: { ticket_id: number; batch: number; items_id: number; amount: number }[]
+  reopencosts: { ticket_id: number; batch: number; items_id: number; amount: number; mode: number }[]
+}
+const MODE_LABEL: Record<number, string> = { 1: 'dernier', 2: 'premier', 3: 'moyenne', 4: 'somme' }
+```
+Tableau « Frais réouverture » : ajout `<th>mode</th>` (entre `batch` et `montant`) et
+`<td>{rc.mode} — {MODE_LABEL[rc.mode] ?? '?'}</td>`.
+
+---
+
+## Tests de bout en bout
+
+### Prérequis
+```bash
+npx tsc --noEmit      # doit passer sans erreur
+npm run dev           # démarre Vite + middleware API (server/api.ts)
+```
+
+### Test A — Kanban (UI)
+1. Ouvrir la vue Kanban.
+2. Clôturer un ticket lié à un item suivi (Computer/Phone/Monitor) en saisissant un Super Cost > 0.
+   Recommencer 2-3 fois (réouvrir puis re-clôturer avec des montants différents) pour créer
+   plusieurs batches.
+3. Glisser le ticket *Closed → In Progress* : le dialog de réouverture s'ouvre.
+4. Choisir un **mode** (1-4) dans la liste déroulante, saisir un `%`, valider « Réouvrir avec ce % ».
+5. Aller sur **Coûts par type d'item**, déplier l'itemtype : vérifier la ligne « Frais réouverture ».
+   - mode 1 → % du dernier montant ; mode 2 → % du premier ; mode 3 → % de la moyenne ;
+     mode 4 → % de la somme.
+
+### Test B — Saisie manuelle (CSV import)
+1. Page Import CSV → « Saisie manuelle ».
+2. Sélectionner `open` : la liste **mode** apparaît. Choisir un mode, saisir ticket + valeur, Envoyer.
+3. Vérifier la colonne `mode` dans le tableau Résultats + le message « réouverture X% (mode N) enregistrée ».
+
+### Test C — Import fichier
+1. Charger `import_mvt.csv` (format `ticket,mvt,valeur,mode`).
+2. Tableau d'aperçu : la colonne `mode` affiche 1/3 pour les `open`, `—` pour close/cancel.
+3. Cliquer « Importer » → vérifier statut `ok` et les frais de réouverture en base.
+
+### Vérification SQLite directe (optionnel)
+```bash
+sqlite3 backend/data/glpi.db "SELECT * FROM ticket_reopen_costs ORDER BY id DESC LIMIT 10;"
+```
+
+---
+
+## Points d'attention / pièges
+
+- **Ambiguïté CSV** : avec séparateur `,`, une valeur décimale `5,3` pour un `open` serait interprétée
+  comme `valeur=5, mode=3`. La dernière colonne n'est consommée comme mode **que si elle vaut 1-4**.
+  Pour un % décimal sur un `open`, utiliser le point (`5.3`) ou le séparateur `;`.
+- **mode hors 1-4** dans le CSV : ignoré → fallback mode 1 (la colonne reste dans `valeur`).
+- **Super Cost = 0** : autorisé, la base peut valoir 0 → frais de réouverture 0 inséré quand même.
+- **Aucune migration** : on réutilise les tables `ticket_supercosts` / `ticket_reopen_costs` existantes.
+- **Calcul par item** : le mode s'applique par couple (itemtype, items_id), cohérent avec le stockage réparti.
+
+## Commandes exécutées
+```bash
+npx tsc --noEmit   # OK, aucune erreur
+```
