@@ -26,6 +26,15 @@ db.exec(`
     items_id INTEGER NOT NULL,
     amount REAL NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS ticket_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    mvt TEXT NOT NULL,
+    valeur TEXT,
+    statut TEXT NOT NULL DEFAULT 'ok',
+    message TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+  );
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -135,6 +144,29 @@ app.post('/api/item-supercosts/reset', (_req, res) => {
     db.prepare('DELETE FROM ticket_reopen_costs').run()
   })()
   res.status(200).end()
+})
+
+// ─────────────────────────────────────────────────────────────
+// /api/ticket-movements
+// ─────────────────────────────────────────────────────────────
+
+type MvtRow = { id: number; ticket_id: number; mvt: string; valeur: string | null; statut: string; message: string | null; created_at: string }
+
+app.post('/api/ticket-movements', (req, res) => {
+  const { ticketId, mvt, valeur, statut, message } = req.body as {
+    ticketId: number; mvt: string; valeur?: string; statut?: string; message?: string
+  }
+  const result = db.prepare(
+    'INSERT INTO ticket_movements (ticket_id, mvt, valeur, statut, message) VALUES (?, ?, ?, ?, ?)'
+  ).run(ticketId, mvt, valeur ?? '', statut ?? 'ok', message ?? null)
+  res.json({ id: result.lastInsertRowid })
+})
+
+app.get('/api/ticket-movements/:ticketId', (req, res) => {
+  const rows = db.prepare(
+    'SELECT * FROM ticket_movements WHERE ticket_id = ? ORDER BY id DESC'
+  ).all(Number(req.params.ticketId)) as MvtRow[]
+  res.json(rows)
 })
 
 // ─────────────────────────────────────────────────────────────

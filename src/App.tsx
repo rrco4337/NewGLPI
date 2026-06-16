@@ -16,6 +16,7 @@ import { TicketDetail } from './pages/BackOffice/TicketDetail'
 import ProtectedRoute from './components/Security/ProtectedRoute';
 import KanbanSetting from './pages/BackOffice/KanbanSetting'
 import { ItemsCostList } from './pages/BackOffice/ItemsCostList'
+import { MvtImport } from './pages/BackOffice/MvtImport'
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="verify-import" element={<ImportVerify />} />
         <Route path="kanban-settings" element={<KanbanSetting />} />
         <Route path="items-cost" element={<ItemsCostList />} />
+        <Route path="mvt-import" element={<MvtImport />} />
       </Route>
 </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

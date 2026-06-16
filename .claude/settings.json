@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat)",
+      "Bash(php \"C:/xampp/htdocs/glpi/gen_tokens3.php\")",
+      "Bash(curl -s -X GET http://localhost/apirest.php/initSession -H 'App-Token: e6f6e9b79e22b92172eacd5583cf8799eb1a9092' -H 'Authorization: Basic __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X GET http://localhost/apirest.php/initSession -H 'App-Token: e6f6e9b79e22b92172eacd5583cf8799eb1a9092' -H 'Authorization: user_token 1842837a71fec06ac2ee8dcb0a0bb1efc484f689')",
+      "Bash(rm \"C:/xampp/htdocs/glpi/gen_tokens.php\" \"C:/xampp/htdocs/glpi/gen_tokens2.php\" \"C:/xampp/htdocs/glpi/gen_tokens3.php\")",
+      "Bash(curl -s -X GET http://localhost/apirest.php/getMyProfiles -H 'App-Token: __TRACKED_VAR__' -H 'Session-Token: __TRACKED_VAR__')",
+      "Bash(npx tsc *)",
+      "Bash(cat vite.config.ts)",
+      "Bash(cat vite.config.js)"
+    ]
+  }
+}
