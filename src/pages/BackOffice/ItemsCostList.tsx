@@ -236,44 +236,48 @@ export const ItemsCostList = () => {
           {chargementDetail && <p>Chargement...</p>}
           {!chargementDetail && detailData && (
             <div>
-              <h4>Supercosts ({detailData.supercosts.length})</h4>
-              {detailData.supercosts.length === 0 ? <p>Aucun</p> : (
-                <table border={1} cellPadding={4}>
-                  <thead>
-                    <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>montant</th></tr>
-
-                  </thead>
-                  <tbody>
-                    {detailData.supercosts.map((sc, i) => (
-                      <tr key={i}>
-                        <td>#{sc.ticket_id} — {ticketName.get(sc.ticket_id) ?? '?'}</td>
-                        <td>Supercost</td>
-                        <td>{sc.items_id}</td>
-                        <td>{sc.batch}</td>
-                        <td>{fmt(sc.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <h4>Frais réouverture ({detailData.reopencosts.length})</h4>
-              {detailData.reopencosts.length === 0 ? <p>Aucun</p> : (
-                <table border={1} cellPadding={4}>
-                  <thead>
-                    <tr><th>ticket</th><th>items_id</th><th>batch</th><th>montant</th></tr>
-                  </thead>
-                  <tbody>
-                    {detailData.reopencosts.map((rc, i) => (
-                      <tr key={i}>
-                        <td>#{rc.ticket_id}</td>
-                        <td>{rc.items_id}</td>
-                        <td>{rc.batch}</td>
-                        <td>{fmt(rc.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <div className="detail-section">
+                <h4>Supercosts ({detailData.supercosts.length})</h4>
+                {detailData.supercosts.length === 0 ? <p style={{ padding: '8px 14px', margin: 0, color: '#94a3b8', fontSize: 13 }}>Aucun</p> : (
+                  <table className="detail-table">
+                    <thead>
+                      <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                    </thead>
+                    <tbody>
+                      {detailData.supercosts.map((sc, i) => (
+                        <tr key={i}>
+                          <td>#{sc.ticket_id} — {ticketName.get(sc.ticket_id) ?? '?'}</td>
+                          <td>Supercost</td>
+                          <td>{sc.items_id}</td>
+                          <td>{sc.batch}</td>
+                          <td>{fmt(sc.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="detail-section">
+                <h4>Frais réouverture ({detailData.reopencosts.length})</h4>
+                {detailData.reopencosts.length === 0 ? <p style={{ padding: '8px 14px', margin: 0, color: '#94a3b8', fontSize: 13 }}>Aucun</p> : (
+                  <table className="detail-table">
+                    <thead>
+                      <tr><th>ticket</th><th>type</th><th>items_id</th><th>batch</th><th>montant</th></tr>
+                    </thead>
+                    <tbody>
+                      {detailData.reopencosts.map((rc, i) => (
+                        <tr key={i}>
+                          <td>#{rc.ticket_id} — {ticketName.get(rc.ticket_id) ?? '?'}</td>
+                          <td>Réouverture</td>
+                          <td>{rc.items_id}</td>
+                          <td>{rc.batch}</td>
+                          <td>{fmt(rc.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           )}
         </div>
