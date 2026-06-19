@@ -6,7 +6,7 @@ import './CsvMvtImport.css'
 const GLPI_STATUS = { EN_COURS: 2, RESOLU: 5 } as const
 
 type LigneCSV = {
-  ticket: number
+  ticket: number      // numéro d'ordre saisi par l'utilisateur (1, 2, 3…), PAS l'id GLPI
   mvt: string
   valeur: number | null
   mode?: number   // 1-4, uniquement pour mvt=open (base de calcul du %)
@@ -46,6 +46,20 @@ function parseCSV(texte: string): LigneCSV[] {
     }
   }
   return lisitra
+}
+
+// Charge la liste des tickets triée par id croissant.
+// L'indice 1 (saisi par l'utilisateur) = 1er ticket, 2 = 2e, etc.
+async function chargerTicketsTries(): Promise<{ id: number }[]> {
+  const liste = await glpiTicketService.listTickets()
+  if (!liste) return []
+  return [...liste].sort((a, b) => a.id - b.id)
+}
+
+// Convertit un numéro d'ordre (1, 2, 3…) en vrai id GLPI. null si hors limites.
+function resoudreTicket(numeroOrdre: number, ticketsTries: { id: number }[]): number | null {
+  if (numeroOrdre < 1 || numeroOrdre > ticketsTries.length) return null
+  return ticketsTries[numeroOrdre - 1].id
 }
 
 // Fonction métier — source de vérité. Ne sait pas d'où viennent les données.
@@ -111,9 +125,15 @@ export const CsvMvtImport = () => {
   async function onImporter() {
     if (lignesCSV.length === 0) return
     setMiasa(true)
+    const ticketsTries = await chargerTicketsTries()
     const resultats: VokatraLigne[] = []
     for (const ligne of lignesCSV) {
-      resultats.push(await traiterLigne(ligne.ticket, ligne.mvt, ligne.valeur, ligne.mode))
+      const ticketId = resoudreTicket(ligne.ticket, ticketsTries)
+      if (ticketId === null) {
+        resultats.push({ ...ligne, status: 'erreur', message: `numéro d'ordre ${ligne.ticket} introuvable (${ticketsTries.length} ticket(s) au total)` })
+        continue
+      }
+      resultats.push(await traiterLigne(ticketId, ligne.mvt, ligne.valeur, ligne.mode))
     }
     setVokatra(resultats)
     setMiasa(false)
@@ -123,10 +143,17 @@ export const CsvMvtImport = () => {
   }
 
   async function onSaisieManuelle() {
-    const ticketId = parseInt(manTicket)
-    if (isNaN(ticketId)) return
+    const numeroOrdre = parseInt(manTicket)
+    if (isNaN(numeroOrdre)) return
     const valeur = manValeur.trim() ? parseFloat(manValeur.replace(',', '.')) : null
     setManMiasa(true)
+    const ticketsTries = await chargerTicketsTries()
+    const ticketId = resoudreTicket(numeroOrdre, ticketsTries)
+    if (ticketId === null) {
+      setVokatra(prev => [{ ticket: numeroOrdre, mvt: manMvt, valeur, status: 'erreur', message: `numéro d'ordre ${numeroOrdre} introuvable (${ticketsTries.length} ticket(s) au total)` }, ...prev])
+      setManMiasa(false)
+      return
+    }
     const resultat = await traiterLigne(ticketId, manMvt, valeur, manMvt === 'open' ? manMode : undefined)
     setVokatra(prev => [resultat, ...prev])
     setManMiasa(false)
@@ -138,6 +165,7 @@ export const CsvMvtImport = () => {
     <div className="mvt-page">
       <h2>Import CSV Mouvements</h2>
       <p>Format attendu : <strong>ticket,mvt,valeur,mode</strong> (mode = dernière colonne, 1-4, uniquement pour open)</p>
+      <p><strong>ticket</strong> = numéro d'ordre (1, 2, 3…), pas l'id GLPI : 1 = 1<sup>er</sup> ticket, 2 = 2<sup>e</sup>, etc. (ordre par id croissant)</p>
       <p>mvt possible : <strong>open</strong> (réouverture en %), <strong>cancel</strong> (annuler), <strong>close</strong> (supercost montant)</p>
       <p>mode (open) : <strong>1</strong>=dernier Super Cost, <strong>2</strong>=premier, <strong>3</strong>=moyenne, <strong>4</strong>=somme</p>
 
@@ -147,7 +175,7 @@ export const CsvMvtImport = () => {
         <div className="mvt-manual-row">
           <input
             type="number"
-            placeholder="N° ticket"
+            placeholder="N° ordre (1, 2, 3…)"
             value={manTicket}
             onChange={e => setManTicket(e.target.value)}
           />
