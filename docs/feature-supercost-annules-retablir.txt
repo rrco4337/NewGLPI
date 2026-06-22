@@ -1,0 +1,133 @@
+
+# Fonctionnalité — Liste des Super Cost annulés + rétablissement
+
+## Objectif
+Ajouter dans la page **ReopenList** un 3ᵉ tableau listant les **Super Cost annulés**, avec
+la possibilité de **rétablir** un Super Cost annulé. Le Super Cost rétabli **regagne sa place
+d'origine** (sa position d'ordre = son `batch`), même si d'autres Super Cost ont été ajoutés entre-temps.
+
+## Principe technique clé
+La « place » d'un Super Cost = son **`batch`** (la liste est triée `ORDER BY ticket_id, batch, id`).
+L'annulation était auparavant un **DELETE physique** → la place était perdue.
+Elle devient un **soft-delete** via une colonne `cancelled` : la ligne (et son `batch`) est conservée,
+donc le rétablissement (`cancelled = 0`) la réinsère naturellement à sa position d'origine.
+
+Le numéro de `batch` à la création reste calculé sur **toutes** les lignes (y compris annulées),
+ce qui évite toute collision de batch lors d'un rétablissement.
+
+---
+
+## Ordre des modifications
+
+### 1. `server/api.ts` — migration colonne `cancelled`
+Après le bloc `db.exec(...)` de création des tables (juste avant la migration `reopenCols`).
+
+**Ajout :**
+```ts
+// Migration : colonnes ajoutées au fil du temps
+const superCols = db.prepare("PRAGMA table_info(ticket_supercosts)").all() as { name: string }[]
+if (!superCols.some(c => c.name === 'cancelled'))
+  db.exec('ALTER TABLE ticket_supercosts ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0')
+```
+
+### 2. `server/api.ts` — `buildScIndex` (filtrer les annulés des bases de calcul)
+**Avant :**
+```ts
+const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, amount FROM ticket_supercosts').all() as ScIndexRow[]
+```
+**Après :**
+```ts
+const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, amount FROM ticket_supercosts WHERE cancelled = 0').all() as ScIndexRow[]
+```
+
+### 3. `server/api.ts` — résumé `/api/item-supercosts`
+**Avant :** `... FROM ticket_supercosts GROUP BY itemtype`
+**Après :** `... FROM ticket_supercosts WHERE cancelled = 0 GROUP BY itemtype`
+
+### 4. `server/api.ts` — POST `/api/item-supercosts/reopen`
+**Avant :** `... WHERE ticket_id = ?` → **Après :** `... WHERE ticket_id = ? AND cancelled = 0`
+
+### 5. `server/api.ts` — PUT `/reopens/:group` et PUT `/supercosts/:ticketId/:batch`
+Dans les deux recalculs de base, ajouter `AND cancelled = 0` à la requête
+`SELECT batch, amount FROM ticket_supercosts WHERE ticket_id = ? AND itemtype = ? AND items_id = ?`.
+
+### 6. `server/api.ts` — GET `/api/item-supercosts/supercosts` (tableau actif)
+**Avant :** `... FROM ticket_supercosts ORDER BY ...`
+**Après :** `... FROM ticket_supercosts WHERE cancelled = 0 ORDER BY ...`
+
+### 7. `server/api.ts` — DEUX nouvelles routes (après la liste des supercosts)
+```ts
+// Liste des SuperCosts annulés (cancelled = 1)
+app.get('/api/item-supercosts/supercosts/cancelled', (_req, res) => {
+  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount FROM ticket_supercosts WHERE cancelled = 1 ORDER BY ticket_id, batch, id').all() as SuperRow[]
+  // ... regroupement par ticket|batch identique à la liste active ...
+  res.json([...groups.values()])
+})
+
+// Rétablissement d'un SuperCost annulé
+app.post('/api/item-supercosts/supercosts/:ticketId/:batch/restore', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const batch = Number(req.params.batch)
+  const result = db.prepare('UPDATE ticket_supercosts SET cancelled = 0 WHERE ticket_id = ? AND batch = ? AND cancelled = 1').run(ticketId, batch)
+  if (result.changes === 0) { res.status(404).json({ error: 'Super Cost annulé introuvable' }); return }
+  res.json({ restored: result.changes })
+})
+```
+> ⚠️ Ordre des routes : `/supercosts/cancelled` (GET) ne collisionne pas avec `/supercosts` (GET) ni avec `/supercosts/:ticketId/:batch` (PUT).
+
+### 8. `server/api.ts` — POST `/cancel` (soft-delete au lieu de DELETE)
+**Avant :**
+```ts
+const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }
+if (maxBatchRow.m === null) { res.json({ removed: 0 }); return }
+const result = db.prepare('DELETE FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').run(ticketId, maxBatchRow.m)
+res.json({ removed: result.changes })
+```
+**Après :**
+```ts
+const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ? AND cancelled = 0').get(ticketId) as { m: number | null }
+if (maxBatchRow.m === null) { res.json({ removed: 0 }); return }
+const result = db.prepare('UPDATE ticket_supercosts SET cancelled = 1 WHERE ticket_id = ? AND batch = ?').run(ticketId, maxBatchRow.m)
+res.json({ removed: result.changes })
+```
+> Contrat `{ removed }` inchangé → appelants `KanbanTickets.tsx` et `CsvMvtImport.tsx` non impactés.
+
+### 9. `server/api.ts` — GET `/:ticketId/last-batch-total`
+Ajouter `AND cancelled = 0` aux deux requêtes (`MAX(batch)` et `SUM(amount)`).
+
+### 10. `src/api/itemSuperCost.ts` — deux méthodes (avant `updateSuperCost`)
+```ts
+async listCancelledSuperCosts(): Promise<SuperCostBatch[]> {
+  const res = await fetch(`${API_BASE}/supercosts/cancelled`)
+  if (!res.ok) throw new Error('Erreur chargement des Super Cost annulés')
+  return res.json()
+},
+async restoreSuperCost(ticketId: number, batch: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/supercosts/${ticketId}/${batch}/restore`, { method: 'POST' })
+  if (!res.ok) throw new Error('Erreur rétablissement du Super Cost')
+},
+```
+
+### 11. `src/pages/BackOffice/ReopenList.tsx`
+- Nouveau state : `const [cancelledSupercosts, setCancelledSupercosts] = useState<SuperCostBatch[]>([])`
+- Dans `load()` : ajouter `ItemSuperCostApi.listCancelledSuperCosts()` au `Promise.all` + `setCancelledSupercosts(cancelledList)`
+- Nouveau handler `restoreSuperCost(s)` : `confirm` → `ItemSuperCostApi.restoreSuperCost(s.ticketId, s.batch)` → `load()`
+- Nouveau 3ᵉ tableau « Liste des Super Cost annulés » (HTML natif, colonnes : Ticket, Batch (place),
+  Items concernés, Montant, Actions → bouton **Rétablir**), inséré juste avant les modales `edit`.
+
+---
+
+## Dépendances
+- Aucune nouvelle dépendance. Réutilise `SuperCostBatch`, le pattern de migration `PRAGMA table_info`,
+  et le rendu de tableau existant de la page.
+
+## Vérification
+1. `npx tsc --noEmit -p tsconfig.app.json` → aucune nouvelle erreur sur les fichiers modifiés.
+2. Lancer l'app, page BackOffice ReopenList.
+3. Scénario de test « 3ᵉ place » :
+   - Créer 3 Super Cost (close) sur un même ticket → batchs 1, 2, 3.
+   - Annuler (mvt `cancel`) → le batch 3 passe dans le tableau « annulés », disparaît du tableau actif.
+   - Créer d'autres Super Cost (nouveau batch 4…).
+   - Cliquer **Rétablir** sur le Super Cost annulé → il réapparaît dans le tableau actif **à sa place
+     d'origine (batch 3)**, avant le batch 4.
+4. Vérifier que les totaux actifs et les frais de réouverture ignorent bien les Super Cost annulés.

@@ -23,6 +23,11 @@ export interface SuperCostBatch {
   items: { itemtype: string; items_id: number; amount: number }[]
 }
 
+export interface TicketCeiling {
+  ticketId: number
+  percent: number
+}
+
 export const ItemSuperCostApi = {
   /**
    * Crée un batch de supercost pour un ticket.
@@ -117,6 +122,19 @@ export const ItemSuperCostApi = {
     return res.json()
   },
 
+  /** Liste les Super Cost annulés (soft-delete), conservés à leur place (batch) pour pouvoir être rétablis. */
+  async listCancelledSuperCosts(): Promise<SuperCostBatch[]> {
+    const res = await fetch(`${API_BASE}/supercosts/cancelled`)
+    if (!res.ok) throw new Error('Erreur chargement des Super Cost annulés')
+    return res.json()
+  },
+
+  /** Rétablit un Super Cost annulé : il regagne sa place (son batch) dans la liste. */
+  async restoreSuperCost(ticketId: number, batch: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/supercosts/${ticketId}/${batch}/restore`, { method: 'POST' })
+    if (!res.ok) throw new Error('Erreur rétablissement du Super Cost')
+  },
+
   /** Modifie le montant d'un Super Cost. Le montant est réparti à parts égales entre ses items. */
   async updateSuperCost(ticketId: number, batch: number, amount: number): Promise<void> {
     const res = await fetch(`${API_BASE}/supercosts/${ticketId}/${batch}`, {
@@ -125,6 +143,23 @@ export const ItemSuperCostApi = {
       body: JSON.stringify({ amount }),
     })
     if (!res.ok) throw new Error('Erreur modification du Super Cost')
+  },
+
+  /** Liste les plafonds de réouverture définis par ticket. */
+  async listCeilings(): Promise<TicketCeiling[]> {
+    const res = await fetch(`${API_BASE}/ceilings`)
+    if (!res.ok) throw new Error('Erreur chargement des plafonds')
+    return res.json()
+  },
+
+  /** Définit (ou supprime si percent = null) le plafond de réouverture d'un ticket. */
+  async setCeiling(ticketId: number, percent: number | null): Promise<void> {
+    const res = await fetch(`${API_BASE}/ceilings/${ticketId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percent }),
+    })
+    if (!res.ok) throw new Error('Erreur enregistrement du plafond')
   },
 
   async getDetailsByItemtype(itemtype: string): Promise<{

@@ -34,6 +34,10 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS ticket_reopen_ceilings (
+    ticket_id INTEGER PRIMARY KEY,
+    percent REAL NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS assets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -45,6 +49,10 @@ db.exec(`
 `)
 
 // Migration : colonnes ajoutées au fil du temps
+const superCols = db.prepare("PRAGMA table_info(ticket_supercosts)").all() as { name: string }[]
+if (!superCols.some(c => c.name === 'cancelled'))
+  db.exec('ALTER TABLE ticket_supercosts ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0')
+
 const reopenCols = db.prepare("PRAGMA table_info(ticket_reopen_costs)").all() as { name: string }[]
 const hasReopenCol = (name: string) => reopenCols.some(c => c.name === name)
 if (!hasReopenCol('mode')) db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN mode INTEGER NOT NULL DEFAULT 1')
@@ -98,7 +106,7 @@ app.use(express.json({ strict: false }))
 // ─── Construction de l'index des SuperCosts par (ticket,itemtype,items_id) ───
 type ScIndexRow = { ticket_id: number; itemtype: string; items_id: number; batch: number; amount: number }
 const buildScIndex = (): Map<string, AmountRow[]> => {
-  const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, amount FROM ticket_supercosts').all() as ScIndexRow[]
+  const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, amount FROM ticket_supercosts WHERE cancelled = 0').all() as ScIndexRow[]
   const index = new Map<string, AmountRow[]>()
   for (const sc of rows) {
     const key = `${sc.ticket_id}|${sc.itemtype}|${sc.items_id}`
@@ -108,13 +116,39 @@ const buildScIndex = (): Map<string, AmountRow[]> => {
   return index
 }
 
+// ─── Plafond de réouverture (Aléa 2) ───
+// Plafond défini PAR TICKET (un seul par ticket, table ticket_reopen_ceilings).
+//   plafondMax(ticket) = (somme des Super Cost actifs du ticket) × (pourcentage du ticket).
+const getCeilingPercent = (ticketId: number): number => {
+  const row = db.prepare('SELECT percent FROM ticket_reopen_ceilings WHERE ticket_id = ?').get(ticketId) as { percent: number } | undefined
+  return row && !isNaN(row.percent) ? row.percent : 0
+}
+
+// Base du plafond d'un ticket = somme de SES Super Cost actifs. Le mode "négligeable"
+// n'existe pas dans le modèle actuel, il n'y a donc aucune ligne à exclure ici.
+const sumActiveSuperCost = (ticketId: number): number =>
+  (db.prepare('SELECT COALESCE(SUM(amount), 0) as s FROM ticket_supercosts WHERE cancelled = 0 AND ticket_id = ?').get(ticketId) as { s: number }).s
+
+// Total dynamique des frais de réouverture non fermés d'un ticket (même calcul que GET /reopens).
+const sumReopenCosts = (ticketId: number): number => {
+  const scIndex = buildScIndex()
+  const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, mode, percent FROM ticket_reopen_costs WHERE closed = 0 AND ticket_id = ?').all(ticketId) as
+    { ticket_id: number; itemtype: string; items_id: number; batch: number; mode: number; percent: number }[]
+  let total = 0
+  for (const r of rows) {
+    const sorted = [...(scIndex.get(`${r.ticket_id}|${r.itemtype}|${r.items_id}`) ?? [])].sort((a, b) => a.batch - b.batch)
+    total += computeBaseAmount(sorted, r.mode, r.batch) * (r.percent / 100)
+  }
+  return total
+}
+
 // ─────────────────────────────────────────────────────────────
 // /api/item-supercosts  (résumé par type)
 // ─────────────────────────────────────────────────────────────
 app.get('/api/item-supercosts', (_req, res) => {
   // SuperCosts totaux par type
   type SuperRow = { itemtype: string; total: number }
-  const superRows = db.prepare('SELECT itemtype, SUM(amount) as total FROM ticket_supercosts GROUP BY itemtype').all() as SuperRow[]
+  const superRows = db.prepare('SELECT itemtype, SUM(amount) as total FROM ticket_supercosts WHERE cancelled = 0 GROUP BY itemtype').all() as SuperRow[]
 
   // Frais de réouverture : calculés dynamiquement en filtrant par batch < batch_reopen
   const scIndex = buildScIndex()
@@ -162,7 +196,7 @@ app.post('/api/item-supercosts/reopen', (req, res) => {
 
   // Récupérer les SuperCosts existants pour ce ticket
   type ScRow = { batch: number; itemtype: string; items_id: number; amount: number }
-  const scRows = db.prepare('SELECT batch, itemtype, items_id, amount FROM ticket_supercosts WHERE ticket_id = ?').all(ticketId) as ScRow[]
+  const scRows = db.prepare('SELECT batch, itemtype, items_id, amount FROM ticket_supercosts WHERE ticket_id = ? AND cancelled = 0').all(ticketId) as ScRow[]
   if (scRows.length === 0) { res.status(200).end(); return }
 
   // Regrouper par item
@@ -187,6 +221,20 @@ app.post('/api/item-supercosts/reopen', (req, res) => {
   const maxGroupRow = db.prepare('SELECT MAX(reopen_group) as m FROM ticket_reopen_costs').get() as { m: number | null }
   const nextGroup = (maxGroupRow.m ?? 0) + 1
 
+
+  let effectivePercent = percent
+  const ceilingPercent = getCeilingPercent(ticketId)
+  if (ceilingPercent > 0) {
+    const ceilingMax = sumActiveSuperCost(ticketId) * (ceilingPercent / 100)
+    const allowed = Math.max(0, ceilingMax - sumReopenCosts(ticketId)) // disponible du ticket avant cette opération
+    let intended = 0
+    for (const list of groups.values()) {
+      const sorted = [...list].sort((a, b) => a.batch - b.batch)
+      intended += computeBaseAmount(sorted, mode, nextBatch) * (percent / 100)
+    }
+    if (intended > allowed) effectivePercent = intended > 0 ? percent * (allowed / intended) : 0
+  }
+
   const ins = db.prepare(`
     INSERT INTO ticket_reopen_costs
       (ticket_id, batch, itemtype, items_id, amount, mode, percent, closed, reopen_group)
@@ -198,8 +246,8 @@ app.post('/api/item-supercosts/reopen', (req, res) => {
       const sorted = [...list].sort((a, b) => a.batch - b.batch)
       // ✅ On calcule la base avec le nouveau batch comme seuil
       const base = computeBaseAmount(sorted, mode, nextBatch)
-      const amount = base * (percent / 100)
-      ins.run(ticketId, nextBatch, sorted[0].itemtype, sorted[0].items_id, amount, mode, percent, nextGroup)
+      const amount = base * (effectivePercent / 100)
+      ins.run(ticketId, nextBatch, sorted[0].itemtype, sorted[0].items_id, amount, mode, effectivePercent, nextGroup)
     }
   })()
 
@@ -274,7 +322,7 @@ app.put('/api/item-supercosts/reopens/:group', (req, res) => {
     for (const r of rows) {
       const scRows = db.prepare(`
         SELECT batch, amount FROM ticket_supercosts
-        WHERE ticket_id = ? AND itemtype = ? AND items_id = ?
+        WHERE ticket_id = ? AND itemtype = ? AND items_id = ? AND cancelled = 0
       `).all(r.ticket_id, r.itemtype, r.items_id) as AmountRow[]
       const sorted = [...scRows].sort((a, b) => a.batch - b.batch)
       // ✅ filtration par batch < r.batch
@@ -298,7 +346,7 @@ app.delete('/api/item-supercosts/reopens/:group', (req, res) => {
 type SuperRow = { id: number; ticket_id: number; batch: number; itemtype: string; items_id: number; amount: number }
 
 app.get('/api/item-supercosts/supercosts', (_req, res) => {
-  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount FROM ticket_supercosts ORDER BY ticket_id, batch, id').all() as SuperRow[]
+  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount FROM ticket_supercosts WHERE cancelled = 0 ORDER BY ticket_id, batch, id').all() as SuperRow[]
   const groups = new Map<string, { ticketId: number; batch: number; total: number; items: { itemtype: string; items_id: number; amount: number }[] }>()
   for (const r of rows) {
     const key = `${r.ticket_id}|${r.batch}`
@@ -308,6 +356,46 @@ app.get('/api/item-supercosts/supercosts', (_req, res) => {
     entry.items.push({ itemtype: r.itemtype, items_id: r.items_id, amount: r.amount })
   }
   res.json([...groups.values()])
+})
+
+// ─── Liste des SuperCosts annulés (cancelled = 1) ───
+app.get('/api/item-supercosts/supercosts/cancelled', (_req, res) => {
+  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount FROM ticket_supercosts WHERE cancelled = 1 ORDER BY ticket_id, batch, id').all() as SuperRow[]
+  const groups = new Map<string, { ticketId: number; batch: number; total: number; items: { itemtype: string; items_id: number; amount: number }[] }>()
+  for (const r of rows) {
+    const key = `${r.ticket_id}|${r.batch}`
+    if (!groups.has(key)) groups.set(key, { ticketId: r.ticket_id, batch: r.batch, total: 0, items: [] })
+    const entry = groups.get(key)!
+    entry.total += r.amount
+    entry.items.push({ itemtype: r.itemtype, items_id: r.items_id, amount: r.amount })
+  }
+  res.json([...groups.values()])
+})
+
+// ─── Rétablissement d'un SuperCost annulé (regagne sa place via son batch) ───
+app.post('/api/item-supercosts/supercosts/:ticketId/:batch/restore', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const batch = Number(req.params.batch)
+  const result = db.prepare('UPDATE ticket_supercosts SET cancelled = 0 WHERE ticket_id = ? AND batch = ? AND cancelled = 1').run(ticketId, batch)
+  if (result.changes === 0) { res.status(404).json({ error: 'Super Cost annulé introuvable' }); return }
+  res.json({ restored: result.changes })
+})
+
+// ─── Plafonds de réouverture par ticket (Aléa 2) ───
+app.get('/api/item-supercosts/ceilings', (_req, res) => {
+  res.json(db.prepare('SELECT ticket_id as ticketId, percent FROM ticket_reopen_ceilings ORDER BY ticket_id').all())
+})
+
+// Définir / mettre à jour / supprimer le plafond d'un ticket (un seul par ticket).
+app.put('/api/item-supercosts/ceilings/:ticketId', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const { percent } = req.body as { percent: number | null }
+  if (percent === null || percent === undefined || isNaN(Number(percent))) {
+    db.prepare('DELETE FROM ticket_reopen_ceilings WHERE ticket_id = ?').run(ticketId)
+    res.json({ ticketId, percent: null }); return
+  }
+  db.prepare('INSERT INTO ticket_reopen_ceilings (ticket_id, percent) VALUES (?, ?) ON CONFLICT(ticket_id) DO UPDATE SET percent = excluded.percent').run(ticketId, Number(percent))
+  res.json({ ticketId, percent: Number(percent) })
 })
 
 // ─── Modification d'un SuperCost (recalcule automatiquement les réouvertures) ───
@@ -339,7 +427,7 @@ app.put('/api/item-supercosts/supercosts/:ticketId/:batch', (req, res) => {
     for (const r of reopenRows) {
       const scRows = db.prepare(`
         SELECT batch, amount FROM ticket_supercosts
-        WHERE ticket_id = ? AND itemtype = ? AND items_id = ?
+        WHERE ticket_id = ? AND itemtype = ? AND items_id = ? AND cancelled = 0
       `).all(ticketId, r.itemtype, r.items_id) as AmountRow[]
       const sorted = [...scRows].sort((a, b) => a.batch - b.batch)
       // ✅ filtration par batch < r.batch
@@ -354,18 +442,19 @@ app.put('/api/item-supercosts/supercosts/:ticketId/:batch', (req, res) => {
 // ─── Annulation du dernier SuperCost (cancel) ───
 app.post('/api/item-supercosts/cancel', (req, res) => {
   const { ticketId } = req.body as { ticketId: number }
-  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }
+  // Soft-delete : on conserve la ligne (et son batch = sa place) pour pouvoir la rétablir.
+  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ? AND cancelled = 0').get(ticketId) as { m: number | null }
   if (maxBatchRow.m === null) { res.json({ removed: 0 }); return }
-  const result = db.prepare('DELETE FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').run(ticketId, maxBatchRow.m)
+  const result = db.prepare('UPDATE ticket_supercosts SET cancelled = 1 WHERE ticket_id = ? AND batch = ?').run(ticketId, maxBatchRow.m)
   res.json({ removed: result.changes })
 })
 
 // ─── Montant total du dernier batch SuperCost ───
 app.get('/api/item-supercosts/:ticketId/last-batch-total', (req, res) => {
   const ticketId = Number(req.params.ticketId)
-  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ?').get(ticketId) as { m: number | null }
+  const maxBatchRow = db.prepare('SELECT MAX(batch) as m FROM ticket_supercosts WHERE ticket_id = ? AND cancelled = 0').get(ticketId) as { m: number | null }
   if (maxBatchRow.m === null) { res.json(0); return }
-  const totalRow = db.prepare('SELECT SUM(amount) as total FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').get(ticketId, maxBatchRow.m) as { total: number | null }
+  const totalRow = db.prepare('SELECT SUM(amount) as total FROM ticket_supercosts WHERE ticket_id = ? AND batch = ? AND cancelled = 0').get(ticketId, maxBatchRow.m) as { total: number | null }
   res.json(totalRow.total ?? 0)
 })
 

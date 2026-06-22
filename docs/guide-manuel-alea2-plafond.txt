@@ -1,0 +1,346 @@
+==============================================================================
+GUIDE MANUEL — ALÉA 2 : PLAFOND DE RÉOUVERTURE (par ticket)
+==============================================================================
+
+But : limiter le cumul des frais de réouverture d'un TICKET à un pourcentage
+de la somme de SES Super Cost. Le plafond se définit ticket par ticket
+(un seul plafond par ticket).
+
+  plafondMax(ticket) = (somme des Super Cost actifs du ticket) x (% du ticket / 100)
+
+Règle clé d'archi : GET /reopens RECALCULE le montant à partir du `percent`
+stocké (il ignore le montant en base). Donc on matérialise le plafond en
+RÉDUISANT le `percent` effectif stocké, pas le montant.
+
+3 fichiers à modifier :
+  1) server/api.ts                       (backend + stockage)
+  2) src/api/itemSuperCost.ts            (client API)
+  3) src/pages/BackOffice/ReopenList.tsx (UI)
+
+Les numéros de ligne ci-dessous correspondent à l'état ACTUEL du dépôt (après
+implémentation). Si tu repars d'une base sans Aléa 2, repère plutôt les ANCRES
+de texte indiquées : elles sont stables.
+
+==============================================================================
+FICHIER 1 — server/api.ts
+==============================================================================
+
+------------------------------------------------------------------------------
+1.1  Créer la table de stockage (un plafond par ticket)
+     ANCRE : dans le bloc `db.exec(` ... `)`, juste après la table `settings`
+     (~ ligne 33-36).
+------------------------------------------------------------------------------
+AJOUTER après la définition de CREATE TABLE settings :
+
+  CREATE TABLE IF NOT EXISTS ticket_reopen_ceilings (
+    ticket_id INTEGER PRIMARY KEY,   -- PRIMARY KEY = un seul plafond / ticket
+    percent REAL NOT NULL
+  );
+
+(Aucune migration ALTER nécessaire : CREATE TABLE IF NOT EXISTS suffit.)
+
+------------------------------------------------------------------------------
+1.2  Helpers de calcul du plafond
+     ANCRE : juste après la fonction `buildScIndex` (qui se termine par
+     `return index }`), AVANT le 1er `app.get('/api/item-supercosts'...`.
+     (~ lignes 119-142)
+------------------------------------------------------------------------------
+AJOUTER ce bloc :
+
+  // ─── Plafond de réouverture (Aléa 2) ───
+  // Plafond défini PAR TICKET (un seul par ticket, table ticket_reopen_ceilings).
+  const getCeilingPercent = (ticketId: number): number => {
+    const row = db.prepare('SELECT percent FROM ticket_reopen_ceilings WHERE ticket_id = ?').get(ticketId) as { percent: number } | undefined
+    return row && !isNaN(row.percent) ? row.percent : 0
+  }
+
+  // Base du plafond d'un ticket = somme de SES Super Cost actifs.
+  // (Le mode "négligeable" n'existe pas dans le modèle → rien à exclure.)
+  const sumActiveSuperCost = (ticketId: number): number =>
+    (db.prepare('SELECT COALESCE(SUM(amount), 0) as s FROM ticket_supercosts WHERE cancelled = 0 AND ticket_id = ?').get(ticketId) as { s: number }).s
+
+  // Total dynamique des frais de réouverture non fermés du ticket
+  // (même calcul que GET /reopens).
+  const sumReopenCosts = (ticketId: number): number => {
+    const scIndex = buildScIndex()
+    const rows = db.prepare('SELECT ticket_id, itemtype, items_id, batch, mode, percent FROM ticket_reopen_costs WHERE closed = 0 AND ticket_id = ?').all(ticketId) as
+      { ticket_id: number; itemtype: string; items_id: number; batch: number; mode: number; percent: number }[]
+    let total = 0
+    for (const r of rows) {
+      const sorted = [...(scIndex.get(`${r.ticket_id}|${r.itemtype}|${r.items_id}`) ?? [])].sort((a, b) => a.batch - b.batch)
+      total += computeBaseAmount(sorted, r.mode, r.batch) * (r.percent / 100)
+    }
+    return total
+  }
+
+------------------------------------------------------------------------------
+1.3  Appliquer le plafond à la CRÉATION d'une réouverture
+     ANCRE : dans `app.post('/api/item-supercosts/reopen', ...)` (~ ligne 194).
+     Juste AVANT la préparation de l'INSERT `const ins = db.prepare(` ... INSERT
+     INTO ticket_reopen_costs ...`. (~ lignes 225-236)
+------------------------------------------------------------------------------
+AJOUTER ce bloc avant `const ins = db.prepare(...)` :
+
+  // ─── Plafond (Aléa 2) : on réduit le percent pour ne pas dépasser le disponible du ticket ───
+  let effectivePercent = percent
+  const ceilingPercent = getCeilingPercent(ticketId)
+  if (ceilingPercent > 0) {
+    const ceilingMax = sumActiveSuperCost(ticketId) * (ceilingPercent / 100)
+    const allowed = Math.max(0, ceilingMax - sumReopenCosts(ticketId)) // disponible du ticket avant l'opération
+    let intended = 0
+    for (const list of groups.values()) {
+      const sorted = [...list].sort((a, b) => a.batch - b.batch)
+      intended += computeBaseAmount(sorted, mode, nextBatch) * (percent / 100)
+    }
+    if (intended > allowed) effectivePercent = intended > 0 ? percent * (allowed / intended) : 0
+  }
+
+PUIS, dans la boucle `db.transaction(() => { for (const list of groups.values()) {...} })`,
+REMPLACER les 2 usages de `percent` par `effectivePercent` :
+
+  AVANT :
+    const amount = base * (percent / 100)
+    ins.run(ticketId, nextBatch, sorted[0].itemtype, sorted[0].items_id, amount, mode, percent, nextGroup)
+  APRÈS :
+    const amount = base * (effectivePercent / 100)
+    ins.run(ticketId, nextBatch, sorted[0].itemtype, sorted[0].items_id, amount, mode, effectivePercent, nextGroup)
+
+(Note : on stocke effectivePercent → GET /reopens recalcule sur ce percent réduit,
+donc la limite est persistée et cohérente partout.)
+
+------------------------------------------------------------------------------
+1.4  Routes REST pour lire / définir les plafonds
+     ANCRE : n'importe où parmi les routes item-supercosts. Ici placées juste
+     AVANT `// ─── Modification d'un SuperCost ...` (~ ligne 384).
+------------------------------------------------------------------------------
+AJOUTER :
+
+  // ─── Plafonds de réouverture par ticket (Aléa 2) ───
+  app.get('/api/item-supercosts/ceilings', (_req, res) => {
+    res.json(db.prepare('SELECT ticket_id as ticketId, percent FROM ticket_reopen_ceilings ORDER BY ticket_id').all())
+  })
+
+  // Définir / mettre à jour / supprimer le plafond d'un ticket (un seul par ticket).
+  app.put('/api/item-supercosts/ceilings/:ticketId', (req, res) => {
+    const ticketId = Number(req.params.ticketId)
+    const { percent } = req.body as { percent: number | null }
+    if (percent === null || percent === undefined || isNaN(Number(percent))) {
+      db.prepare('DELETE FROM ticket_reopen_ceilings WHERE ticket_id = ?').run(ticketId)
+      res.json({ ticketId, percent: null }); return
+    }
+    db.prepare('INSERT INTO ticket_reopen_ceilings (ticket_id, percent) VALUES (?, ?) ON CONFLICT(ticket_id) DO UPDATE SET percent = excluded.percent').run(ticketId, Number(percent))
+    res.json({ ticketId, percent: Number(percent) })
+  })
+
+  ATTENTION ORDRE DES ROUTES : `/ceilings` (1 segment) ne collisionne pas avec
+  `/:ticketId/last-batch-total` (2 segments) ni avec `/supercosts/:ticketId/:batch`.
+
+==============================================================================
+FICHIER 2 — src/api/itemSuperCost.ts
+==============================================================================
+
+------------------------------------------------------------------------------
+2.1  Type TicketCeiling
+     ANCRE : juste après `export interface SuperCostBatch { ... }` (~ ligne 19-24).
+------------------------------------------------------------------------------
+AJOUTER :
+
+  export interface TicketCeiling {
+    ticketId: number
+    percent: number
+  }
+
+------------------------------------------------------------------------------
+2.2  Deux méthodes client
+     ANCRE : dans l'objet `ItemSuperCostApi`, juste AVANT `async getDetailsByItemtype(`
+     (~ ligne 149).
+------------------------------------------------------------------------------
+AJOUTER :
+
+  /** Liste les plafonds de réouverture définis par ticket. */
+  async listCeilings(): Promise<TicketCeiling[]> {
+    const res = await fetch(`${API_BASE}/ceilings`)
+    if (!res.ok) throw new Error('Erreur chargement des plafonds')
+    return res.json()
+  },
+
+  /** Définit (ou supprime si percent = null) le plafond de réouverture d'un ticket. */
+  async setCeiling(ticketId: number, percent: number | null): Promise<void> {
+    const res = await fetch(`${API_BASE}/ceilings/${ticketId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percent }),
+    })
+    if (!res.ok) throw new Error('Erreur enregistrement du plafond')
+  },
+
+==============================================================================
+FICHIER 3 — src/pages/BackOffice/ReopenList.tsx
+==============================================================================
+
+------------------------------------------------------------------------------
+3.1  Import du type (ligne 4)
+------------------------------------------------------------------------------
+  AVANT : import type { ReopenGroup, SuperCostBatch } from '@/api/itemSuperCost'
+  APRÈS : import type { ReopenGroup, SuperCostBatch, TicketCeiling } from '@/api/itemSuperCost'
+
+------------------------------------------------------------------------------
+3.2  States (après `const [superEdit, setSuperEdit] = ...`, ~ ligne 26)
+------------------------------------------------------------------------------
+AJOUTER :
+
+  const [ceilings, setCeilings] = useState<Map<number, number>>(new Map())
+  const [ceilingForm, setCeilingForm] = useState<{ ticketId: string; percent: string; saving: boolean }>({ ticketId: '', percent: '', saving: false })
+
+------------------------------------------------------------------------------
+3.3  Chargement dans load() (~ lignes 37-49)
+------------------------------------------------------------------------------
+- Ajouter `ItemSuperCostApi.listCeilings()` au Promise.all et récupérer le résultat :
+
+  const [list, scList, cancelledList, tickets, ceilingList] = await Promise.all([
+    ItemSuperCostApi.listReopens(),
+    ItemSuperCostApi.listSuperCosts(),
+    ItemSuperCostApi.listCancelledSuperCosts(),
+    glpiTicketService.listTickets(),
+    ItemSuperCostApi.listCeilings(),
+  ])
+
+- Après `setTicketNames(names)` :
+
+  setCeilings(new Map(ceilingList.map((c: TicketCeiling) => [c.ticketId, c.percent])))
+
+------------------------------------------------------------------------------
+3.4  Handler saveCeiling (avant le `if (loading) ...`, ~ ligne 119)
+------------------------------------------------------------------------------
+AJOUTER :
+
+  const saveCeiling = async () => {
+    const ticketId = Number(ceilingForm.ticketId)
+    if (!ticketId) return
+    const pct = ceilingForm.percent.trim() === '' ? null : parseFloat(ceilingForm.percent)
+    if (pct !== null && isNaN(pct)) return
+    setCeilingForm(f => ({ ...f, saving: true }))
+    try {
+      await ItemSuperCostApi.setCeiling(ticketId, pct)
+      setCeilingForm({ ticketId: '', percent: '', saving: false })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement du plafond')
+      setCeilingForm(f => ({ ...f, saving: false }))
+    }
+  }
+
+------------------------------------------------------------------------------
+3.5  Valeurs dérivées (après `const grandTotalSuper = ...`, ~ ligne 135)
+------------------------------------------------------------------------------
+AJOUTER :
+
+  const hasCeiling = ceilings.size > 0
+
+  const sumByTicket = (rows: { ticketId: number; total: number }[]) => {
+    const m = new Map<number, number>()
+    for (const r of rows) m.set(r.ticketId, (m.get(r.ticketId) ?? 0) + r.total)
+    return m
+  }
+  const superByTicket = sumByTicket(supercosts)
+  const reopenByTicket = sumByTicket(reopens)
+  const ticketCeilingMax = (ticketId: number) =>
+    (superByTicket.get(ticketId) ?? 0) * ((ceilings.get(ticketId) ?? 0) / 100)
+  const ticketCeilingAvail = (ticketId: number) =>
+    Math.max(0, ticketCeilingMax(ticketId) - (reopenByTicket.get(ticketId) ?? 0))
+
+  // Tickets éligibles à un plafond = ceux qui ont au moins un Super Cost.
+  const ceilingTickets = [...superByTicket.keys()].sort((a, b) => a - b)
+
+------------------------------------------------------------------------------
+3.6  Formulaire d'attribution (dans <div className="items-cost-header">,
+     après le <p> "Total des frais de réouverture", ~ ligne 158)
+     -> Aucune classe CSS nouvelle : réutilise `reopen-field` et `reopen-btn`.
+------------------------------------------------------------------------------
+AJOUTER :
+
+  <label className="reopen-field">
+    <span>Plafond de réouverture — ticket</span>
+    <select
+      value={ceilingForm.ticketId}
+      onChange={e => setCeilingForm(f => ({ ...f, ticketId: e.target.value, percent: String(ceilings.get(Number(e.target.value)) ?? '') }))}
+      disabled={ceilingForm.saving}
+    >
+      <option value="">— Choisir un ticket —</option>
+      {ceilingTickets.map(id => (
+        <option key={id} value={id}>
+          #{id} — {ticketNames.get(id) ?? `Ticket #${id}`}{ceilings.has(id) ? ` (${ceilings.get(id)} %)` : ''}
+        </option>
+      ))}
+    </select>
+  </label>
+  <label className="reopen-field">
+    <span>Plafond (%)</span>
+    <input
+      type="number"
+      step="0.01"
+      min="0"
+      value={ceilingForm.percent}
+      onChange={e => setCeilingForm(f => ({ ...f, percent: e.target.value }))}
+      disabled={ceilingForm.saving || !ceilingForm.ticketId}
+      placeholder="Vide = aucun plafond"
+    />
+  </label>
+  <button
+    className="reopen-btn reopen-btn-edit"
+    onClick={() => void saveCeiling()}
+    disabled={ceilingForm.saving || !ceilingForm.ticketId}
+  >
+    {ceilingForm.saving ? 'Enregistrement...' : 'Enregistrer le plafond'}
+  </button>
+  {hasCeiling && (
+    <p>
+      Plafonds définis :{' '}
+      {ceilingTickets.filter(id => ceilings.has(id)).map(id => `#${id} : ${ceilings.get(id)} %`).join(' · ')}
+    </p>
+  )}
+
+------------------------------------------------------------------------------
+3.7  Colonne "Plafond (ticket)" dans le tableau des réouvertures
+------------------------------------------------------------------------------
+(a) ENTÊTE — dans <thead>, après `<th ...>Frais</th>` (~ ligne 222) :
+
+  {hasCeiling && <th style={{ textAlign: 'right' }}>Plafond (ticket)</th>}
+
+(b) CELLULE — dans <tbody>, après la cellule
+    `<td className="items-cost-amount total">{fmt(r.total)}</td>` (~ ligne 243) :
+
+  {hasCeiling && (
+    <td className="items-cost-amount">
+      {ceilings.has(r.ticketId)
+        ? `${ceilings.get(r.ticketId)} % · max ${fmt(ticketCeilingMax(r.ticketId))} · dispo ${fmt(ticketCeilingAvail(r.ticketId))}`
+        : '—'}
+    </td>
+  )}
+
+(c) PIED — dans <tfoot>, la dernière cellule vide (~ ligne 269) :
+
+  AVANT : <td colSpan={2} />
+  APRÈS : <td colSpan={hasCeiling ? 2 : 1} />
+
+==============================================================================
+VÉRIFICATION
+==============================================================================
+1. npx tsc --noEmit -p tsconfig.app.json
+   -> aucune NOUVELLE erreur (le warning `closeReopen` non utilisé est préexistant).
+2. Lancer l'app, page BackOffice "Réouvertures & Super Cost".
+3. Scénario métier :
+   - Un ticket avec Super Cost = 100, lui attribuer un plafond de 30 %.
+   - Tenter une réouverture de 40 % (mode 1) -> elle est limitée à 30 (dispo = 30).
+   - Ajouter un Super Cost à ce ticket (total 150) -> dispo recalculé à 45.
+   - Laisser le champ % vide et enregistrer -> le plafond du ticket est supprimé.
+
+==============================================================================
+NOTES
+==============================================================================
+- Le pourcentage est défini PAR TICKET (table ticket_reopen_ceilings, PK ticket_id).
+- "Mode négligeable" : inexistant dans le modèle actuel (modes 1-4), donc aucune
+  ligne à exclure de la base du plafond.
+- Les Super Cost annulés (cancelled = 1) sont déjà exclus de la base.
+- Le plafond n'est imposé qu'à la CRÉATION d'une réouverture. Le "disponible"
+  affiché se recalcule à chaque rechargement à partir des Super Cost courants.
