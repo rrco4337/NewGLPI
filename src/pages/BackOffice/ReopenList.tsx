@@ -128,7 +128,7 @@ export const ReopenList = () => {
                 <th style={{ textAlign: 'center' }}>Mode</th>
                 <th style={{ textAlign: 'right' }}>Pourcentage</th>
                 <th style={{ textAlign: 'right' }}>Frais</th>
-                <th style={{ textAlign: 'center' }}>Statut</th>
+                
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
@@ -149,11 +149,7 @@ export const ReopenList = () => {
                   <td style={{ textAlign: 'center' }}>{r.mode} — {MODE_LABEL[r.mode] ?? '?'}</td>
                   <td className="items-cost-amount">{r.percent} %</td>
                   <td className="items-cost-amount total">{fmt(r.total)}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className={`reopen-badge ${r.closed ? 'reopen-badge-closed' : 'reopen-badge-active'}`}>
-                      {r.closed ? 'Fermée' : 'Active'}
-                    </span>
-                  </td>
+                
                   <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                     <button
                       className="reopen-btn reopen-btn-edit"
