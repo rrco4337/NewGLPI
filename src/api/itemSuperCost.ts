@@ -6,6 +6,23 @@ export interface ItemCostSummary {
   reopenCost: number
 }
 
+export interface ReopenGroup {
+  reopenGroup: number
+  ticketId: number
+  percent: number
+  mode: number
+  closed: boolean
+  total: number
+  items: { itemtype: string; items_id: number; amount: number }[]
+}
+
+export interface SuperCostBatch {
+  ticketId: number
+  batch: number
+  total: number
+  items: { itemtype: string; items_id: number; amount: number }[]
+}
+
 export const ItemSuperCostApi = {
   /**
    * Crée un batch de supercost pour un ticket.
@@ -68,6 +85,46 @@ export const ItemSuperCostApi = {
     const res = await fetch(API_BASE)
     if (!res.ok) throw new Error('Erreur chargement coûts')
     return res.json()
+  },
+
+  /** Liste toutes les réouvertures (regroupées par reopen_group), dans l'ordre de création. */
+  async listReopens(): Promise<ReopenGroup[]> {
+    const res = await fetch(`${API_BASE}/reopens`)
+    if (!res.ok) throw new Error('Erreur chargement des réouvertures')
+    return res.json()
+  },
+
+  /** Modifie une réouverture : seuls le pourcentage et le mode changent, les montants sont recalculés côté serveur. */
+  async updateReopen(group: number, percent: number, mode: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/reopens/${group}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ percent, mode }),
+    })
+    if (!res.ok) throw new Error('Erreur modification de la réouverture')
+  },
+
+  /** Ferme (close) une réouverture : montant remis à 0, mais la ligne reste à sa place dans la liste. */
+  async closeReopen(group: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/reopens/${group}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Erreur suppression de la réouverture')
+  },
+
+  /** Liste tous les Super Cost (un par batch de ticket), regroupés par ticket + batch. */
+  async listSuperCosts(): Promise<SuperCostBatch[]> {
+    const res = await fetch(`${API_BASE}/supercosts`)
+    if (!res.ok) throw new Error('Erreur chargement des Super Cost')
+    return res.json()
+  },
+
+  /** Modifie le montant d'un Super Cost. Le montant est réparti à parts égales entre ses items. */
+  async updateSuperCost(ticketId: number, batch: number, amount: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/supercosts/${ticketId}/${batch}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
+    })
+    if (!res.ok) throw new Error('Erreur modification du Super Cost')
   },
 
   async getDetailsByItemtype(itemtype: string): Promise<{

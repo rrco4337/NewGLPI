@@ -17,6 +17,8 @@ import ProtectedRoute from './components/Security/ProtectedRoute';
 import KanbanSetting from './pages/BackOffice/KanbanSetting'
 import { ItemsCostList } from './pages/BackOffice/ItemsCostList'
 import { CsvMvtImport } from './pages/BackOffice/CsvMvtImport'
+import { ReopenList } from '@/pages/BackOffice/ReopenList'
+
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
         <Route path="verify-import" element={<ImportVerify />} />
         <Route path="kanban-settings" element={<KanbanSetting />} />
         <Route path="items-cost" element={<ItemsCostList />} />
+      <Route path="reopens" element={<ReopenList />} />
+
         <Route path="csv-mvt" element={<CsvMvtImport />} />
       </Route>
 </Route>

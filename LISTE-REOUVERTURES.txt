@@ -1,0 +1,320 @@
+# Fonctionnalité — Page « Réouvertures »
+
+Page qui liste toutes les réouvertures déjà effectuées, avec modification (pourcentage + mode) et
+suppression (= fermeture, sans changer l'ordre dans la liste).
+
+## Comportement attendu
+
+1. **Liste** : toutes les réouvertures, dans leur ordre de création.
+2. **Modifier** (bouton sur le côté) : on change la **valeur (le pourcentage)** et le **mode**.
+   Après validation → les montants sont **recalculés** côté serveur.
+   Lors de la modification, **seuls la valeur et le mode** peuvent changer.
+3. **Supprimer** : revient à **fermer (close)** la réouverture, comme si elle avait été mal créée
+   (montant remis à 0), **sans changer son ordre** : la ligne reste affichée à sa place.
+
+## Concept clé : `reopen_group`
+
+Un appel à `addReopenCost(ticketId, percent, mode)` insère **plusieurs lignes** dans
+`ticket_reopen_costs` (une par couple `itemtype|items_id`). Pour pouvoir lister / modifier /
+fermer une réouverture comme **une seule unité**, on ajoute une colonne `reopen_group` :
+toutes les lignes d'un même appel partagent le même numéro.
+
+- **Fermer** = `closed = 1` + `amount = 0` sur toutes les lignes du groupe (la ligne n'est pas
+  supprimée → l'ordre est conservé, l'agrégat `SUM(amount)` retombe à 0).
+- **Modifier** = recalcul de `amount` pour chaque ligne du groupe à partir des Super Cost actuels
+  du ticket, avec le nouveau `percent` et le nouveau `mode`.
+
+---
+
+## 1. Backend — `server/api.ts`
+
+### 1.1 Schéma `CREATE TABLE ticket_reopen_costs` (≈ ligne 21)
+
+**Avant**
+```ts
+CREATE TABLE IF NOT EXISTS ticket_reopen_costs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  batch INTEGER NOT NULL,
+  itemtype TEXT NOT NULL,
+  items_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  mode INTEGER NOT NULL DEFAULT 1
+);
+```
+
+**Après**
+```ts
+CREATE TABLE IF NOT EXISTS ticket_reopen_costs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL,
+  batch INTEGER NOT NULL,
+  itemtype TEXT NOT NULL,
+  items_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  mode INTEGER NOT NULL DEFAULT 1,
+  percent REAL NOT NULL DEFAULT 0,
+  closed INTEGER NOT NULL DEFAULT 0,
+  reopen_group INTEGER
+);
+```
+
+### 1.2 Migration + helper `computeBaseAmount` (bloc migration, ≈ ligne 44)
+
+**Avant**
+```ts
+const reopenCols = db.prepare("PRAGMA table_info(ticket_reopen_costs)").all() as { name: string }[]
+if (!reopenCols.some(c => c.name === 'mode')) {
+  db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN mode INTEGER NOT NULL DEFAULT 1')
+}
+```
+
+**Après**
+```ts
+const reopenCols = db.prepare("PRAGMA table_info(ticket_reopen_costs)").all() as { name: string }[]
+const hasReopenCol = (name: string) => reopenCols.some(c => c.name === name)
+if (!hasReopenCol('mode')) db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN mode INTEGER NOT NULL DEFAULT 1')
+if (!hasReopenCol('percent')) db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN percent REAL NOT NULL DEFAULT 0')
+if (!hasReopenCol('closed')) db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN closed INTEGER NOT NULL DEFAULT 0')
+if (!hasReopenCol('reopen_group')) {
+  db.exec('ALTER TABLE ticket_reopen_costs ADD COLUMN reopen_group INTEGER')
+  // Backfill : 1 groupe par ticket (cas usuel = 1 réouverture par ticket), dans l'ordre d'apparition.
+  const legacy = db.prepare('SELECT ticket_id, MIN(id) as mid FROM ticket_reopen_costs GROUP BY ticket_id ORDER BY mid').all() as { ticket_id: number }[]
+  const updGroup = db.prepare('UPDATE ticket_reopen_costs SET reopen_group = ? WHERE ticket_id = ? AND reopen_group IS NULL')
+  let g = 0
+  db.transaction(() => { for (const t of legacy) { g++; updGroup.run(g, t.ticket_id) } })()
+}
+
+// Base de calcul du % selon le mode (1=dernier, 2=premier, 3=moyenne, 4=somme)
+type AmountRow = { batch: number; amount: number }
+const computeBaseAmount = (sorted: AmountRow[], mode: number): number => {
+  switch (mode) {
+    case 2: return sorted[0].amount
+    case 3: return sorted.reduce((s, r) => s + r.amount, 0) / sorted.length
+    case 4: return sorted.reduce((s, r) => s + r.amount, 0)
+    case 1:
+    default: return sorted[sorted.length - 1].amount
+  }
+}
+```
+
+### 1.3 `POST /api/item-supercosts/reopen` — persister `reopen_group`, `percent`, `closed`
+
+La fonction locale `baseAmount` est remplacée par le helper partagé `computeBaseAmount`, et
+l'`INSERT` enregistre maintenant `percent`, `closed = 0`, `reopen_group`.
+
+**Après** (extrait modifié)
+```ts
+// Numéro de réouverture : toutes les lignes d'un même appel partagent le même reopen_group.
+const maxGroupRow = db.prepare('SELECT MAX(reopen_group) as m FROM ticket_reopen_costs').get() as { m: number | null }
+const nextGroup = (maxGroupRow.m ?? 0) + 1
+
+const ins = db.prepare('INSERT INTO ticket_reopen_costs (ticket_id, batch, itemtype, items_id, amount, mode, percent, closed, reopen_group) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)')
+db.transaction(() => {
+  for (const list of groups.values()) {
+    const sorted = [...list].sort((a, b) => a.batch - b.batch)
+    const lastBatch = sorted[sorted.length - 1].batch
+    ins.run(ticketId, lastBatch, sorted[0].itemtype, sorted[0].items_id, computeBaseAmount(sorted, mode) * (percent / 100), mode, percent, nextGroup)
+  }
+})()
+res.status(200).end()
+```
+
+### 1.4 Nouveaux endpoints (ajoutés juste après `POST /reopen`)
+
+```ts
+type ReopenRow = { id: number; ticket_id: number; batch: number; itemtype: string; items_id: number; amount: number; mode: number; percent: number; closed: number; reopen_group: number | null }
+
+// GET — liste regroupée par reopen_group, dans l'ordre de création
+app.get('/api/item-supercosts/reopens', (_req, res) => {
+  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount, mode, percent, closed, reopen_group FROM ticket_reopen_costs ORDER BY reopen_group, id').all() as ReopenRow[]
+  const groups = new Map<number, { reopenGroup: number; ticketId: number; percent: number; mode: number; closed: boolean; total: number; items: { itemtype: string; items_id: number; amount: number }[] }>()
+  for (const r of rows) {
+    const g = r.reopen_group ?? r.id
+    if (!groups.has(g)) groups.set(g, { reopenGroup: g, ticketId: r.ticket_id, percent: r.percent, mode: r.mode, closed: r.closed === 1, total: 0, items: [] })
+    const entry = groups.get(g)!
+    entry.total += r.amount
+    entry.items.push({ itemtype: r.itemtype, items_id: r.items_id, amount: r.amount })
+  }
+  res.json([...groups.values()])
+})
+
+// PUT — modifier : seuls percent + mode changent, puis recalcul des montants
+app.put('/api/item-supercosts/reopens/:group', (req, res) => {
+  const group = Number(req.params.group)
+  const { percent, mode } = req.body as { percent: number; mode: number }
+  const rows = db.prepare('SELECT id, ticket_id, itemtype, items_id, closed FROM ticket_reopen_costs WHERE reopen_group = ?').all(group) as Pick<ReopenRow, 'id' | 'ticket_id' | 'itemtype' | 'items_id' | 'closed'>[]
+  if (rows.length === 0) { res.status(404).json({ error: 'Réouverture introuvable' }); return }
+  if (rows[0].closed === 1) { res.status(409).json({ error: 'Réouverture fermée : modification impossible' }); return }
+  const upd = db.prepare('UPDATE ticket_reopen_costs SET amount = ?, mode = ?, percent = ? WHERE id = ?')
+  db.transaction(() => {
+    for (const r of rows) {
+      const scRows = db.prepare('SELECT batch, amount FROM ticket_supercosts WHERE ticket_id = ? AND itemtype = ? AND items_id = ?').all(r.ticket_id, r.itemtype, r.items_id) as AmountRow[]
+      const sorted = [...scRows].sort((a, b) => a.batch - b.batch)
+      const base = sorted.length > 0 ? computeBaseAmount(sorted, mode) : 0
+      upd.run(base * (percent / 100), mode, percent, r.id)
+    }
+  })()
+  res.status(200).end()
+})
+
+// DELETE — fermer (close) : montant = 0, ligne conservée à sa place
+app.delete('/api/item-supercosts/reopens/:group', (req, res) => {
+  const group = Number(req.params.group)
+  const result = db.prepare('UPDATE ticket_reopen_costs SET closed = 1, amount = 0 WHERE reopen_group = ?').run(group)
+  if (result.changes === 0) { res.status(404).json({ error: 'Réouverture introuvable' }); return }
+  res.status(200).end()
+})
+```
+
+---
+
+## 2. Client API — `src/api/itemSuperCost.ts`
+
+### 2.1 Type ajouté (après `ItemCostSummary`)
+```ts
+export interface ReopenGroup {
+  reopenGroup: number
+  ticketId: number
+  percent: number
+  mode: number
+  closed: boolean
+  total: number
+  items: { itemtype: string; items_id: number; amount: number }[]
+}
+```
+
+### 2.2 Méthodes ajoutées (avant `getDetailsByItemtype`)
+```ts
+async listReopens(): Promise<ReopenGroup[]> {
+  const res = await fetch(`${API_BASE}/reopens`)
+  if (!res.ok) throw new Error('Erreur chargement des réouvertures')
+  return res.json()
+},
+async updateReopen(group: number, percent: number, mode: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/reopens/${group}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ percent, mode }),
+  })
+  if (!res.ok) throw new Error('Erreur modification de la réouverture')
+},
+async closeReopen(group: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/reopens/${group}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Erreur suppression de la réouverture')
+},
+```
+
+---
+
+## 3. Page — `src/pages/BackOffice/ReopenList.tsx` (nouveau)
+
+- Charge en parallèle `ItemSuperCostApi.listReopens()` + `glpiTicketService.listTickets()`
+  (pour afficher le nom du ticket).
+- Tableau : `#` (reopen_group), ticket, items + montant par item, mode, pourcentage, frais total,
+  statut (badge Active / Fermée), actions.
+- Bouton **Modifier** → modal : `select` mode (1-4) + `input number` pourcentage → `updateReopen` → reload.
+- Bouton **Supprimer** → `window.confirm` → `closeReopen` → reload.
+- Les deux boutons sont désactivés si la réouverture est déjà fermée.
+- Réutilise les classes `items-cost-*` de `ItemsCostList.css` + styles propres dans `ReopenList.css`.
+
+## 4. Styles — `src/pages/BackOffice/ReopenList.css` (nouveau)
+Badges statut, boutons d'action, overlay + modal d'édition.
+
+## 5. Routing — `src/routes/appRoutes.tsx`
+```ts
+import { ReopenList } from '@/pages/BackOffice/ReopenList'
+// ...
+<Route path="reopens" element={<ReopenList />} />
+```
+
+## 6. Navigation — `src/layouts/DashboardLayout.tsx`
+Entrée ajoutée dans `NAV`, juste après « Coûts Items » :
+```ts
+{ to: '/admin/reopens', icon: 'bi-arrow-repeat', label: 'Réouvertures' },
+```
+
+---
+
+---
+
+## 7. Ajout — Liste & édition des Super Cost (même page)
+
+La page liste aussi les **Super Cost** sous la liste des réouvertures, chacun avec un bouton
+**Modifier** (seul le **montant** est éditable). Un Super Cost = un **batch** d'un ticket, dont le
+montant est réparti entre ses items.
+
+### 7.1 Backend — `server/api.ts` (après les endpoints `/reopens`)
+```ts
+type SuperRow = { id: number; ticket_id: number; batch: number; itemtype: string; items_id: number; amount: number }
+
+// GET — liste regroupée par (ticket_id, batch)
+app.get('/api/item-supercosts/supercosts', (_req, res) => {
+  const rows = db.prepare('SELECT id, ticket_id, batch, itemtype, items_id, amount FROM ticket_supercosts ORDER BY ticket_id, batch, id').all() as SuperRow[]
+  const groups = new Map<string, { ticketId: number; batch: number; total: number; items: { itemtype: string; items_id: number; amount: number }[] }>()
+  for (const r of rows) {
+    const key = `${r.ticket_id}|${r.batch}`
+    if (!groups.has(key)) groups.set(key, { ticketId: r.ticket_id, batch: r.batch, total: 0, items: [] })
+    const entry = groups.get(key)!
+    entry.total += r.amount
+    entry.items.push({ itemtype: r.itemtype, items_id: r.items_id, amount: r.amount })
+  }
+  res.json([...groups.values()])
+})
+
+// PUT — modifier le montant : réparti à parts égales entre les items du batch
+app.put('/api/item-supercosts/supercosts/:ticketId/:batch', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const batch = Number(req.params.batch)
+  const { amount } = req.body as { amount: number }
+  const rows = db.prepare('SELECT id FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').all(ticketId, batch) as { id: number }[]
+  if (rows.length === 0) { res.status(404).json({ error: 'Super Cost introuvable' }); return }
+  const share = amount / rows.length
+  const upd = db.prepare('UPDATE ticket_supercosts SET amount = ? WHERE id = ?')
+  db.transaction(() => { for (const r of rows) upd.run(share, r.id) })()
+  res.status(200).end()
+})
+```
+
+### 7.2 Client — `src/api/itemSuperCost.ts`
+- Type `SuperCostBatch { ticketId, batch, total, items[] }`
+- Méthodes `listSuperCosts()` (GET) et `updateSuperCost(ticketId, batch, amount)` (PUT)
+
+### 7.3 Page — `src/pages/BackOffice/ReopenList.tsx`
+- Titre de page → « Réouvertures & Super Cost », deux sections (`h3.reopen-section-title`).
+- 2ᵉ tableau : ticket, batch, items + montant par item, montant total, bouton **Modifier**.
+- Modal d'édition Super Cost : un seul champ `montant` → `updateSuperCost` → reload.
+
+### 7.4 Nav — label mis à jour
+`{ to: '/admin/reopens', icon: 'bi-arrow-repeat', label: 'Réouvertures & Super Cost' }`
+
+> ⚠️ **Important** : modifier un Super Cost **ne recalcule pas automatiquement** les réouvertures
+> déjà calculées à partir de ce Super Cost. Pour les remettre à jour, ré-éditer la réouverture
+> (le bouton « Modifier » recalcule le montant à partir du Super Cost courant).
+
+---
+
+## Ordre des modifications
+1. `server/api.ts` (schéma, migration, helper, POST /reopen, 3 nouveaux endpoints)
+2. `src/api/itemSuperCost.ts` (type + 3 méthodes)
+3. `src/pages/BackOffice/ReopenList.tsx` + `ReopenList.css` (nouveaux)
+4. `src/routes/appRoutes.tsx` (import + route)
+5. `src/layouts/DashboardLayout.tsx` (entrée NAV)
+
+## Dépendances
+Aucune nouvelle dépendance. Utilise `react`, `react-router-dom`, `better-sqlite3`, `express`,
+icônes Bootstrap déjà présentes.
+
+## Vérification
+```bash
+npx tsc --noEmit          # ✅ aucune erreur
+npm run dev               # lancer l'app
+```
+Étapes manuelles :
+1. Créer une réouverture depuis le Kanban (fermer puis rouvrir un ticket avec % + mode).
+2. Aller sur **Back Office → Réouvertures** : la réouverture apparaît avec son ticket, ses items,
+   le mode, le pourcentage et le total.
+3. **Modifier** : changer le pourcentage / mode → valider → le total est recalculé.
+4. **Supprimer** : confirmer → le statut passe « Fermée », le total tombe à 0, mais la ligne
+   reste à la même position. Les boutons deviennent désactivés.
+5. Vérifier sur la page **Coûts Items** que les frais de réouverture fermés ne comptent plus.

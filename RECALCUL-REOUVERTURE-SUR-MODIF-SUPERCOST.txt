@@ -1,0 +1,96 @@
+# Fonctionnalité — Recalcul des réouvertures lors de la modification d'un Super Cost
+
+Quand on modifie le montant d'un **Super Cost**, les **réouvertures** non fermées du même ticket
+sont désormais **recalculées automatiquement** à partir du Super Cost mis à jour.
+
+Avant : modifier un Super Cost ne touchait pas aux réouvertures déjà calculées (il fallait
+ré-éditer chaque réouverture manuellement). Maintenant le recalcul est fait côté serveur dans le
+même appel.
+
+## Concept
+
+Une réouverture stocke son propre `mode` et `percent`. Son `amount` vaut
+`computeBaseAmount(superCosts, mode) * percent / 100`, où `superCosts` sont les lignes
+`ticket_supercosts` du couple `(ticket_id, itemtype, items_id)`.
+
+Donc dès que le montant d'un Super Cost change, on relit ces lignes et on réapplique exactement
+la même formule (mode et percent restant inchangés). On ne recalcule que les réouvertures
+`closed = 0` (les fermées restent à 0).
+
+---
+
+## Modification — `server/api.ts`
+
+Endpoint `PUT /api/item-supercosts/supercosts/:ticketId/:batch` (≈ ligne 241).
+
+### Avant
+```ts
+// Modifie le montant d'un Super Cost : le nouveau montant est réparti à parts égales entre ses items
+// (même logique que la création). Les réouvertures déjà calculées ne sont pas recalculées automatiquement.
+app.put('/api/item-supercosts/supercosts/:ticketId/:batch', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const batch = Number(req.params.batch)
+  const { amount } = req.body as { amount: number }
+  const rows = db.prepare('SELECT id FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').all(ticketId, batch) as { id: number }[]
+  if (rows.length === 0) { res.status(404).json({ error: 'Super Cost introuvable' }); return }
+  const share = amount / rows.length
+  const upd = db.prepare('UPDATE ticket_supercosts SET amount = ? WHERE id = ?')
+  db.transaction(() => { for (const r of rows) upd.run(share, r.id) })()
+  res.status(200).end()
+})
+```
+
+### Après
+```ts
+// Modifie le montant d'un Super Cost : le nouveau montant est réparti à parts égales entre ses items
+// (même logique que la création). On recalcule ensuite les réouvertures non fermées du même ticket,
+// à partir des Super Cost mis à jour (même calcul que PUT /reopens/:group), en gardant leur mode et percent.
+app.put('/api/item-supercosts/supercosts/:ticketId/:batch', (req, res) => {
+  const ticketId = Number(req.params.ticketId)
+  const batch = Number(req.params.batch)
+  const { amount } = req.body as { amount: number }
+  const rows = db.prepare('SELECT id FROM ticket_supercosts WHERE ticket_id = ? AND batch = ?').all(ticketId, batch) as { id: number }[]
+  if (rows.length === 0) { res.status(404).json({ error: 'Super Cost introuvable' }); return }
+  const share = amount / rows.length
+  const upd = db.prepare('UPDATE ticket_supercosts SET amount = ? WHERE id = ?')
+  const reopenRows = db.prepare('SELECT id, itemtype, items_id, mode, percent FROM ticket_reopen_costs WHERE ticket_id = ? AND closed = 0').all(ticketId) as Pick<ReopenRow, 'id' | 'itemtype' | 'items_id' | 'mode' | 'percent'>[]
+  const updReopen = db.prepare('UPDATE ticket_reopen_costs SET amount = ? WHERE id = ?')
+  db.transaction(() => {
+    for (const r of rows) upd.run(share, r.id)
+    for (const r of reopenRows) {
+      const scRows = db.prepare('SELECT batch, amount FROM ticket_supercosts WHERE ticket_id = ? AND itemtype = ? AND items_id = ?').all(ticketId, r.itemtype, r.items_id) as AmountRow[]
+      const sorted = [...scRows].sort((a, b) => a.batch - b.batch)
+      const base = sorted.length > 0 ? computeBaseAmount(sorted, r.mode) : 0
+      updReopen.run(base * (r.percent / 100), r.id)
+    }
+  })()
+  res.status(200).end()
+})
+```
+
+---
+
+## Logique réutilisée (aucune duplication métier)
+- `computeBaseAmount(sorted, mode)` : helper existant (base selon mode 1=dernier / 2=premier / 3=moyenne / 4=somme).
+- Le bloc de recalcul est identique à celui de `PUT /api/item-supercosts/reopens/:group`, à ceci près
+  que `mode` et `percent` proviennent de la ligne de réouverture stockée (et non du body de la requête).
+- Types `ReopenRow` et `AmountRow` déjà définis dans le fichier.
+
+## Dépendances
+Aucune nouvelle dépendance.
+
+## Côté client
+Aucune modification : la page `ReopenList.tsx` recharge déjà ses données après une édition de Super Cost.
+
+## Vérification
+```bash
+npx tsc --noEmit          # aucune erreur
+npm run dev
+```
+Étapes manuelles :
+1. Créer une réouverture sur un ticket (% + mode), noter le frais total.
+2. Aller sur Back Office → Réouvertures & Super Cost.
+3. Modifier le montant du Super Cost de ce ticket → valider.
+4. Vérifier que le frais total de la réouverture associée est automatiquement recalculé
+   (proportionnel au nouveau montant, selon son mode et son pourcentage).
+5. Une réouverture déjà « Fermée » reste à 0 (non recalculée).
