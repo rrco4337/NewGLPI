@@ -3,7 +3,7 @@ import { glpiTicketService } from '@/services/glpiService'
 import { ItemSuperCostApi } from '@/api/itemSuperCost'
 import type { ReopenGroup, SuperCostBatch } from '@/api/itemSuperCost'
 import './ItemsCostList.css'
-import './ReopenList.css'
+
 
 const fmt = (n: number) =>
   n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })

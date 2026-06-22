@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType File -Path \"c:\\\\Users\\\\Fitahiana\\\\Desktop\\\\NewGLPI\\\\tracking_implementation.txt\" -Force)"
+    ]
+  }
+}
